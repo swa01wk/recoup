@@ -2,13 +2,13 @@
 
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class OpportunityState(str, Enum):
+class OpportunityState(StrEnum):
     DETECTED = "DETECTED"
     INVESTIGATING = "INVESTIGATING"
     EVIDENCE_READY = "EVIDENCE_READY"

@@ -8,18 +8,15 @@ never communicate with external AWS services directly.
 from __future__ import annotations
 
 import hashlib
-import json
 import uuid
-from datetime import datetime, timedelta, timezone
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-from decimal import Decimal
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from strands import tool
 
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 # ---------------------------------------------------------------------------
 # Evidence store

@@ -8,11 +8,12 @@ Designed to wrap strands-agents at runtime while keeping Phase 1 stubs dependenc
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
-from typing import Any, Callable, Literal, Union
+from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +25,6 @@ from ..models.evidence import EvidenceManifest, RedactionReport
 from ..models.opportunity import OpportunityState
 from ..models.signal import IncidentSignal
 from ..models.sla import SLAContract
-
 
 # ---------------------------------------------------------------------------
 # Domain types produced within the graph (not in models/ as they are
@@ -55,13 +55,13 @@ class CaseOutcome(BaseModel):
     notes: str = ""
 
 
-class PolicyDecision(str, Enum):
+class PolicyDecision(StrEnum):
     ALLOW = "ALLOW"
     REQUIRE_APPROVAL = "REQUIRE_APPROVAL"
     DENY = "DENY"
 
 
-class ErrorDisposition(str, Enum):
+class ErrorDisposition(StrEnum):
     RETRY = "RETRY"
     FATAL = "FATAL"
 
@@ -225,7 +225,7 @@ class Edge:
 class ConditionalEdge:
     source: str
     condition: Callable[[GraphState], str]
-    targets: dict[str, Union[str, AgentNode, DeterministicNode]]
+    targets: dict[str, str | AgentNode | DeterministicNode]
 
 
 # ---------------------------------------------------------------------------

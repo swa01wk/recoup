@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ...models.approval import ApprovalRecord, ApprovalState
+from ...models.approval import ApprovalState
 
 router = APIRouter()
 

@@ -26,13 +26,13 @@ class SLAContract(BaseModel):
     effective_from: date
     effective_to: date | None = None
     service_commitment: Decimal = Field(description="e.g. Decimal('99.95')")
-    interval_minutes: int = Field(ge=1, description="Monitoring interval; typically 5 for API Gateway")
+    interval_minutes: int = Field(ge=1, description="Monitoring interval; typically 5 for API Gateway")  # noqa: E501
     claim_deadline_rule: str
     credit_tiers: list[CreditTier] = Field(min_length=1)
     required_claim_fields: list[str] = Field(min_length=1)
     exclusions: list[str] = Field(default_factory=list)
     source_url: str = Field(description="Official AWS SLA page URL")
-    source_hash: str = Field(description="SHA-256 of the source document; must start with 'sha256:'")
+    source_hash: str = Field(description="SHA-256 of the source document; must start with 'sha256:'")  # noqa: E501
 
     @model_validator(mode="after")
     def validate_source_hash(self) -> "SLAContract":

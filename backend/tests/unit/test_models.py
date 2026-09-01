@@ -7,23 +7,23 @@ Pydantic v2 serialisation. No LLM calls, no AWS calls, no network.
 
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, date, timedelta, timezone
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
+
+from recoup.models.approval import ApprovalRecord, ApprovalState
+from recoup.models.claim import ClaimPackage
+from recoup.models.eligibility import EligibilityAssessment
+from recoup.models.evidence import EvidenceItem, EvidenceManifest
 from recoup.models.opportunity import OpportunityState, RecoveryOpportunity
 from recoup.models.signal import IncidentSignal
 from recoup.models.sla import CreditTier, SLAContract
-from recoup.models.availability import AvailabilityInterval, AvailabilityResult
-from recoup.models.evidence import EvidenceItem, EvidenceManifest, RedactionReport
-from recoup.models.eligibility import EligibilityAssessment
-from recoup.models.approval import ApprovalRecord, ApprovalState
-from recoup.models.claim import ClaimPackage
-from recoup.models.audit import ToolAudit
 
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 # ---------------------------------------------------------------------------
 # RecoveryOpportunity
@@ -59,7 +59,7 @@ class TestRecoveryOpportunity:
         assert "123456789012" not in opp.account_id_masked
 
     def test_confidence_bounds(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             RecoveryOpportunity(
                 id="opp-002",
                 type="SLA",
@@ -105,7 +105,7 @@ class TestIncidentSignal:
         assert signal.replay is False
 
     def test_invalid_source(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             IncidentSignal(
                 source="unknown_source",  # type: ignore
                 event_id="evt-002",
@@ -134,9 +134,21 @@ class TestSLAContract:
             interval_minutes=5,
             claim_deadline_rule="end_of_second_billing_cycle_after_incident",
             credit_tiers=[
-                CreditTier(min_pct=Decimal("99.00"), max_exclusive_pct=Decimal("99.95"), credit_pct=Decimal("10")),
-                CreditTier(min_pct=Decimal("95.00"), max_exclusive_pct=Decimal("99.00"), credit_pct=Decimal("25")),
-                CreditTier(min_pct=Decimal("0.00"), max_exclusive_pct=Decimal("95.00"), credit_pct=Decimal("100")),
+                CreditTier(
+                    min_pct=Decimal("99.00"),
+                    max_exclusive_pct=Decimal("99.95"),
+                    credit_pct=Decimal("10"),
+                ),
+                CreditTier(
+                    min_pct=Decimal("95.00"),
+                    max_exclusive_pct=Decimal("99.00"),
+                    credit_pct=Decimal("25"),
+                ),
+                CreditTier(
+                    min_pct=Decimal("0.00"),
+                    max_exclusive_pct=Decimal("95.00"),
+                    credit_pct=Decimal("100"),
+                ),
             ],
             required_claim_fields=["api_id", "region", "billing_cycle"],
             exclusions=["customer_caused_errors"],
@@ -145,7 +157,7 @@ class TestSLAContract:
         )
 
     def test_source_hash_required(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             SLAContract(
                 service="apigateway",
                 version="2022-05-05",
@@ -154,7 +166,11 @@ class TestSLAContract:
                 interval_minutes=5,
                 claim_deadline_rule="end_of_second_billing_cycle",
                 credit_tiers=[
-                    CreditTier(min_pct=Decimal("99.00"), max_exclusive_pct=Decimal("99.95"), credit_pct=Decimal("10")),
+                    CreditTier(
+                        min_pct=Decimal("99.00"),
+                        max_exclusive_pct=Decimal("99.95"),
+                        credit_pct=Decimal("10"),
+                    ),
                 ],
                 required_claim_fields=["api_id"],
                 source_url="https://example.com",
@@ -172,7 +188,7 @@ class TestSLAContract:
         assert tier == Decimal("0")
 
     def test_credit_tier_invalid_range(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             CreditTier(
                 min_pct=Decimal("99.95"),
                 max_exclusive_pct=Decimal("99.00"),  # min > max — invalid
@@ -229,7 +245,7 @@ class TestEvidenceManifest:
 
 class TestEligibilityAssessment:
     def test_low_confidence_requires_unresolved(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             EligibilityAssessment(
                 eligible_estimate=True,
                 confidence=0.5,  # low
@@ -306,7 +322,7 @@ class TestClaimPackage:
             opportunity_id="opp-001",
             items=[],
         )
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ClaimPackage(
                 opportunity_id="opp-001",
                 subject="Test",

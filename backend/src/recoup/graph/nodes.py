@@ -23,13 +23,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import uuid
-from datetime import datetime, timezone
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any
 
 from ..engines.calculator import calculate_availability_and_credit
 from ..engines.sla_resolver import SLAContractNotFoundError, resolve_sla_contract
@@ -37,7 +33,6 @@ from ..models.availability import AvailabilityInterval, AvailabilityResult
 from ..models.claim import ClaimPackage
 from ..models.eligibility import EligibilityAssessment
 from ..models.evidence import EvidenceManifest, RedactionReport
-from ..models.signal import IncidentSignal
 from .types import (
     CaseOutcome,
     GraphState,
@@ -45,6 +40,9 @@ from .types import (
     PolicyDecision,
 )
 
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -60,7 +58,7 @@ def _sha256(obj: object) -> str:
 # Node 1 — normalize_event (Deterministic)
 # ---------------------------------------------------------------------------
 
-def normalize_event_fn(state: GraphState) -> dict:
+def normalize_event_fn(state: GraphState) -> dict[str, Any]:
     """
     Parse a raw event dict (from EventBridge, replay seed, or SQS) into a
     typed IncidentSignal and generate an idempotency key.
@@ -86,7 +84,7 @@ def normalize_event_fn(state: GraphState) -> dict:
 # Node 2 — incident_correlation (AgentNode stub)
 # ---------------------------------------------------------------------------
 
-def incident_correlation_stub(state: GraphState) -> dict:
+def incident_correlation_stub(state: GraphState) -> dict[str, Any]:
     """
     Correlate the incident signal to form a working hypothesis.
 
@@ -140,7 +138,7 @@ def incident_correlation_stub(state: GraphState) -> dict:
 # Node 3 — sla_contract_resolver (Deterministic)
 # ---------------------------------------------------------------------------
 
-def sla_contract_resolver_fn(state: GraphState) -> dict:
+def sla_contract_resolver_fn(state: GraphState) -> dict[str, Any]:
     """
     Load the correct SLA contract for the service/date from the local catalog.
 
@@ -166,7 +164,7 @@ def sla_contract_resolver_fn(state: GraphState) -> dict:
 # Node 4 — availability_calculator (Deterministic)
 # ---------------------------------------------------------------------------
 
-def availability_calculator_fn(state: GraphState) -> dict:
+def availability_calculator_fn(state: GraphState) -> dict[str, Any]:
     """
     Pure arithmetic: compute monthly uptime % and SLA credit from intervals.
 
@@ -194,7 +192,7 @@ def availability_calculator_fn(state: GraphState) -> dict:
 # Node 5 — evidence_collector (AgentNode stub)
 # ---------------------------------------------------------------------------
 
-def evidence_collector_stub(state: GraphState) -> dict:
+def evidence_collector_stub(state: GraphState) -> dict[str, Any]:
     """
     Collect CloudWatch metrics, logs, cost records, and health events for the
     incident period and store raw evidence to S3.
@@ -236,7 +234,10 @@ def evidence_collector_stub(state: GraphState) -> dict:
         items=items,
         missing_fields=[
             f for f in contract.required_claim_fields
-            if f not in {"api_id", "region", "billing_cycle", "request_logs", "error_logs", "billing_record"}
+            if f not in {
+                "api_id", "region", "billing_cycle",
+                "request_logs", "error_logs", "billing_record",
+            }
         ],
         redaction_report=RedactionReport(evidence_id=opp_id),
     )
@@ -247,7 +248,7 @@ def evidence_collector_stub(state: GraphState) -> dict:
 # Node 6 — evidence_sanitizer (Deterministic)
 # ---------------------------------------------------------------------------
 
-def evidence_sanitizer_fn(state: GraphState) -> dict:
+def evidence_sanitizer_fn(state: GraphState) -> dict[str, Any]:
     """
     Apply deterministic redaction rules to all evidence items.
 
@@ -260,7 +261,6 @@ def evidence_sanitizer_fn(state: GraphState) -> dict:
         return {"errors": state.errors + ["evidence_sanitizer: no manifest in state"]}
 
     # Build sanitized copies (Phase 1: no actual redaction, just record the step)
-    from ..models.evidence import EvidenceItem
     sanitized_items = []
     for item in manifest.items:
         sanitized_uri = item.storage_uri.replace(
@@ -288,7 +288,7 @@ def evidence_sanitizer_fn(state: GraphState) -> dict:
 # Node 7 — eligibility_reasoner (AgentNode stub)
 # ---------------------------------------------------------------------------
 
-def eligibility_reasoner_stub(state: GraphState) -> dict:
+def eligibility_reasoner_stub(state: GraphState) -> dict[str, Any]:
     """
     Reason about claim eligibility using evidence IDs (never raw evidence).
 
@@ -327,7 +327,7 @@ def eligibility_reasoner_stub(state: GraphState) -> dict:
 # Node 8 — risk_policy_gate (Deterministic)
 # ---------------------------------------------------------------------------
 
-def risk_policy_gate_fn(state: GraphState) -> dict:
+def risk_policy_gate_fn(state: GraphState) -> dict[str, Any]:
     """
     Evaluate risk and call AgentCore Policy (Cedar) for authorization.
 
@@ -359,7 +359,7 @@ def risk_policy_gate_fn(state: GraphState) -> dict:
 # Node 9 — claim_package_generator (AgentNode stub)
 # ---------------------------------------------------------------------------
 
-def claim_package_generator_stub(state: GraphState) -> dict:
+def claim_package_generator_stub(state: GraphState) -> dict[str, Any]:
     """
     Assemble the complete claim package from sanitized evidence.
 
@@ -415,7 +415,7 @@ def claim_package_generator_stub(state: GraphState) -> dict:
 # Node 10 — submission_adapter (Deterministic)
 # ---------------------------------------------------------------------------
 
-def submission_adapter_fn(state: GraphState) -> dict:
+def submission_adapter_fn(state: GraphState) -> dict[str, Any]:
     """
     Submit the claim package to AWS Support — or simulate if simulation_mode is True.
 
@@ -458,7 +458,7 @@ def submission_adapter_fn(state: GraphState) -> dict:
 # Node 11 — case_monitor (AgentNode stub)
 # ---------------------------------------------------------------------------
 
-def case_monitor_stub(state: GraphState) -> dict:
+def case_monitor_stub(state: GraphState) -> dict[str, Any]:
     """
     Poll the AWS Support case for resolution status.
 

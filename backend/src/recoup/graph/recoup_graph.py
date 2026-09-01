@@ -25,10 +25,8 @@ from .nodes import (
 )
 from .types import (
     AgentNode,
-    ConditionalEdge,
     DeterministicNode,
     Graph,
-    GraphState,
     PolicyDecision,
 )
 
@@ -159,7 +157,7 @@ def build_recoup_graph() -> Graph:
     graph = Graph(name="recoup-recovery")
 
     # Register all nodes
-    for node in [
+    all_nodes: list[DeterministicNode | AgentNode] = [
         normalize_event,
         incident_correlation,
         sla_contract_resolver,
@@ -171,7 +169,8 @@ def build_recoup_graph() -> Graph:
         claim_package_generator,
         submission_adapter,
         case_monitor,
-    ]:
+    ]
+    for node in all_nodes:
         graph.add_node(node)
 
     # Linear edges

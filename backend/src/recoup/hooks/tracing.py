@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import re
+from datetime import UTC
 from typing import Any
 
 import structlog
@@ -182,8 +182,9 @@ class RecoupTracingHooks:
 
         Hashes request and response — never stores raw content.
         """
+        from datetime import datetime
+
         from ..models.audit import ToolAudit
-        from datetime import datetime, timezone
 
         audit = ToolAudit(
             trace_id=f"{self._opportunity_id}:{ctx.node_name}:{ctx.tool_name}",
@@ -194,7 +195,7 @@ class RecoupTracingHooks:
             response_hash=_sha256_json(ctx.response_json),
             policy_decision=ctx.policy_decision,  # type: ignore[arg-type]
             latency_ms=ctx.duration_ms,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         log.info(
@@ -225,7 +226,7 @@ class RecoupTracingHooks:
             return ErrorDisposition.RETRY
         return ErrorDisposition.FATAL
 
-    def custom_redaction_hook(self, ctx: "TraceContext", value: str) -> str:  # type: ignore[name-defined]
+    def custom_redaction_hook(self, ctx: TraceContext, value: str) -> str:  # type: ignore[name-defined]  # noqa: F821
         """
         Redact any high-risk pattern found in a user-visible trace value.
 
@@ -247,13 +248,13 @@ class RecoupTracingHooks:
     # Internal helpers
     # -----------------------------------------------------------------------
 
-    def _save_audit(self, audit: "ToolAudit") -> None:  # type: ignore[name-defined]
+    def _save_audit(self, audit: ToolAudit) -> None:  # type: ignore[name-defined]  # noqa: F821
         """
         Persist ToolAudit to DynamoDB (best-effort; log errors but don't raise).
         """
         try:
             import boto3
-            from botocore.exceptions import ClientError
+
             from ..config import settings
 
             ddb = boto3.resource("dynamodb")

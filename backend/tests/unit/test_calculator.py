@@ -6,7 +6,7 @@ These tests are 100% deterministic — no LLM calls, no AWS calls.
 All must pass before every commit to main.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -53,7 +53,7 @@ BILLED_CHARGES = Decimal("18400.00")
 
 def _make_intervals(total: int, unavailable_count: int) -> list[AvailabilityInterval]:
     """Create intervals with the first `unavailable_count` at 0% availability."""
-    base = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    base = datetime(2026, 8, 1, tzinfo=UTC)
     from datetime import timedelta
 
     intervals = []

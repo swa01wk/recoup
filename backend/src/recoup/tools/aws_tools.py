@@ -13,15 +13,14 @@ the stub bodies with real boto3 calls wrapped by the AgentCore Gateway.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from datetime import UTC, datetime
 from typing import Any
 
 from strands import tool
 
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 # ---------------------------------------------------------------------------
 # CloudWatch

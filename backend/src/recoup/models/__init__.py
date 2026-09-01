@@ -7,8 +7,8 @@ from .claim import ClaimPackage
 from .eligibility import EligibilityAssessment
 from .evidence import EvidenceItem, EvidenceManifest, RedactionReport
 from .opportunity import OpportunityState, RecoveryOpportunity
-from .sla import CreditTier, SLAContract
 from .signal import IncidentSignal
+from .sla import CreditTier, SLAContract
 
 __all__ = [
     "ApprovalRecord",

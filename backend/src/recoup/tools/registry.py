@@ -16,8 +16,9 @@ The registry is consumed by:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from .aws_tools import (
     get_cloudwatch_metrics,

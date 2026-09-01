@@ -12,9 +12,8 @@ bedrock-agent-runtime calls.
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, Iterator
+from typing import Any
 
 import boto3
 
@@ -102,11 +101,7 @@ class AgentCoreAdapter:
         Returns:
             Gateway registration response.
         """
-        log.info(
-            "agentcore.register_tool",
-            tool=tool_name,
-            action_class=action_class,
-        )
+        log.info("agentcore.register_tool tool=%s action_class=%s", tool_name, action_class)
         # Phase 2: call AgentCore Gateway API
         return {
             "tool_name": tool_name,
@@ -116,8 +111,9 @@ class AgentCoreAdapter:
 
     def register_all_tools(self) -> list[dict[str, Any]]:
         """Register all tools from TOOL_REGISTRY with the AgentCore Gateway."""
-        from ..tools.registry import TOOL_REGISTRY
         import inspect
+
+        from ..tools.registry import TOOL_REGISTRY
 
         results = []
         for meta in TOOL_REGISTRY.values():

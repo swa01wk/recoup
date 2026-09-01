@@ -127,7 +127,7 @@ class InMemoryStateMachine:
         if extra_attrs:
             record.update(extra_attrs)
 
-        return record["state_version"]
+        return int(record["state_version"])
 
     def get(self, opportunity_id: str) -> dict[str, Any] | None:
         return _in_memory_store.get(opportunity_id)
@@ -210,7 +210,7 @@ class DynamoDBStateMachine:
                 ExpressionAttributeValues=expr_attr_values,
                 ReturnValues="UPDATED_NEW",
             )
-            new_version = int(response["Attributes"]["state_version"])
+            new_version = int(str(response["Attributes"]["state_version"]))
             log.info(
                 "state_transition",
                 extra={
@@ -243,7 +243,9 @@ class DynamoDBStateMachine:
 # Factory — returns in-memory or DynamoDB backend
 # ---------------------------------------------------------------------------
 
-def get_state_machine(use_dynamodb: bool | None = None) -> DynamoDBStateMachine | InMemoryStateMachine:
+def get_state_machine(
+    use_dynamodb: bool | None = None,
+) -> DynamoDBStateMachine | InMemoryStateMachine:
     """
     Return the appropriate state machine backend.
 

@@ -9,18 +9,15 @@ GET  /api/opportunities/{id}/trace — get the agent trace
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
-from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ...graph.recoup_graph import recoup_graph
-from ...graph.state_machine import InMemoryStateMachine, get_state_machine
+from ...graph.state_machine import InMemoryStateMachine
 from ...graph.types import GraphState
-from ...models.opportunity import OpportunityState, RecoveryOpportunity
+from ...models.opportunity import OpportunityState
 from ...models.signal import IncidentSignal
 
 router = APIRouter()
@@ -134,6 +131,8 @@ def run_opportunity(opportunity_id: str, req: RunRequest) -> dict[str, Any]:
     else:
         adapter = ReplayAdapter()
         state = adapter.build_state(CANONICAL_SCENARIO, opportunity_id=opportunity_id)
+        if state.signal is None:
+            raise ValueError("Replay adapter returned no signal for canonical scenario")
         signal = state.signal
 
     initial_state = GraphState(

@@ -1,17 +1,17 @@
 """Human approval record — bound to claim hash, amount, and state version."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-class ApprovalState(str, Enum):
+class ApprovalState(StrEnum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     EXPIRED = "EXPIRED"
