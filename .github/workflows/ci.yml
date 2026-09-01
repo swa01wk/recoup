@@ -84,6 +84,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compile TypeScript
+        run: npm run build
+
       - name: CDK synth (dry-run; no AWS credentials needed)
         env:
           CDK_DEFAULT_ACCOUNT: "000000000000"

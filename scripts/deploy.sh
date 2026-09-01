@@ -56,7 +56,10 @@ fi
 log "Bootstrapping CDK (idempotent)..."
 cd "$CDK_DIR"
 npm ci -q
-npx cdk bootstrap "aws://$ACCOUNT/$REGION" --quiet
+log "Compiling CDK TypeScript..."
+npm run build
+ok "CDK TypeScript compiled"
+npx cdk bootstrap "aws://$ACCOUNT/$REGION"
 ok "CDK bootstrap complete"
 
 # ── Deploy RecoupInfraStack ───────────────────────────────────────────────────

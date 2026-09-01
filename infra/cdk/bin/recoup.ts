@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { RecoupInfraStack } from "../lib/stacks/recoup-infra-stack";
 import { RecoupDemoStack } from "../lib/stacks/recoup-demo-stack";
