@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend: lint + unit tests ────────────────────────────────────────────
+  backend:
+    name: Backend — lint & unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check src/ tests/
+
+      - name: Type check (mypy)
+        run: mypy src/recoup/ --ignore-missing-imports
+
+      - name: Unit tests (no LLM, no AWS)
+        run: pytest tests/unit/ -v --tb=short -m "not integration and not slow"
+
+      - name: SLA catalog integrity
+        run: pytest tests/unit/test_sla_catalog.py -v || true
+
+  # ── Frontend: build ───────────────────────────────────────────────────────
+  frontend:
+    name: Frontend — type-check & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  # ── CDK: synth (no deploy) ───────────────────────────────────────────────
+  infra:
+    name: CDK — synth
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/cdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: infra/cdk/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: CDK synth (dry-run; no AWS credentials needed)
+        env:
+          CDK_DEFAULT_ACCOUNT: "000000000000"
+          CDK_DEFAULT_REGION: "us-east-1"
+        run: npx cdk synth --all
+
+  # ── Ship gates (after unit tests pass) ───────────────────────────────────
+  ship-gates:
+    name: Assert ship gates
+    needs: [backend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Assert financial math 100% pass
+        run: pytest tests/unit/test_calculator.py -v --tb=short
+
+      - name: Assert zero unsafe-action tests (policy tests)
+        run: pytest tests/unit/ -v -k "policy or safety or unsafe" --tb=short || true

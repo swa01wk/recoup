@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+frontend/.env.local
+frontend/.env.production
+
+# CDK
+infra/cdk/cdk.out/
+infra/cdk/dist/
+infra/cdk/node_modules/
+
+# AWS
+.aws/
+*.pem
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Secrets — never commit these
+*.credentials
+secrets.yaml
+.secrets/
+
+# Pyenv
+.python-version
+
+# Architecture placeholders
+architecture/*.png
+!architecture/.gitkeep

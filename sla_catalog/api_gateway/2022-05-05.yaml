@@ -1,0 +1,32 @@
+service: apigateway
+version: "2022-05-05"
+effective_from: "2022-05-05"
+effective_to: null
+service_commitment: "99.95"
+interval_minutes: 5
+claim_deadline_rule: "end_of_second_billing_cycle_after_incident"
+credit_tiers:
+  - min_pct: "99.00"
+    max_exclusive_pct: "99.95"
+    credit_pct: 10
+  - min_pct: "95.00"
+    max_exclusive_pct: "99.00"
+    credit_pct: 25
+  - min_pct: "0.00"
+    max_exclusive_pct: "95.00"
+    credit_pct: 100
+required_claim_fields:
+  - api_id
+  - region
+  - billing_cycle
+  - request_logs
+  - error_logs
+  - billing_record
+exclusions:
+  - customer_caused_errors
+  - backend_lambda_failures
+  - planned_maintenance
+  - force_majeure
+source_url: "https://aws.amazon.com/api-gateway/sla/"
+# sha256 of the source SLA document — populated and verified by CI
+source_hash: "sha256:PLACEHOLDER_UPDATE_IN_CI"
