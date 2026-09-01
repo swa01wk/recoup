@@ -14,6 +14,24 @@ from ..models.sla import SLAContract
 
 _CATALOG_DIR = Path(__file__).parent.parent.parent.parent.parent / "sla_catalog"
 
+# Maps AWS service identifiers to catalog directory names.
+# AWS APIs use short identifiers (e.g. "apigateway") but catalog dirs use the
+# canonical human-readable names (e.g. "api_gateway") to stay readable.
+_SERVICE_DIR_ALIASES: dict[str, str] = {
+    "apigateway": "api_gateway",
+    "api-gateway": "api_gateway",
+    "lambda": "lambda",
+    "ec2": "ec2",
+    "s3": "s3",
+    "rds": "rds",
+    "elasticloadbalancing": "elb",
+    "elb": "elb",
+    "cloudfront": "cloudfront",
+    "dynamodb": "dynamodb",
+    "sqs": "sqs",
+    "sns": "sns",
+}
+
 
 class SLAContractNotFoundError(Exception):
     pass
@@ -47,7 +65,12 @@ def resolve_sla_contract(service: str, region: str, incident_date: date) -> SLAC
 
 
 def _load_contracts_for_service(service: str) -> list[SLAContract]:
-    service_dir = _CATALOG_DIR / service
+    # Normalise to catalog directory name
+    dir_name = _SERVICE_DIR_ALIASES.get(service.lower(), service)
+    service_dir = _CATALOG_DIR / dir_name
+    if not service_dir.exists():
+        # Fallback: try the raw service name as-is
+        service_dir = _CATALOG_DIR / service
     if not service_dir.exists():
         raise SLAContractNotFoundError(f"No SLA catalog directory for service '{service}'")
 

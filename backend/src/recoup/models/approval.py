@@ -1,10 +1,14 @@
 """Human approval record — bound to claim hash, amount, and state version."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class ApprovalState(str, Enum):
@@ -29,11 +33,11 @@ class ApprovalRecord(BaseModel):
 
     @property
     def is_valid(self) -> bool:
-        return self.state == ApprovalState.APPROVED and self.expires_at > datetime.utcnow()
+        return self.state == ApprovalState.APPROVED and self.expires_at > _utcnow()
 
     @property
     def is_expired(self) -> bool:
-        return self.expires_at <= datetime.utcnow()
+        return self.expires_at <= _utcnow()
 
     @classmethod
     def create(
@@ -47,7 +51,7 @@ class ApprovalRecord(BaseModel):
         state_version: int,
         ttl_hours: int = 24,
     ) -> "ApprovalRecord":
-        now = datetime.utcnow()
+        now = _utcnow()
         return cls(
             approval_id=approval_id,
             principal=principal,

@@ -1,0 +1,122 @@
+##
+## Recoup — Amazon Bedrock AgentCore Runtime Configuration
+## Deploy target: us-east-1 (or CDK_DEFAULT_REGION)
+## See docs/infrastructure-runbook.md for deployment instructions
+##
+
+runtime:
+  name: recoup-recovery-agent
+  # Set BEDROCK_MODEL_ID via environment — never hard-coded
+  model_id: ${BEDROCK_MODEL_ID}
+  session_idle_timeout_seconds: 3600
+  log_group: /recoup/runtime
+  execution_role_arn: ${RECOUP_RUNTIME_ROLE_ARN}
+
+  # Memory / context settings
+  max_session_duration_seconds: 14400   # 4 h hard cap
+  enable_trace: true
+  trace_level: STANDARD                 # STANDARD | DETAILED
+
+gateway:
+  name: recoup-tool-gateway
+  execution_role_arn: ${RECOUP_GATEWAY_EXECUTION_ROLE_ARN}
+  log_group: /recoup/gateway
+
+  tools:
+    # ── READ tools ────────────────────────────────────────────────────────────
+    - name: get_cloudwatch_metrics
+      action_class: READ
+      lambda_arn: ${RECOUP_CW_TOOL_LAMBDA_ARN}
+      description: "Retrieve CloudWatch metric statistics for a given namespace/metric/period."
+      allowed_nodes:
+        - incident_correlation
+        - evidence_collector
+
+    - name: query_cloudwatch_logs
+      action_class: READ_SENSITIVE
+      lambda_arn: ${RECOUP_CW_LOGS_TOOL_LAMBDA_ARN}
+      description: "Query CloudWatch Logs Insights; results stored as evidence, never in context."
+      allowed_nodes:
+        - evidence_collector
+
+    - name: get_health_event
+      action_class: READ
+      lambda_arn: ${RECOUP_HEALTH_TOOL_LAMBDA_ARN}
+      description: "Retrieve AWS Health event details by event ARN."
+      allowed_nodes:
+        - incident_correlation
+
+    - name: get_cost_and_usage
+      action_class: READ_FINANCIAL
+      lambda_arn: ${RECOUP_COST_TOOL_LAMBDA_ARN}
+      description: "Retrieve AWS Cost Explorer cost and usage data for a billing period."
+      allowed_nodes:
+        - evidence_collector
+
+    - name: get_cost_anomalies
+      action_class: READ_FINANCIAL
+      lambda_arn: ${RECOUP_COST_TOOL_LAMBDA_ARN}
+      description: "Retrieve AWS Cost Anomaly Detection findings."
+      allowed_nodes:
+        - incident_correlation
+
+    - name: list_cost_optimization_recommendations
+      action_class: READ_FINANCIAL
+      lambda_arn: ${RECOUP_COST_TOOL_LAMBDA_ARN}
+      description: "List AWS Cost Optimization Hub recommendations."
+      allowed_nodes:
+        - incident_correlation
+
+    - name: lookup_cloudtrail_events
+      action_class: READ_SENSITIVE
+      lambda_arn: ${RECOUP_CLOUDTRAIL_TOOL_LAMBDA_ARN}
+      description: "Look up CloudTrail management events for a resource or time window."
+      allowed_nodes:
+        - incident_correlation
+
+    # ── WRITE_INTERNAL tools ──────────────────────────────────────────────────
+    - name: store_evidence
+      action_class: WRITE_INTERNAL
+      lambda_arn: ${RECOUP_EVIDENCE_TOOL_LAMBDA_ARN}
+      description: "Store sanitized evidence to S3 and record hash in DynamoDB."
+      allowed_nodes:
+        - evidence_collector
+        - claim_package_generator
+
+    - name: create_approval_request
+      action_class: WRITE_INTERNAL
+      lambda_arn: ${RECOUP_APPROVAL_TOOL_LAMBDA_ARN}
+      description: "Create a HITL approval record in DynamoDB with TTL."
+      allowed_nodes:
+        - risk_policy_gate
+
+    - name: simulate_support_case
+      action_class: WRITE_INTERNAL
+      lambda_arn: ${RECOUP_SIMULATE_TOOL_LAMBDA_ARN}
+      description: "Simulate a Support case submission; returns synthetic case ID."
+      allowed_nodes:
+        - submission_adapter
+
+    # ── WRITE_EXTERNAL_FINANCIAL tools ────────────────────────────────────────
+    - name: submit_support_case
+      action_class: WRITE_EXTERNAL_FINANCIAL
+      lambda_arn: ${RECOUP_SUPPORT_TOOL_LAMBDA_ARN}
+      description: "Submit a real AWS Support case via the Support API. Requires approval."
+      allowed_nodes:
+        - submission_adapter
+      requires_approval: true
+      policy_guard: "RecoupSubmitCasePolicy"
+
+    # ── MUTATE_RED tools (Phase 6 only) ───────────────────────────────────────
+    - name: stop_demo_instance
+      action_class: MUTATE_RED
+      lambda_arn: ${RECOUP_EC2_DEMO_TOOL_LAMBDA_ARN}
+      description: "Stop a tagged demo EC2 instance. Tag RecoupDemo=true required."
+      allowed_nodes: []   # populated in Phase 6 deployment
+      requires_approval: true
+      policy_guard: "RecoupStopInstancePolicy"
+
+session:
+  isolation: STRICT           # each recovery opportunity gets its own session
+  principal_source: COGNITO   # or IAM for dev/test
+  audit_all_tool_calls: true
