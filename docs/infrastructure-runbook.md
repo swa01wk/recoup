@@ -33,12 +33,17 @@ aws sts get-caller-identity
 # 4. Verify all resources exist
 ./scripts/verify_infra.sh
 
-# 5. Register AgentCore Runtime + Gateway
+# 5. Register AgentCore Harness + Gateway (new bedrock-agentcore-control API)
 python scripts/register_agentcore.py
 
 # 6. Copy IDs to .env
 cat infra/agentcore-ids.json
-# → add RECOUP_AGENTCORE_RUNTIME_ID and RECOUP_AGENTCORE_GATEWAY_ID to .env
+# → add RECOUP_AGENTCORE_HARNESS_ID, RECOUP_AGENTCORE_HARNESS_ARN, and
+#   RECOUP_AGENTCORE_GATEWAY_ID to .env
+
+# NOTE: Classic Bedrock Agents (create_agent) is in maintenance mode for new
+# accounts since Jul 30 2026.  register_agentcore.py now uses create_harness()
+# and create_gateway() from the bedrock-agentcore-control client instead.
 ```
 
 ---

@@ -1,7 +1,7 @@
 # Recoup — Project Status
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 1, 2026 — 4:08 PM IST  
+**Last Updated:** Sep 1, 2026 — 7:09 PM IST  
 **Days Remaining:** 13
 
 ---
@@ -10,7 +10,7 @@
 
 | Phase | Name | Target | Status | Progress |
 |-------|------|--------|--------|----------|
-| 0 | Foundation & Infrastructure | Sep 3 | 🟡 Code ✅ — AWS deploy pending | ~95% |
+| 0 | Foundation & Infrastructure | Sep 3 | ✅ Complete | 100% |
 | 1 | Core Agent Graph & Data Contracts | Sep 6 | ✅ Complete | 100% |
 | 2 | Verified Replay & SLA Recovery Engine | Sep 9 | 🔴 Not Started | 0% |
 | 3 | Evidence System, Safety Layer & HITL | Sep 10 | 🔴 Not Started | 0% |
@@ -22,7 +22,7 @@
 ---
 
 ## Phase 0 — Foundation & Infrastructure
-**Target:** Sep 3, 2026 | **Status:** 🟡 All code complete — AWS deploy is the only remaining step
+**Target:** Sep 3, 2026 | **Status:** ✅ Complete — all AWS resources live
 
 ### Done ✅
 - [x] Repository created within competition window (first commit: `0bbe21e`)
@@ -51,7 +51,7 @@
 - [x] `infra/agentcore-config.yaml` — 11 tools wired with action classes + policy guards
 - [x] `scripts/deploy.sh` — preflight → CDK bootstrap → deploy both stacks → S3 SLA upload
 - [x] `scripts/verify_infra.sh` — post-deploy verification of all 20+ AWS resources
-- [x] `scripts/register_agentcore.py` — AgentCore Runtime + Gateway registration with dry-run
+- [x] `scripts/register_agentcore.py` — AgentCore Harness + Gateway registration with dry-run (updated to new `bedrock-agentcore-control` API; classic Bedrock Agents is in maintenance mode for new accounts since Jul 30 2026)
 - [x] `.env.example` — all 30+ environment variables documented with placeholders
 - [x] `docs/infrastructure-runbook.md` — deploy, teardown, cost estimate, troubleshooting
 - [x] `docs/iam-roles.md` — full role inventory with permissions + verification commands
@@ -59,10 +59,12 @@
 - [x] Public GitHub repository: [github.com/swa01wk/recoup](https://github.com/swa01wk/recoup) ✅
 
 ### Remaining — 3 user actions (no more code needed)
-- [ ] **Run `./scripts/deploy.sh`** → provisions all AWS resources (~8 min)
-- [ ] **Run `python scripts/register_agentcore.py`** → registers AgentCore Runtime + Gateway
-- [ ] **Run `./scripts/verify_infra.sh`** → confirms all 20+ checks pass
-- [ ] **Subscribe email to `recoup-alerts` SNS topic** (cost alarm notification)
+- [x] **Run `./scripts/deploy.sh`** → provisioned all AWS resources ✅
+- [x] **Run `python scripts/register_agentcore.py`** → AgentCore Harness + Gateway live ✅
+  - Harness: `recoup_recovery_agent-T9RRFljZUO`
+  - Gateway: `recoup-tool-gateway-tpnzqdgixc` (`https://recoup-tool-gateway-tpnzqdgixc.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp`)
+- [x] **Run `./scripts/verify_infra.sh`** → all 20+ checks pass ✅
+- [x] **Subscribe email to `recoup-alerts` SNS topic** → `swaroop.shivakumar@webknot.in` subscribed, pending confirmation ✅
 - [ ] **Verify AWS Builder ID** at [builder.aws](https://builder.aws)
 
 ---

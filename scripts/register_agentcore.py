@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-Recoup — AgentCore Runtime & Gateway Registration Script
+Recoup — AgentCore Harness & Gateway Registration Script
+
+Registers the Recoup agent using the Amazon Bedrock AgentCore APIs
+(bedrock-agentcore-control).  Classic Bedrock Agents is in maintenance
+mode for new accounts as of July 30 2026; this script targets the new
+service exclusively.
 
 Run AFTER ./scripts/deploy.sh has completed successfully.
 Requires CDK outputs at infra/cdk-outputs.json.
@@ -9,7 +14,8 @@ Usage:
     python scripts/register_agentcore.py [--dry-run] [--region us-east-1]
 
 Outputs:
-    infra/agentcore-ids.json  — runtime ID + gateway ID (add these to .env)
+    infra/agentcore-ids.json  — harness ID + harness ARN + gateway ID
+                                (add these to .env)
 """
 from __future__ import annotations
 
@@ -17,62 +23,52 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 CDK_OUTPUTS_FILE = REPO_ROOT / "infra" / "cdk-outputs.json"
 IDS_OUTPUT_FILE = REPO_ROOT / "infra" / "agentcore-ids.json"
-AGENTCORE_CONFIG_FILE = REPO_ROOT / "infra" / "agentcore-config.yaml"
 
-# ── Tool definitions (mirrors infra/agentcore-config.yaml) ──────────────────
-STUB_TOOLS = [
-    {
-        "name": "get_cloudwatch_metrics",
-        "description": "Retrieve CloudWatch metric statistics for a given namespace/metric/period.",
-        "actionType": "READ",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "namespace": {"type": "string"},
-                "metric_name": {"type": "string"},
-                "dimensions": {"type": "object"},
-                "start_time": {"type": "string", "format": "date-time"},
-                "end_time": {"type": "string", "format": "date-time"},
-                "period": {"type": "integer", "default": 300},
-                "stat": {"type": "string", "default": "Average"},
-            },
-            "required": ["namespace", "metric_name", "start_time", "end_time"],
-        },
-    },
-    {
-        "name": "get_health_event",
-        "description": "Retrieve AWS Health event details by event ARN.",
-        "actionType": "READ",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"event_arn": {"type": "string"}},
-            "required": ["event_arn"],
-        },
-    },
-    {
-        "name": "store_evidence",
-        "description": "Store sanitized evidence to S3 and record hash in DynamoDB.",
-        "actionType": "WRITE_INTERNAL",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "opportunity_id": {"type": "string"},
-                "evidence_type": {"type": "string"},
-                "content": {"type": "object"},
-                "sensitivity": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"],
-                },
-            },
-            "required": ["opportunity_id", "evidence_type", "content"],
-        },
-    },
+HARNESS_NAME = "recoup_recovery_agent"
+GATEWAY_NAME = "recoup-tool-gateway"
+
+SYSTEM_PROMPT = (
+    "You are a Recoup recovery agent. You investigate AWS SLA breaches, "
+    "collect evidence, and prepare support cases for human approval. "
+    "You NEVER make financial conclusions — all credit calculations are "
+    "performed by deterministic engines. You NEVER take destructive actions "
+    "without explicit human approval."
+)
+
+# Tool descriptions for the MCP gateway targets (registered against Lambda ARNs
+# once those are deployed in Phase 1+).  Presence here is informational for the
+# dry-run output; actual registration happens in register_gateway_targets().
+TOOL_MANIFEST = [
+    {"name": "get_cloudwatch_metrics",   "action_class": "READ"},
+    {"name": "query_cloudwatch_logs",    "action_class": "READ_SENSITIVE"},
+    {"name": "get_health_event",         "action_class": "READ"},
+    {"name": "get_cost_and_usage",       "action_class": "READ_FINANCIAL"},
+    {"name": "get_cost_anomalies",       "action_class": "READ_FINANCIAL"},
+    {"name": "list_cost_opt_recs",       "action_class": "READ_FINANCIAL"},
+    {"name": "lookup_cloudtrail_events", "action_class": "READ_SENSITIVE"},
+    {"name": "store_evidence",           "action_class": "WRITE_INTERNAL"},
+    {"name": "create_approval_request",  "action_class": "WRITE_INTERNAL"},
+    {"name": "simulate_support_case",    "action_class": "WRITE_INTERNAL"},
+    {"name": "submit_support_case",      "action_class": "WRITE_EXTERNAL_FINANCIAL"},
+    {"name": "stop_demo_instance",       "action_class": "MUTATE_RED"},
 ]
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def get_boto3_client(service: str, region: str):
+    try:
+        import boto3
+    except ImportError:
+        print("ERROR: boto3 not installed — run: pip install boto3")
+        sys.exit(1)
+    return boto3.client(service, region_name=region)
 
 
 def load_cdk_outputs(region: str) -> dict:
@@ -87,166 +83,278 @@ def load_cdk_outputs(region: str) -> dict:
     return stack
 
 
-def get_boto3_client(service: str, region: str):
-    try:
-        import boto3
-    except ImportError:
-        print("ERROR: boto3 not installed — run: pip install boto3")
-        sys.exit(1)
-    return boto3.client(service, region_name=region)
+# ── Step 1: AgentCore Harness (replaces classic create_agent) ────────────────
 
+def create_agentcore_harness(control, runtime_role_arn: str, region: str, dry_run: bool) -> tuple[str, str]:
+    """Create (or fetch existing) AgentCore Harness.
 
-def create_agentcore_runtime(client, runtime_role_arn: str, region: str, dry_run: bool) -> str:
-    """Create (or fetch existing) Bedrock Agent (AgentCore Runtime)."""
-    # Correct boto3 bedrock-agent parameter names (from botocore validation error)
-    create_params = {
-        "agentName": "recoup-recovery-agent",
-        "description": "Recoup autonomous cloud spend recovery agent",
-        "agentResourceRoleArn": runtime_role_arn,
-        "foundationModel": os.getenv(
-            "BEDROCK_MODEL_ID",
-            "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        ),
-        "instruction": (
-            "You are a Recoup recovery agent. You investigate AWS SLA breaches, "
-            "collect evidence, and prepare support cases for human approval. "
-            "You NEVER make financial conclusions — all credit calculations are "
-            "performed by deterministic engines. You NEVER take destructive actions "
-            "without explicit human approval."
-        ),
-        "idleSessionTTLInSeconds": 3600,
+    Returns (harness_id, harness_arn).
+    """
+    model_id = os.getenv(
+        "BEDROCK_MODEL_ID",
+        "us.amazon.nova-pro-v1:0",  # Nova Pro: instant access, no approval gate
+    )
+
+    create_params: dict = {
+        "harnessName": HARNESS_NAME,
+        "executionRoleArn": runtime_role_arn,
+        # Model configuration — new AgentCore harness API shape
+        "model": {
+            "bedrockModelConfig": {
+                "modelId": model_id,
+            }
+        },
+        # System prompt as a list of content blocks
+        "systemPrompt": [{"text": SYSTEM_PROMPT}],
+        # Lifecycle: 1-hour idle session timeout
+        "environment": {
+            "agentCoreRuntimeEnvironment": {
+                "lifecycleConfiguration": {
+                    "idleRuntimeSessionTimeout": 3600,
+                },
+                "networkConfiguration": {
+                    "networkMode": "PUBLIC",
+                },
+            }
+        },
     }
 
     if dry_run:
-        print("  [DRY RUN] Would create Bedrock Agent: recoup-recovery-agent")
+        print(f"  [DRY RUN] Would create AgentCore Harness: {HARNESS_NAME}")
         print(f"  Params: {json.dumps(create_params, indent=2)}")
-        return "dry-run-runtime-id"
+        return "dry-run-harness-id", "arn:dry-run:harness/dry-run-harness-id"
 
     try:
-        bedrock = get_boto3_client("bedrock-agent", region)
-        response = bedrock.create_agent(**create_params)
-        runtime_id = response["agent"]["agentId"]
-        print(f"  Created Bedrock Agent: {runtime_id}")
-
-        # Prepare the agent so it becomes invokable
-        print("  Preparing agent (building draft version)...")
-        bedrock.prepare_agent(agentId=runtime_id)
-        print("  Agent prepared")
-        return runtime_id
+        response = control.create_harness(**create_params)
+        h = response["harness"]
+        harness_id = h["harnessId"]
+        harness_arn = h["arn"]
+        print(f"  Created AgentCore Harness: {harness_id}")
+        print(f"  Harness ARN : {harness_arn}")
+        _wait_for_harness_ready(control, harness_id)
+        return harness_id, harness_arn
 
     except Exception as e:
-        if "already exists" in str(e).lower() or "ConflictException" in type(e).__name__:
-            bedrock = get_boto3_client("bedrock-agent", region)
-            agents = bedrock.list_agents()["agentSummaries"]
-            for agent in agents:
-                if agent["agentName"] == "recoup-recovery-agent":
-                    print(f"  Agent already exists: {agent['agentId']}")
-                    return agent["agentId"]
+        err_name = type(e).__name__
+        if "already exists" in str(e).lower() or "ConflictException" in err_name:
+            print(f"  Harness '{HARNESS_NAME}' already exists — fetching ID…")
+            resp = control.list_harnesses()
+            for h in resp.get("harnesses", []):
+                if h["harnessName"] == HARNESS_NAME:
+                    harness_id = h["harnessId"]
+                    harness_arn = h.get("arn", "")
+                    print(f"  Found existing harness: {harness_id}")
+                    return harness_id, harness_arn
+            print("  ERROR: Could not find existing harness in list — check AWS console")
         raise
 
 
-def register_gateway_tools(
-    client,
-    runtime_id: str,
-    gateway_role_arn: str,
-    region: str,
-    dry_run: bool,
-) -> str:
-    """Register stub tools with AgentCore Gateway (action group)."""
+def _wait_for_harness_ready(control, harness_id: str, timeout: int = 300) -> None:
+    """Poll GetHarness until status is READY (or timeout)."""
+    print("  Waiting for harness to reach READY status…", end="", flush=True)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        resp = control.get_harness(harnessId=harness_id)
+        # response is nested: resp['harness']['status']
+        harness = resp.get("harness", resp)
+        status = harness.get("status", "UNKNOWN")
+        if status == "READY":
+            print(" READY")
+            return
+        if status in ("FAILED", "CREATE_FAILED", "DELETED"):
+            print(f" {status}")
+            print(f"  ERROR: Harness entered terminal state: {status}")
+            sys.exit(1)
+        print(".", end="", flush=True)
+        time.sleep(10)
+    print(" TIMEOUT")
+    print(f"  WARNING: Harness not READY after {timeout}s — continuing anyway")
+
+
+# ── Step 2: AgentCore Gateway (replaces create_agent_action_group) ───────────
+
+def create_agentcore_gateway(control, gateway_role_arn: str, region: str, dry_run: bool) -> str:
+    """Create (or fetch existing) AgentCore Gateway.
+
+    Returns gateway_id.
+    """
+    create_params: dict = {
+        "name": GATEWAY_NAME,
+        "roleArn": gateway_role_arn,
+        "protocolType": "MCP",
+        # AWS_IAM: all calls must be SigV4-signed — fits internal agent-to-gateway use
+        "authorizerType": "AWS_IAM",
+        "description": "Recoup tool gateway — read/write AWS investigation tools",
+    }
+
     if dry_run:
-        print(f"  [DRY RUN] Would register {len(STUB_TOOLS)} tools as action group")
-        for t in STUB_TOOLS:
-            print(f"    - {t['name']} ({t['actionType']})")
+        print(f"  [DRY RUN] Would create AgentCore Gateway: {GATEWAY_NAME}")
+        print(f"  Params: {json.dumps(create_params, indent=2)}")
         return "dry-run-gateway-id"
 
     try:
-        bedrock = get_boto3_client("bedrock-agent", region)
-        response = bedrock.create_agent_action_group(
-            agentId=runtime_id,
-            agentVersion="DRAFT",
-            actionGroupName="recoup-tools",
-            description="Recoup read and write tools for AWS investigation",
-            # RETURN_CONTROL tells Bedrock to return tool calls to the caller
-            # rather than invoking a Lambda directly — correct for Strands integration
-            actionGroupExecutor={"customControl": "RETURN_CONTROL"},
-            functionSchema={
-                "functions": [
-                    {
-                        "name": t["name"],
-                        "description": t["description"],
-                        "parameters": {
-                            k: {
-                                "type": v.get("type", "string"),
-                                "description": v.get("description", k),
-                                "required": k in t["inputSchema"].get("required", []),
-                            }
-                            for k, v in t["inputSchema"]
-                            .get("properties", {})
-                            .items()
-                        },
-                    }
-                    for t in STUB_TOOLS
-                ]
-            },
-        )
-        group_id = response["agentActionGroup"]["actionGroupId"]
-        print(f"  Registered {len(STUB_TOOLS)} tools — action group: {group_id}")
-
-        # Re-prepare after adding action group
-        bedrock.prepare_agent(agentId=runtime_id)
-        print("  Agent re-prepared with tools")
-        return group_id
+        response = control.create_gateway(**create_params)
+        # response may be top-level or nested under 'gateway'
+        gw = response.get("gateway", response)
+        gateway_id = gw["gatewayId"]
+        gateway_url = gw.get("gatewayUrl", "")
+        print(f"  Created AgentCore Gateway: {gateway_id}")
+        if gateway_url:
+            print(f"  Gateway URL: {gateway_url}")
+        return gateway_id
 
     except Exception as e:
-        if "already exists" in str(e).lower():
-            print("  Action group already exists — skipping registration")
-            return "existing"
+        err_name = type(e).__name__
+        if "already exists" in str(e).lower() or "ConflictException" in err_name:
+            print(f"  Gateway '{GATEWAY_NAME}' already exists — fetching ID…")
+            resp = control.list_gateways()
+            for gw in resp.get("gateways", resp.get("gatewaySummaries", [])):
+                if gw.get("name") == GATEWAY_NAME:
+                    gw_id = gw["gatewayId"]
+                    print(f"  Found existing gateway: {gw_id}")
+                    return gw_id
         raise
 
 
-def prepare_agent(client, runtime_id: str, region: str, dry_run: bool) -> None:
-    """No-op — prepare is now called inside create and register steps."""
-    if dry_run:
-        print("  [DRY RUN] Agent prepare already handled in prior steps")
-        return
-    print("  Agent is ready to invoke")
+# ── Step 3: Optional — register Lambda targets when ARNs are available ───────
 
+def register_gateway_targets(control, gateway_id: str, outputs: dict, dry_run: bool) -> list[str]:
+    """Register Lambda-backed gateway targets for each tool group.
+
+    This step is optional for Phase 0 — Lambda ARNs are only available once
+    Phase 1–3 deploys the tool Lambdas.  Missing ARNs are skipped gracefully.
+    """
+    # Map env-var keys to logical target names (one Lambda per tool group)
+    target_groups = {
+        "RECOUP_CW_TOOL_LAMBDA_ARN":       "recoup-cloudwatch-tools",
+        "RECOUP_HEALTH_TOOL_LAMBDA_ARN":   "recoup-health-tools",
+        "RECOUP_COST_TOOL_LAMBDA_ARN":     "recoup-cost-tools",
+        "RECOUP_CLOUDTRAIL_TOOL_LAMBDA_ARN": "recoup-cloudtrail-tools",
+        "RECOUP_EVIDENCE_TOOL_LAMBDA_ARN": "recoup-evidence-tools",
+        "RECOUP_APPROVAL_TOOL_LAMBDA_ARN": "recoup-approval-tools",
+        "RECOUP_SIMULATE_TOOL_LAMBDA_ARN": "recoup-simulate-tools",
+        "RECOUP_SUPPORT_TOOL_LAMBDA_ARN":  "recoup-support-tools",
+        "RECOUP_EC2_DEMO_TOOL_LAMBDA_ARN": "recoup-ec2-demo-tools",
+    }
+
+    registered: list[str] = []
+    skipped: list[str] = []
+
+    for env_key, target_name in target_groups.items():
+        # Check CDK outputs first, fall back to env var
+        lambda_arn = outputs.get(env_key.replace("RECOUP_", "").replace("_ARN", "Arn"), "") or os.getenv(env_key, "")
+        if not lambda_arn:
+            skipped.append(target_name)
+            continue
+
+        if dry_run:
+            print(f"  [DRY RUN] Would register target: {target_name} → {lambda_arn}")
+            registered.append(f"dry-run-{target_name}")
+            continue
+
+        try:
+            response = control.create_gateway_target(
+                gatewayIdentifier=gateway_id,
+                name=target_name,
+                description=f"Recoup tool Lambda: {target_name}",
+                targetConfiguration={
+                    "lambda": {
+                        "lambdaArn": lambda_arn,
+                        "toolSchema": {
+                            "inlinePayload": [
+                                {
+                                    "name": target_name.replace("recoup-", "").replace("-tools", "").replace("-", "_"),
+                                    "description": f"Tool group: {target_name}",
+                                    "inputSchema": {"json": {"type": "object", "properties": {}}},
+                                }
+                            ]
+                        },
+                    }
+                },
+                credentialProviderConfigurations=[
+                    {"credentialProviderType": "GATEWAY_IAM_ROLE"}
+                ],
+            )
+            target_id = response["gatewayTargetId"]
+            print(f"  Registered target: {target_name} → {target_id}")
+            registered.append(target_id)
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print(f"  Target '{target_name}' already registered — skipping")
+                registered.append("existing")
+            else:
+                print(f"  WARNING: Could not register target '{target_name}': {e}")
+
+    if skipped:
+        print(f"\n  ⚠  Skipped {len(skipped)} targets (Lambda ARNs not yet available):")
+        for t in skipped:
+            print(f"     • {t}")
+        print("  Re-run this script after Phase 1–3 Lambdas are deployed.")
+
+    return registered
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Register Recoup AgentCore Runtime + Gateway")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would happen, don't call AWS")
-    parser.add_argument("--region", default=os.getenv("CDK_DEFAULT_REGION", "us-east-1"))
+    parser = argparse.ArgumentParser(
+        description="Register Recoup AgentCore Harness + Gateway (new bedrock-agentcore-control API)"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Print what would happen without calling AWS",
+    )
+    parser.add_argument(
+        "--region", default=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
+    )
+    parser.add_argument(
+        "--skip-targets", action="store_true",
+        help="Skip gateway target registration (useful for Phase 0 before Lambdas exist)",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
     print("  Recoup — AgentCore Registration")
-    print(f"  Region : {args.region}")
-    print(f"  Dry run: {args.dry_run}")
+    print(f"  Service : bedrock-agentcore-control (new API)")
+    print(f"  Region  : {args.region}")
+    print(f"  Dry run : {args.dry_run}")
     print("=" * 60)
 
-    # Load CDK outputs
     outputs = load_cdk_outputs(args.region)
-    runtime_role_arn = outputs.get("RuntimeRoleArn", os.getenv("RECOUP_RUNTIME_ROLE_ARN", ""))
-    gateway_role_arn = outputs.get("GatewayExecutionRoleArn", os.getenv("RECOUP_GATEWAY_EXECUTION_ROLE_ARN", ""))
+    runtime_role_arn = outputs.get("RuntimeRoleArn") or os.getenv("RECOUP_RUNTIME_ROLE_ARN", "")
+    gateway_role_arn = outputs.get("GatewayExecutionRoleArn") or os.getenv("RECOUP_GATEWAY_EXECUTION_ROLE_ARN", "")
 
     if not runtime_role_arn:
         print("ERROR: RuntimeRoleArn not found — deploy CDK stack first")
         sys.exit(1)
+    if not gateway_role_arn:
+        print("ERROR: GatewayExecutionRoleArn not found — deploy CDK stack first")
+        sys.exit(1)
 
-    print(f"\n[1/3] Creating AgentCore Runtime...")
-    client = None if args.dry_run else get_boto3_client("bedrock-agent", args.region)
-    runtime_id = create_agentcore_runtime(client, runtime_role_arn, args.region, args.dry_run)
+    control = None if args.dry_run else get_boto3_client("bedrock-agentcore-control", args.region)
 
-    print(f"\n[2/3] Registering Gateway tools...")
-    gateway_id = register_gateway_tools(client, runtime_id, gateway_role_arn, args.region, args.dry_run)
+    # ── 1. Harness ────────────────────────────────────────────────────────────
+    print("\n[1/3] Creating AgentCore Harness…")
+    harness_id, harness_arn = create_agentcore_harness(control, runtime_role_arn, args.region, args.dry_run)
 
-    print(f"\n[3/3] Preparing agent...")
-    prepare_agent(client, runtime_id, args.region, args.dry_run)
+    # ── 2. Gateway ────────────────────────────────────────────────────────────
+    print("\n[2/3] Creating AgentCore Gateway…")
+    gateway_id = create_agentcore_gateway(control, gateway_role_arn, args.region, args.dry_run)
 
-    # Write IDs to file
+    # ── 3. Gateway targets (optional) ─────────────────────────────────────────
+    target_ids: list[str] = []
+    if not args.skip_targets:
+        print("\n[3/3] Registering Gateway targets (Lambda ARNs)…")
+        target_ids = register_gateway_targets(control, gateway_id, outputs, args.dry_run)
+    else:
+        print("\n[3/3] Skipping gateway target registration (--skip-targets set)")
+
+    # ── Persist IDs ───────────────────────────────────────────────────────────
     ids = {
-        "runtime_id": runtime_id,
+        "harness_id": harness_id,
+        "harness_arn": harness_arn,
         "gateway_id": gateway_id,
+        "gateway_target_ids": target_ids,
         "region": args.region,
     }
     if not args.dry_run:
@@ -255,7 +363,8 @@ def main() -> None:
 
     print("\n" + "=" * 60)
     print("  Registration complete")
-    print(f"  RECOUP_AGENTCORE_RUNTIME_ID={runtime_id}")
+    print(f"  RECOUP_AGENTCORE_HARNESS_ID={harness_id}")
+    print(f"  RECOUP_AGENTCORE_HARNESS_ARN={harness_arn}")
     print(f"  RECOUP_AGENTCORE_GATEWAY_ID={gateway_id}")
     print("\n  Add these to your .env file.")
     print("=" * 60)

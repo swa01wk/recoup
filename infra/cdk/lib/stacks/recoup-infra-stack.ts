@@ -184,11 +184,20 @@ export class RecoupInfraStack extends cdk.Stack {
     });
 
     // ── IAM Roles ─────────────────────────────────────────────────────────────
-    // RecoupRuntimeRole — used by Bedrock AgentCore Runtime
+    // RecoupRuntimeRole — used by Amazon Bedrock AgentCore Harness/Runtime
+    // Trust principal is bedrock-agentcore.amazonaws.com (new service) with
+    // confused-deputy conditions to prevent cross-account abuse.
     this.runtimeRole = new iam.Role(this, "RecoupRuntimeRole", {
       roleName: "RecoupRuntimeRole",
-      assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
-      description: "Bedrock AgentCore Runtime: invokes Bedrock, reads/writes Recoup DynamoDB/S3",
+      assumedBy: new iam.ServicePrincipal("bedrock-agentcore.amazonaws.com", {
+        conditions: {
+          StringEquals: { "aws:SourceAccount": this.account },
+          ArnLike: {
+            "aws:SourceArn": `arn:aws:bedrock-agentcore:${this.region}:${this.account}:*`,
+          },
+        },
+      }),
+      description: "AgentCore Harness/Runtime: invokes Bedrock, reads/writes Recoup DynamoDB/S3",
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonBedrockFullAccess"),
       ],
@@ -206,7 +215,14 @@ export class RecoupInfraStack extends cdk.Stack {
     // RecoupGatewayExecutionRole — used by AgentCore Gateway to invoke Lambda tools
     this.gatewayExecutionRole = new iam.Role(this, "RecoupGatewayExecutionRole", {
       roleName: "RecoupGatewayExecutionRole",
-      assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
+      assumedBy: new iam.ServicePrincipal("bedrock-agentcore.amazonaws.com", {
+        conditions: {
+          StringEquals: { "aws:SourceAccount": this.account },
+          ArnLike: {
+            "aws:SourceArn": `arn:aws:bedrock-agentcore:${this.region}:${this.account}:*`,
+          },
+        },
+      }),
       description: "AgentCore Gateway: invokes Lambda tool targets, emits logs/traces",
     });
     this.gatewayExecutionRole.addToPolicy(

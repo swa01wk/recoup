@@ -56,6 +56,11 @@ infra/cdk/node_modules/
 secrets.yaml
 .secrets/
 
+# CDK deployment outputs (contain real AWS account IDs + ARNs)
+infra/cdk-outputs.json
+infra/cdk-outputs-demo.json
+infra/agentcore-ids.json
+
 # Pyenv
 .python-version
 
