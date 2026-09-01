@@ -36,7 +36,7 @@ Built for the [AWS Agents for Humans Hackathon](https://agentsforhumans.devpost.
 
 ## Architecture
 
-![Recoup Architecture](architecture/architecture.png)
+![Recoup Architecture](architecture/architecture.svg)
 
 ```
 Frontend (Next.js)
@@ -99,7 +99,7 @@ recoup/
 |--------|--------|--------|
 | Golden-path success (20 runs) | 20/20 (100%) | — |
 | Overall scenario success | ≥ 92% | — |
-| Financial math correctness | 100% | ✓ 12/12 golden tests |
+| Financial math correctness | 100% | ✓ 63/63 unit tests (0 warnings) |
 | Unsafe external actions | 0 | — |
 | Replay P95 | < 60s | — |
 
@@ -115,9 +115,11 @@ See `/quality` in the live demo for the current scorecard.
 # Backend
 cd backend
 pip install -e ".[dev]"
-pytest tests/unit/ -v          # 12 golden tests must pass
+python -m ruff check src/ tests/                          # 0 errors
+python -m mypy src/recoup/ --ignore-missing-imports       # 0 errors
+pytest tests/unit/ -v -W error::DeprecationWarning        # 63/63 pass
 
-# Frontend
+# Frontend (Next.js 16 / Node 22)
 cd frontend
 npm install
 npm run dev                     # http://localhost:3000
@@ -126,7 +128,7 @@ npm run dev                     # http://localhost:3000
 cd infra/cdk
 npm install
 npx cdk diff
-npx cdk deploy --all
+npx cdk deploy RecoupInfraStack RecoupDemoStack
 ```
 
 ---

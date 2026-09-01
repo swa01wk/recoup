@@ -1,7 +1,7 @@
 # Recoup — Project Status
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 1, 2026 — 7:09 PM IST  
+**Last Updated:** Sep 1, 2026 — 8:24 PM IST  
 **Days Remaining:** 13
 
 ---
@@ -40,6 +40,7 @@
 - [x] SLA catalog: `sla_catalog/api_gateway/2022-05-05.yaml`
 - [x] CI workflow (4 jobs): backend lint+tests, frontend build, CDK synth, ship-gates
   - Hardened with `-W error::DeprecationWarning` — zero warnings tolerated
+  - **All 4 jobs green** — ruff (0 errors), mypy strict (0 errors), 63/63 tests, CDK synth clean (fixed Sep 1)
 - [x] Calculator engine + golden unit tests (63/63 passing, 0 warnings)
 - [x] SLA resolver engine with `_SERVICE_DIR_ALIASES` normalization
 - [x] Python project: `pyproject.toml`, `.python-version`
@@ -101,6 +102,9 @@
 | Hooks fire on stub node calls | ✅ |
 | 63/63 tests pass; no LLM/AWS calls | ✅ |
 | `-W error::DeprecationWarning` clean | ✅ |
+| `ruff check` — 0 errors | ✅ |
+| `mypy --strict` — 0 errors | ✅ |
+| CI all 4 jobs green | ✅ |
 
 ---
 
@@ -236,7 +240,7 @@ recoup/
 
 | Day | Action |
 |-----|--------|
-| **Sep 1 (today)** | `./scripts/deploy.sh` · `python scripts/register_agentcore.py` · `./scripts/verify_infra.sh` |
+| **Sep 1 ✅** | `./scripts/deploy.sh` · `python scripts/register_agentcore.py` · `./scripts/verify_infra.sh` · CI fixed (ruff + mypy + tests all green) |
 | **Sep 2–3** | Phase 2: replay engine → $1,840 deterministic end-to-end |
 | **Sep 4–6** | Phase 3: evidence, redaction, Cedar policy, HITL approval flow |
 | **Sep 5–7** | Phase 4: frontend views (overlaps Phase 3) |
