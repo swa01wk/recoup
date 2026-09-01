@@ -1,5 +1,7 @@
 # Recoup — AWS Autonomous Cloud Spend Recovery Agent
 
+[![CI](https://github.com/swa01wk/recoup/actions/workflows/ci.yml/badge.svg)](https://github.com/swa01wk/recoup/actions/workflows/ci.yml)
+
 > **Every cloud dollar accounted for — humans only make the decisions that require humans.**
 
 Recoup is a background [Strands Agents](https://strandsagents.com) graph that finds recoverable or preventable AWS spend, investigates the cause, assembles evidence, and safely handles the operational work. It involves humans only at real policy boundaries.

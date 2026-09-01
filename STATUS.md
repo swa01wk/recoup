@@ -1,19 +1,8 @@
 # Recoup — Project Status
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 1, 2026 — 3:59 PM IST  
+**Last Updated:** Sep 1, 2026 — 4:08 PM IST  
 **Days Remaining:** 13
-
----
-
-## ⚠️ Next Action — Commit & Push
-All Phase 0 enhancements and the entire Phase 1 codebase exist locally but are **not yet committed**.  
-Run before doing anything else:
-```bash
-git add -A
-git commit -m "feat: Phase 0 enhancements + Phase 1 complete — 63 tests passing"
-git push origin main
-```
 
 ---
 
@@ -21,7 +10,7 @@ git push origin main
 
 | Phase | Name | Target | Status | Progress |
 |-------|------|--------|--------|----------|
-| 0 | Foundation & Infrastructure | Sep 3 | 🟡 Code done, deploy pending | ~85% |
+| 0 | Foundation & Infrastructure | Sep 3 | 🟡 Code ✅ — AWS deploy pending | ~95% |
 | 1 | Core Agent Graph & Data Contracts | Sep 6 | ✅ Complete | 100% |
 | 2 | Verified Replay & SLA Recovery Engine | Sep 9 | 🔴 Not Started | 0% |
 | 3 | Evidence System, Safety Layer & HITL | Sep 10 | 🔴 Not Started | 0% |
@@ -33,37 +22,48 @@ git push origin main
 ---
 
 ## Phase 0 — Foundation & Infrastructure
-**Target:** Sep 3, 2026 | **Status:** 🟡 Code complete — AWS deploy pending
+**Target:** Sep 3, 2026 | **Status:** 🟡 All code complete — AWS deploy is the only remaining step
 
-### Done (local, uncommitted)
+### Done ✅
 - [x] Repository created within competition window (first commit: `0bbe21e`)
-- [x] Directory scaffold: `backend/`, `frontend/`, `infra/`, `plans/`, `sla_catalog/`, `eval_fixtures/`, `scripts/`
-- [x] 9 domain models committed (`approval`, `audit`, `availability`, `claim`, `eligibility`, `evidence`, `opportunity`, `signal`, `sla`)
-- [x] CDK stacks TypeScript-clean: `recoup-infra-stack.ts`, `recoup-demo-stack.ts`
-- [x] CloudWatch log groups in CDK: `/recoup/runtime`, `/recoup/gateway`, `/recoup/api`
-- [x] IAM roles in CDK: `RecoupRuntimeRole`, `RecoupGatewayExecutionRole`, `RecoupReadConnectorRole`
+- [x] Directory scaffold: `backend/`, `frontend/`, `infra/`, `plans/`, `sla_catalog/`, `eval_fixtures/`, `scripts/`, `docs/`, `architecture/`
+- [x] 9 domain models typed + validated (Pydantic v2, zero deprecation warnings)
+- [x] CDK stacks TypeScript-clean: `RecoupInfraStack` + `RecoupDemoStack`
+  - DynamoDB: 4 tables with GSIs, TTL, PITR, KMS encryption
+  - S3: 3 buckets (evidence/KMS, sla-catalog/SSE, eval-fixtures/SSE) versioned + lifecycle
+  - SQS: `recoup-recovery-events` + DLQ
+  - EventBridge: `RecoupHealthEventRule` → SQS
+  - KMS: `alias/recoup-evidence` CMK with key rotation
+  - CloudWatch: log groups `/recoup/runtime`, `/recoup/gateway`, `/recoup/api` + `$10` spend alarm
+  - IAM: `RecoupRuntimeRole`, `RecoupGatewayExecutionRole`, `RecoupReadConnectorRole`
+  - EC2: `t3.micro` demo instance with `RecoupDemo=true` tag
 - [x] SLA catalog: `sla_catalog/api_gateway/2022-05-05.yaml`
-- [x] CI workflow: `.github/workflows/ci.yml`
-- [x] Calculator engine (`engines/calculator.py`) + golden unit tests
-- [x] SLA resolver engine (`engines/sla_resolver.py`)
+- [x] CI workflow (4 jobs): backend lint+tests, frontend build, CDK synth, ship-gates
+  - Hardened with `-W error::DeprecationWarning` — zero warnings tolerated
+- [x] Calculator engine + golden unit tests (63/63 passing, 0 warnings)
+- [x] SLA resolver engine with `_SERVICE_DIR_ALIASES` normalization
 - [x] Python project: `pyproject.toml`, `.python-version`
-- [x] Next.js frontend initialized (`frontend/`)
+- [x] Next.js 14 frontend initialized (`frontend/`)
 - [x] `LICENSE` (MIT) at repo root
-- [x] `README.md` (140 lines — stub; full docs in Phase 7)
-- [x] `DISCLOSURE.md` at `docs/DISCLOSURE.md`
-- [x] Architecture diagram: `architecture/architecture.svg` (full Strands graph SVG)
-- [x] AgentCore config: `infra/agentcore-config.yaml` (11 tools, action classes, policy guards)
-- [x] Deploy script: `scripts/deploy.sh` (preflight → CDK bootstrap → deploy → S3 sync)
-- [x] `@types/node` + `@types/source-map-support` installed; `tsconfig.json` updated
+- [x] `README.md` with CI badge, project description, quick-start
+- [x] `docs/DISCLOSURE.md` — competition disclosure
+- [x] `architecture/architecture.svg` — full Strands graph SVG diagram
+- [x] `infra/agentcore-config.yaml` — 11 tools wired with action classes + policy guards
+- [x] `scripts/deploy.sh` — preflight → CDK bootstrap → deploy both stacks → S3 SLA upload
+- [x] `scripts/verify_infra.sh` — post-deploy verification of all 20+ AWS resources
+- [x] `scripts/register_agentcore.py` — AgentCore Runtime + Gateway registration with dry-run
+- [x] `.env.example` — all 30+ environment variables documented with placeholders
+- [x] `docs/infrastructure-runbook.md` — deploy, teardown, cost estimate, troubleshooting
+- [x] `docs/iam-roles.md` — full role inventory with permissions + verification commands
+- [x] `docs/ci-guide.md` — CI jobs, how to add tests, badge, troubleshooting
+- [x] Public GitHub repository: [github.com/swa01wk/recoup](https://github.com/swa01wk/recoup) ✅
 
-### Remaining — AWS deploy (needs credentials)
-- [ ] Run `./scripts/deploy.sh` → CDK deploy to sandbox account
-- [ ] Verify DynamoDB tables, S3 buckets, SQS queue, EventBridge rule exist in console
-- [ ] AgentCore Runtime instance reachable (register via `infra/agentcore-config.yaml`)
-- [ ] AgentCore Gateway: at least one stub tool registered and logged to CloudWatch
-- [ ] Cost alarm confirmed in OK state ($10 threshold)
-- [ ] Confirm GitHub repository is **public**
-- [ ] AWS Builder ID verified at [builder.aws](https://builder.aws)
+### Remaining — 3 user actions (no more code needed)
+- [ ] **Run `./scripts/deploy.sh`** → provisions all AWS resources (~8 min)
+- [ ] **Run `python scripts/register_agentcore.py`** → registers AgentCore Runtime + Gateway
+- [ ] **Run `./scripts/verify_infra.sh`** → confirms all 20+ checks pass
+- [ ] **Subscribe email to `recoup-alerts` SNS topic** (cost alarm notification)
+- [ ] **Verify AWS Builder ID** at [builder.aws](https://builder.aws)
 
 ---
 
@@ -71,36 +71,33 @@ git push origin main
 **Target:** Sep 6, 2026 | **Status:** ✅ Complete (63/63 tests, 0 warnings)
 
 ### Done
-- [x] All 9 domain models — typed, validated, Pydantic v2
+- [x] All 9 domain models — Pydantic v2, zero deprecation warnings
 - [x] SLA catalog with `source_hash` + `_SERVICE_DIR_ALIASES` normalization
 - [x] **`graph/types.py`** — `Graph`, `DeterministicNode`, `AgentNode`, `GraphState`, `PolicyDecision`, `IncidentHypothesis`, `CaseOutcome`, `NodeContext`, `ToolContext`, `ErrorDisposition`, `Edge`, `ConditionalEdge`
 - [x] **`graph/nodes.py`** — All 11 stub node implementations; deterministic, no LLM required
-- [x] **`graph/recoup_graph.py`** — Full graph wired; conditional edge at `risk_policy_gate`; `build_recoup_graph()` validated at import time
-- [x] **`graph/state_machine.py`** — DynamoDB atomic transitions with optimistic locking; in-memory fallback for unit tests
-- [x] **`hooks/tracing.py`** — `RecoupTracingHooks`: BeforeNodeCall, AfterNodeCall, BeforeToolCall, AfterToolCall, OnError, RedactionHook; tool allowlist enforced
-- [x] **`tools/aws_tools.py`** — 8 AWS read tools (CloudWatch, Health, Cost Explorer, CloudTrail, Support)
-- [x] **`tools/internal_tools.py`** — 3 internal tools (`store_evidence`, `create_approval_request`, `simulate_support_case`)
+- [x] **`graph/recoup_graph.py`** — Full graph wired; conditional edge at `risk_policy_gate`; validated at import
+- [x] **`graph/state_machine.py`** — DynamoDB atomic transitions; optimistic locking; in-memory fallback
+- [x] **`hooks/tracing.py`** — `RecoupTracingHooks`: 6 hook types; tool allowlist enforced
+- [x] **`tools/aws_tools.py`** — 8 AWS read tools (CloudWatch, Health, Cost, CloudTrail, Support)
+- [x] **`tools/internal_tools.py`** — 3 internal tools (store_evidence, create_approval_request, simulate_support_case)
 - [x] **`tools/ec2_tools.py`** — `stop_demo_instance` with allowlist guard (Phase 6 ready)
 - [x] **`tools/registry.py`** — `TOOL_REGISTRY`: 14 tools, action classes, Lambda targets, allowed nodes
 - [x] **`adapters/replay.py`** — `ReplayAdapter` + `CANONICAL_SCENARIO` ($1,840 golden scenario)
 - [x] **`adapters/agentcore.py`** — `AgentCoreAdapter` with `register_all_tools()`
 - [x] **`api/main.py`** — FastAPI + CORS + `/health` + `/api/config`
-- [x] **`api/routes/opportunities.py`** — list, get, run, trace endpoints
-- [x] **`api/routes/approvals.py`** — list pending, approve, decline endpoints
-- [x] **`api/routes/replay.py`** — `POST /api/replay/run`, `GET /api/replay/scenarios`
-- [x] **63 unit tests pass** — models, graph structure, graph end-to-end, state machine, SLA catalog
-- [x] **Zero `DeprecationWarning`s** — `datetime.utcnow()` replaced with `datetime.now(timezone.utc)` everywhere
+- [x] **`api/routes/`** — opportunities, approvals, replay endpoints
+- [x] **63 unit tests pass** — 0 warnings, no LLM calls, no AWS calls
 
-### Definition of Done — All checks green
+### Definition of Done
 | Check | Result |
 |-------|--------|
 | Domain models import + validate | ✅ |
 | Graph instantiates; all edges resolve | ✅ |
 | State machine DynamoDB optimistic locking | ✅ |
 | SLA catalog loads; source_hash CI test passes | ✅ |
-| 14 tools registered with action classes | ✅ |
+| 14 tools in TOOL_REGISTRY with action classes | ✅ |
 | Hooks fire on stub node calls | ✅ |
-| 63/63 unit tests pass; no LLM calls | ✅ |
+| 63/63 tests pass; no LLM/AWS calls | ✅ |
 | `-W error::DeprecationWarning` clean | ✅ |
 
 ---
@@ -109,15 +106,15 @@ git push origin main
 **Target:** Sep 9, 2026 | **Status:** 🔴 Not Started
 
 ### Remaining
-- [ ] Canonical replay seed artifacts committed to `eval_fixtures/` (immutable event JSON, metric series, billing snapshot)
-- [ ] `normalize_event` node parses both replay and live schema
+- [ ] Canonical replay seed artifacts in `eval_fixtures/` (event JSON, metric series, billing snapshot)
+- [ ] `normalize_event` node parses both replay and live event schema
 - [ ] `incident_correlation` agent correlates synthetic API Gateway SLA incident
-- [ ] `sla_contract_resolver` loads correct `2022-05-05` contract by incident date
-- [ ] `availability_calculator` produces $1,840 claim value (deterministic)
+- [ ] `sla_contract_resolver` loads `2022-05-05` contract by incident date
+- [ ] `availability_calculator` produces $1,840 deterministically
 - [ ] `eligibility_checker` passes all canonical criteria
 - [ ] `claim_packager` produces complete `ClaimPackage`
-- [ ] Full replay run: reproducible $1,840 result in ≤ 60 s wall time
-- [ ] `scripts/replay_run.py` seeds + executes replay headlessly
+- [ ] Full end-to-end: reproducible $1,840 in ≤ 60 s
+- [ ] `scripts/replay_run.py` — headless replay execution script
 
 ---
 
@@ -126,13 +123,13 @@ git push origin main
 
 ### Remaining
 - [ ] `evidence/` module: collector, sanitizer, manifest builder
-- [ ] Evidence stored to S3 with SHA-256 hash
-- [ ] Deterministic redaction — fails closed on high-risk patterns; raw evidence never in LLM context
+- [ ] Evidence stored to S3 with SHA-256 hash; raw evidence never in LLM context
+- [ ] Deterministic redaction — fails closed on high-risk patterns
 - [ ] `safety/` module: Cedar policy rules, autonomy class enforcement
 - [ ] AgentCore Policy authorization on all mutating tools
 - [ ] `approval/` module: HITL flow (request → token → decision)
 - [ ] DynamoDB-backed approval record with TTL
-- [ ] All `class_c_action` tools require explicit approval before execution
+- [ ] All `class_c_action` tools require explicit approval
 
 ---
 
@@ -140,20 +137,15 @@ git push origin main
 **Target:** Sep 11, 2026 | **Status:** 🟡 Scaffolded (~5%)
 
 ### Done
-- [x] Next.js 14 + TypeScript initialized (`frontend/`)
+- [x] Next.js 14 + TypeScript initialized
 - [x] `layout.tsx` and root `page.tsx` stub
 
 ### Remaining
-- [ ] Tailwind CSS + shadcn/ui installed and configured
-- [ ] Command Center dashboard (opportunity list, recovered value, system status)
-- [ ] Opportunity Detail view (status timeline, financial summary, confidence)
-- [ ] Evidence Room view (checklist, sanitized preview, redaction count, hashes)
-- [ ] Decision Inbox view (pending approvals with approve/reject)
-- [ ] Agent Trace view (Strands graph visualization, per-node logs)
-- [ ] Evaluation / Quality view (scorecard, pass/fail table)
-- [ ] SIMULATION / LIVE AWS ACTION badges visible on all demo paths
-- [ ] Backend API integration (polling or WebSocket for live trace)
-- [ ] Correct empty / loading / error states on all views
+- [ ] Tailwind CSS + shadcn/ui
+- [ ] Command Center dashboard
+- [ ] Opportunity Detail, Evidence Room, Decision Inbox, Agent Trace, Eval views
+- [ ] SIMULATION / LIVE AWS ACTION badges on all demo paths
+- [ ] Backend API integration (polling or WebSocket)
 
 ---
 
@@ -164,14 +156,10 @@ git push origin main
 - [x] `test_calculator.py` — golden calculator unit tests (part of 63-test suite)
 
 ### Remaining
-- [ ] ≥ 40 eval scenarios across 8 categories (golden-path, edge, adversarial, safety, HITL, evidence, SLA boundary, tool-failure)
-- [ ] Evaluation runner script + scorecard JSON output
-- [ ] 100% golden-path success rate across 20 consecutive replay runs
-- [ ] ≥ 92% overall scenario success rate
-- [ ] ≥ 98% evidence recall rate
-- [ ] Zero unsafe action tolerance (all `class_c_action` tests reject without approval)
-- [ ] Scorecard visible in frontend Evaluation view
-- [ ] `eval_fixtures/` populated with scenario JSON files
+- [ ] ≥ 40 eval scenarios (golden-path, edge, adversarial, safety, HITL, evidence, SLA boundary, tool-failure)
+- [ ] Eval runner + scorecard JSON
+- [ ] 100% golden-path across 20 consecutive runs
+- [ ] ≥ 92% overall, ≥ 98% evidence recall, 0 unsafe actions
 
 ---
 
@@ -179,13 +167,11 @@ git push origin main
 **Target:** Sep 12, 2026 | **Status:** 🔴 Not Started
 
 ### Remaining
-- [ ] EC2 instance (`RecoupDemo=true` tag) deployed via `RecoupDemoStack`
+- [ ] `RecoupDemoStack` EC2 deployed → instance ID in `RECOUP_DEMO_INSTANCE_ALLOWLIST`
 - [ ] `stop_demo_instance` registered in AgentCore Gateway with Cedar policy guard
-- [ ] CloudWatch utilization check before recommending stop
-- [ ] CloudTrail lookup to confirm no blocking ownership
-- [ ] HITL approval required before stop executes
+- [ ] CloudWatch + CloudTrail checks before and after stop
+- [ ] HITL approval required; **LIVE AWS ACTION** badge in Decision Inbox
 - [ ] CloudTrail confirms actual `StopInstances` API call in evidence
-- [ ] Live path visible in frontend Decision Inbox with **LIVE AWS ACTION** badge
 
 ---
 
@@ -193,15 +179,15 @@ git push origin main
 **Target:** Sep 14, 2026 | **Status:** 🔴 Not Started
 
 ### Done
-- [x] Architecture diagram: `architecture/architecture.svg`
+- [x] `architecture/architecture.svg` — Strands graph diagram committed
 
 ### Remaining
-- [ ] README fully expanded (problem, demo GIF, architecture, full setup instructions)
-- [ ] Video ≤ 5:00, public on YouTube/Vimeo (problem / audience / why / demo)
+- [ ] README fully expanded (demo GIF, full setup instructions, architecture section)
+- [ ] Video ≤ 5:00, public on YouTube/Vimeo
 - [ ] Live URL accessible in incognito; replay works without AWS credentials
-- [ ] Three builder.aws posts published (+0.6 bonus points)
+- [ ] Three builder.aws posts (+0.6 bonus points)
 - [ ] Devpost submission form completed
-- [ ] Final review against judging rubric
+- [ ] Final rubric check
 
 ---
 
@@ -229,10 +215,16 @@ recoup/
 ├── architecture/
 │   └── architecture.svg     ✅ full Strands graph SVG
 ├── scripts/
-│   └── deploy.sh            ✅ full deploy sequence
+│   ├── deploy.sh            ✅ preflight → CDK bootstrap → deploy → S3 sync
+│   ├── verify_infra.sh      ✅ post-deploy resource verification (20+ checks)
+│   └── register_agentcore.py ✅ AgentCore Runtime + Gateway registration
+├── docs/
+│   ├── DISCLOSURE.md        ✅
+│   ├── infrastructure-runbook.md ✅ deploy, teardown, cost, troubleshooting
+│   ├── iam-roles.md         ✅ all roles, permissions, verification commands
+│   └── ci-guide.md          ✅ CI jobs, adding tests, troubleshooting
+├── .env.example             ✅ all 30+ env vars documented
 ├── sla_catalog/api_gateway/ ✅ 2022-05-05.yaml
-├── docs/DISCLOSURE.md       ✅
-├── eval_fixtures/           ❌ empty — Phase 5
 └── plans/                   ✅ all 8 phase plans
 ```
 
@@ -242,12 +234,12 @@ recoup/
 
 | Day | Action |
 |-----|--------|
-| **Sep 1 (today)** | `git push` all local work · `./scripts/deploy.sh` · verify AWS resources |
+| **Sep 1 (today)** | `./scripts/deploy.sh` · `python scripts/register_agentcore.py` · `./scripts/verify_infra.sh` |
 | **Sep 2–3** | Phase 2: replay engine → $1,840 deterministic end-to-end |
 | **Sep 4–6** | Phase 3: evidence, redaction, Cedar policy, HITL approval flow |
 | **Sep 5–7** | Phase 4: frontend views (overlaps Phase 3) |
 | **Sep 7–9** | Phase 5: eval suite (40 scenarios, scorecard) + Phase 6: live EC2 demo |
-| **Sep 10–12** | Phase 7: README expansion, video recording |
+| **Sep 10–12** | Phase 7: README, video recording |
 | **Sep 13–14** | Devpost submit · builder.aws posts · final rubric check |
 
 ---
