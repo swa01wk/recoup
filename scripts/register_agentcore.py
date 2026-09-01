@@ -97,43 +97,41 @@ def get_boto3_client(service: str, region: str):
 
 
 def create_agentcore_runtime(client, runtime_role_arn: str, region: str, dry_run: bool) -> str:
-    """Create (or fetch existing) Bedrock AgentCore Runtime."""
-    runtime_config = {
-        "name": "recoup-recovery-agent",
+    """Create (or fetch existing) Bedrock Agent (AgentCore Runtime)."""
+    # Correct boto3 bedrock-agent parameter names (from botocore validation error)
+    create_params = {
+        "agentName": "recoup-recovery-agent",
         "description": "Recoup autonomous cloud spend recovery agent",
-        "roleArn": runtime_role_arn,
+        "agentResourceRoleArn": runtime_role_arn,
         "foundationModel": os.getenv(
             "BEDROCK_MODEL_ID",
             "anthropic.claude-3-5-sonnet-20241022-v2:0",
         ),
-        "agentConfiguration": {
-            "instruction": (
-                "You are a Recoup recovery agent. You investigate AWS SLA breaches, "
-                "collect evidence, and prepare support cases for human approval. "
-                "You NEVER make financial conclusions — all credit calculations are "
-                "performed by deterministic engines. You NEVER take destructive actions "
-                "without explicit human approval."
-            ),
-            "idleSessionTTLInSeconds": 3600,
-        },
+        "instruction": (
+            "You are a Recoup recovery agent. You investigate AWS SLA breaches, "
+            "collect evidence, and prepare support cases for human approval. "
+            "You NEVER make financial conclusions — all credit calculations are "
+            "performed by deterministic engines. You NEVER take destructive actions "
+            "without explicit human approval."
+        ),
+        "idleSessionTTLInSeconds": 3600,
     }
 
     if dry_run:
-        print(f"  [DRY RUN] Would create AgentCore Runtime: recoup-recovery-agent")
-        print(f"  Config: {json.dumps(runtime_config, indent=2)}")
+        print("  [DRY RUN] Would create Bedrock Agent: recoup-recovery-agent")
+        print(f"  Params: {json.dumps(create_params, indent=2)}")
         return "dry-run-runtime-id"
 
     try:
         bedrock = get_boto3_client("bedrock-agent", region)
-        response = bedrock.create_agent(**runtime_config)
+        response = bedrock.create_agent(**create_params)
         runtime_id = response["agent"]["agentId"]
-        print(f"  Created AgentCore Runtime: {runtime_id}")
+        print(f"  Created Bedrock Agent: {runtime_id}")
 
-        # Wait for runtime to be ready
-        print("  Waiting for runtime to become ready...")
-        waiter = bedrock.get_waiter("agent_available")
-        waiter.wait(agentId=runtime_id)
-        print("  Runtime ready")
+        # Prepare the agent so it becomes invokable
+        print("  Preparing agent (building draft version)...")
+        bedrock.prepare_agent(agentId=runtime_id)
+        print("  Agent prepared")
         return runtime_id
 
     except Exception as e:
@@ -142,7 +140,7 @@ def create_agentcore_runtime(client, runtime_role_arn: str, region: str, dry_run
             agents = bedrock.list_agents()["agentSummaries"]
             for agent in agents:
                 if agent["agentName"] == "recoup-recovery-agent":
-                    print(f"  Runtime already exists: {agent['agentId']}")
+                    print(f"  Agent already exists: {agent['agentId']}")
                     return agent["agentId"]
         raise
 
@@ -168,7 +166,9 @@ def register_gateway_tools(
             agentVersion="DRAFT",
             actionGroupName="recoup-tools",
             description="Recoup read and write tools for AWS investigation",
-            actionGroupExecutor={"lambda": gateway_role_arn},
+            # RETURN_CONTROL tells Bedrock to return tool calls to the caller
+            # rather than invoking a Lambda directly — correct for Strands integration
+            actionGroupExecutor={"customControl": "RETURN_CONTROL"},
             functionSchema={
                 "functions": [
                     {
@@ -177,7 +177,7 @@ def register_gateway_tools(
                         "parameters": {
                             k: {
                                 "type": v.get("type", "string"),
-                                "description": v.get("description", ""),
+                                "description": v.get("description", k),
                                 "required": k in t["inputSchema"].get("required", []),
                             }
                             for k, v in t["inputSchema"]
@@ -191,6 +191,10 @@ def register_gateway_tools(
         )
         group_id = response["agentActionGroup"]["actionGroupId"]
         print(f"  Registered {len(STUB_TOOLS)} tools — action group: {group_id}")
+
+        # Re-prepare after adding action group
+        bedrock.prepare_agent(agentId=runtime_id)
+        print("  Agent re-prepared with tools")
         return group_id
 
     except Exception as e:
@@ -201,13 +205,11 @@ def register_gateway_tools(
 
 
 def prepare_agent(client, runtime_id: str, region: str, dry_run: bool) -> None:
-    """Prepare (build) the agent so it becomes invokable."""
+    """No-op — prepare is now called inside create and register steps."""
     if dry_run:
-        print("  [DRY RUN] Would prepare (build) agent")
+        print("  [DRY RUN] Agent prepare already handled in prior steps")
         return
-    bedrock = get_boto3_client("bedrock-agent", region)
-    bedrock.prepare_agent(agentId=runtime_id)
-    print("  Agent prepared and ready to invoke")
+    print("  Agent is ready to invoke")
 
 
 def main() -> None:
