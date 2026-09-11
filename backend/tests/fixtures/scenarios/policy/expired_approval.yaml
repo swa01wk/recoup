@@ -1,0 +1,18 @@
+id: pol-002
+name: "Expired approval — DENY"
+category: policy
+description: "Cedar policy denies submission when approval TTL has elapsed"
+inputs:
+  approval_state: "APPROVED"
+  approval_expired: true
+  simulation_mode: false
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - hitl
+  - expired_approval

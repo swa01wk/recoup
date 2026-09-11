@@ -1,8 +1,10 @@
 # Recoup — Tool Registry Reference
 
 **File:** `backend/src/recoup/tools/registry.py`  
-**Total tools:** 14  
-**Status:** All 14 tools have typed signatures, deterministic Phase 1 stubs, and are registered in `TOOL_REGISTRY`
+**Total tools:** 13  
+**Last updated:** Sep 11, 2026  
+**Status:** All 13 tools have typed signatures and are registered in `TOOL_REGISTRY`  
+**Playwright tests:** `journey-quality-gates.spec.ts` J8 verifies `unsafe_external_actions=0` (no destructive tools called).
 
 ---
 
@@ -132,7 +134,7 @@ def get_cost_and_usage(
 ) -> {"results": [{start, end, total_usd}]}
 ```
 
-Phase 1 stub returns `total_usd: "18400.00"` (the canonical golden scenario value). Phase 2 calls `ce:GetCostAndUsage`.
+Phase 1 stub returns `total_usd: "3.51"` (the canonical golden scenario value). Phase 2 calls `ce:GetCostAndUsage`.
 
 ---
 
@@ -271,7 +273,7 @@ Creates a `PENDING` `ApprovalRecord` in DynamoDB with a TTL. The `claim_hash` + 
 | Allowed nodes | `submission_adapter` |
 
 Phase 1 backing function: `simulate_support_case` (real implementation wired in Phase 2). Requires:
-- `simulation_mode == False`
+- `recoup_enable_real_support_submission == True` (config flag)
 - Valid, unexpired `ApprovalRecord`
 - AgentCore Policy Cedar ALLOW
 
@@ -295,7 +297,7 @@ def simulate_support_case(
 ) -> {"case_id", "simulated": True, "submitted_at", "subject", "status"}
 ```
 
-Produces a deterministic case ID: `"sim-" + sha256(calculator_result_hash)[:12]`. The same replay input always produces the same case ID.
+Produces a deterministic case ID: `"sim-" + sha256(calculator_result_hash)[:12]` when this **tool** is invoked. The graph **`submission_adapter` node** (canonical replay) uses `"replay-" + hash[:12]` instead — see [agent-graph.md](agent-graph.md).
 
 ---
 
@@ -329,11 +331,9 @@ Phase 1/simulation: always returns stub with `simulated: true`. Phase 6: real `e
 
 ---
 
-### Tool Not Yet Implemented
+#### 13. `stop_demo_instance` (Phase 6 EC2 demo — outside standard graph)
 
-#### 14. (Registry slot) `stop_demo_instance` (standard graph slot)
-
-The registry currently allocates `stop_demo_instance` with `allowed_nodes=frozenset()` — meaning it is not reachable from any standard graph node. It is registered in the AgentCore Gateway exclusively for the Phase 6 live demo path.
+`allowed_nodes` is empty — not invoked from the 11-node SLA graph. Called from `/api/ec2-demo/execute` after HITL approval.
 
 ---
 
@@ -359,13 +359,13 @@ A `PermissionError` is raised before any tool executes if the calling node is no
 | Node | Allowed tools |
 |------|-------------|
 | `normalize_event` | _(none)_ |
-| `incident_correlation` | `get_cloudwatch_metrics`, `get_health_event`, `lookup_cloudtrail_events`, `get_cost_anomalies` |
+| `incident_correlation` | `get_cloudwatch_metrics`, `get_health_event`, `lookup_cloudtrail_events`, `get_cost_anomalies`, `list_cost_optimization_recommendations` (registry); tracing hooks may allow a subset — see `hooks/tracing.py` |
 | `sla_contract_resolver` | _(none)_ |
 | `availability_calculator` | _(none)_ |
 | `evidence_collector` | `get_cloudwatch_metrics`, `query_cloudwatch_logs`, `get_cost_and_usage`, `store_evidence` |
 | `evidence_sanitizer` | _(none)_ |
 | `eligibility_reasoner` | _(none — read-only)_ |
-| `risk_policy_gate` | `create_approval_request` |
+| `risk_policy_gate` | _(none at runtime — Cedar in `nodes.py`; `create_approval_request` registered but graph node does not call it)_ |
 | `claim_package_generator` | `store_evidence` |
-| `submission_adapter` | `submit_support_case`, `simulate_support_case` |
+| `submission_adapter` | _(none at runtime — produces `replay-` case IDs; registry lists submit/simulate for Gateway)_ |
 | `case_monitor` | `get_support_case_status` |

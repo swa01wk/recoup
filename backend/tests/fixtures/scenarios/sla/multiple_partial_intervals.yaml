@@ -1,0 +1,18 @@
+id: sla-valid-005
+name: "Multiple partial outage intervals across month"
+category: valid_sla
+description: "24 intervals at 0% spread throughout the month → breach in 10% tier"
+inputs:
+  total_intervals: 8640
+  unavailable_intervals: 24
+  billed_charges: "100.00"
+expected:
+  threshold_breached: true
+  tier_pct: "10"
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - valid_sla
+  - sla_10pct
+  - multi_interval

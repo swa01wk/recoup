@@ -1,0 +1,24 @@
+{
+  "billing_cycle": "2026-09",
+  "account_id": "625962218034",
+  "service": "AmazonApiGateway",
+  "service_display": "Amazon API Gateway",
+  "region": "us-east-1",
+  "billed_amount_usd": "3.50",
+  "currency": "USD",
+  "line_items": [
+    {
+      "description": "API Gateway REST API Calls \u2014 us-east-1 (recoup-sla-demo), Sep 2026",
+      "usage_type": "USE1-ApiGatewayRequest",
+      "quantity": 1000500,
+      "unit": "Requests",
+      "amount_usd": "3.50"
+    }
+  ],
+  "_recoup_replay": true,
+  "_recoup_fixture_version": "2.0.0",
+  "_recoup_scenario_id": "replay-apigateway-2026-09-sla-001",
+  "_status": "REAL \u2014 1,000,500 calls injected by inject_sla_traffic.py on 2026-09-07",
+  "_verify_api_gateway": "aws apigateway get-rest-apis --query \"items[?name=='recoup-sla-demo']\"",
+  "_verify_billing": "aws ce get-cost-and-usage --time-period Start=2026-09-01,End=2026-09-14 --granularity MONTHLY --metrics BlendedCost --filter '{\"Dimensions\":{\"Key\":\"SERVICE\",\"Values\":[\"Amazon API Gateway\"]}}'"
+}

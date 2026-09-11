@@ -1,14 +1,37 @@
 # Phase 7 — Polish, Submission & Video
 
-**Timeline:** Day 12–14 (Target: Sep 13 internal deadline; Sep 14 official deadline)  
-**Status:** `[ ] Not Started`  
-**Depends on:** All previous phases complete
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
+**Timeline:** Day 12–14 (Target: Sep 13 internal deadline; Sep 14 official deadline)
+**Status:** `[~] In progress` — docs/playbooks synced Sep 11; video + Devpost remain
+**Depends on:** Phases 0–9 ✅ Complete
+
+---
+
+## As-built demo path (use for video — Sep 11, 2026)
+
+Do **not** follow the legacy Command Center / Decision Inbox / Viewer checklist below without reading this block.
+
+1. `docker compose up` or local backend **8000** / frontend **3000**
+2. **`/opportunities`** — hub ( `/` redirects here )
+3. **`/scan`** — Run Demo Scan → Start Recovery
+4. **`/opportunities/{id}`** — approve with claim-bound amount
+5. **`/replay`** — canonical SLA replay (~$0.35)
+6. **`/recovery`** — ledger buckets
+7. Quality: `curl /api/quality/scorecard` → `all_gates_pass` (**6 gates**)
+8. Script: [docs/video-script.md](../docs/video-script.md) · [docs/judge-demo.md](../docs/judge-demo.md)
+
+**Tests:** 420 backend collected · 279 Playwright (28 specs).
 
 ---
 
 ## Objective
 
 Final polish, competition submission preparation, video production, and three builder.aws posts. Everything in this phase exists to maximize the judge score. A smaller, flawless submission beats an impressive but brittle one.
+
+**Competitive positioning:** Recoup is an *Autonomous Cloud Spend Recovery Agent* — a spend-incident investigator and recovery operator. It is not a FinOps dashboard, not a rightsizer, not a commitment optimizer.
 
 ---
 
@@ -26,6 +49,64 @@ Final polish, competition submission preparation, video production, and three bu
 
 ---
 
+## Competitive Positioning (from positioning document)
+
+### The positioning sentence
+
+> "AWS provides the FinOps intelligence; Recoup closes the recovery loop."
+
+### One-liner answers (must be deliverable in under 30 seconds)
+
+**"Why not ProsperOps?"**
+> ProsperOps is a mature autonomous FinOps optimizer, especially for commitments and workload scheduling. Recoup is an autonomous cloud-spend investigator and recovery operator focused on cross-signal causal investigation, evidence, risk-tiered HITL remediation, and technical + financial verification.
+
+**"Why not AWS FinOps Agent?"**
+> AWS FinOps Agent investigates anomalies and surfaces recommendations. Recoup goes further: it assembles an evidence-backed Recovery Case, runs the proposed action through deterministic Cedar policy, obtains explicit human approval with rollback context, executes a bounded AWS action, verifies technical health and financial outcome, and closes the case in the Recovery Ledger.
+
+**"Why not AWS Compute Optimizer?"**
+> Compute Optimizer identifies opportunities. Recoup investigates surrounding context, establishes intent, packages evidence, chooses a safe recovery workflow, executes under policy, and verifies the outcome.
+
+### Three-way competitive boundary (§17.3)
+
+| Dimension | ProsperOps | AWS FinOps Agent | Recoup |
+|-----------|-----------|-----------------|--------|
+| Primary job | Autonomous cloud economics optimization | FinOps investigation, cost answers, recommendation routing | Agentic spend-incident remediation and recovery |
+| Strongest domain | Commitments, rates, workload optimization | AWS cost anomalies, cost Q&A, AWS-native recommendations | Ambiguous spend incidents requiring evidence, governance, action |
+| Investigation | Not central public model | Core capability | Core capability |
+| Root-cause / change attribution | Not central positioning | Core capability using CloudTrail | Core + intent + dependency reasoning |
+| Recommendation source | Own optimization engines | Cost Optimization Hub / Compute Optimizer + agent | Agent-created recovery plan informed by AWS signals |
+| Execution model | Autonomous optimization within configured domains | Primarily investigates, reports, routes | Policy-governed bounded remediation |
+| HITL | Not central to core autonomous story | Engineering decision after findings routed | Explicit approval state inside recovery workflow |
+| Post-action technical verification | Not primary | Not primary documented workflow | Core requirement |
+| Recovery accounting | Savings / optimization outcomes | Cost reports and recommendation estimates | Projected vs realized recovery ledger |
+
+### What Recoup should NOT lead with (§9)
+
+| Avoid as headline | Reason |
+|-------------------|--------|
+| Savings Plan / RI recommendations | ProsperOps territory — unfavorable comparison |
+| Generic cost dashboard | Low originality; AWS tools already cover it |
+| Idle-resource list alone | Make investigation + evidence + action the center |
+| Scheduling by itself | ProsperOps Scheduler already automates schedules |
+| LLM chatbot over Cost Explorer | Thin wrapper; underuses Strands |
+| Fully autonomous destructive actions | Weakens safety story; use HITL visibly |
+| Too many scenarios in video | One flagship + one fast secondary is stronger than six shallow examples |
+
+### Judge objection-handling (§10)
+
+Add verbatim as FAQ in README:
+
+| Objection | Answer |
+|-----------|--------|
+| "Doesn't AWS already have Compute Optimizer?" | Yes — Recoup consumes AWS signals. Compute Optimizer identifies opportunities; Recoup investigates surrounding context, establishes intent, packages evidence, chooses a safe recovery workflow, executes under policy, and verifies the outcome. |
+| "Isn't this just ProsperOps?" | ProsperOps is a mature autonomous FinOps optimizer, especially for commitments. Recoup is an autonomous cloud-spend investigator and recovery operator focused on cross-signal causal investigation, evidence, risk-tiered HITL remediation, and technical + financial verification. |
+| "Why use an agent?" | Because deciding whether spend is truly waste often requires multi-step evidence gathering and contextual reasoning across heterogeneous signals. The agent is valuable in the investigative loop; deterministic policy governs sensitive actions. |
+| "Why not automate everything with rules?" | Known, repetitive optimizations should be deterministic. Recoup targets ambiguous cases where the system must determine intent and causality before applying bounded automation. |
+| "How do you prevent hallucinated destructive actions?" | The model does not get unrestricted control. Evidence requirements, action allowlists, environment protections, thresholds, and approval rules are deterministic. The execution tool validates identifiers and policy before acting. |
+| "How do you prove savings?" | The Recovery Ledger stores the pre-action baseline, estimated recovery, executed change, post-action resource/health checks, and subsequent cost delta. Estimated savings and realized savings remain separate metrics. |
+
+---
+
 ## Workstreams
 
 ### 7.1 Sep 11 Feature Cutoff
@@ -38,48 +119,12 @@ After Sep 11:
 
 ### 7.2 Architecture Diagram
 
-**Update `architecture/architecture.png`** to show deployed reality:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    RECOUP ARCHITECTURE                          │
-├────────────┬────────────────────────┬───────────────────────────┤
-│  FRONTEND  │       API LAYER        │     AGENT RUNTIME         │
-│            │                        │                           │
-│  Next.js   │    FastAPI             │  AgentCore Runtime        │
-│  Command   │    /api/*              │  ┌─────────────────────┐  │
-│  Center    │    Auth + Session      │  │   Strands Graph     │  │
-│            │    SSE Streaming       │  │                     │  │
-│  Evidence  │                        │  │  normalize_event    │  │
-│  Room      │                        │  │  incident_correl.   │  │
-│            │                        │  │  sla_resolver       │  │
-│  Decision  │                        │  │  calculator         │  │
-│  Inbox     │                        │  │  evidence_collect.  │  │
-│            │                        │  │  sanitizer          │  │
-│  Trace     │                        │  │  eligibility        │  │
-│  View      │                        │  │  risk_gate          │  │
-│            │                        │  │  claim_generator    │  │
-│  Quality   │                        │  │  submission_adapter │  │
-│            │                        │  │  case_monitor       │  │
-└────────────┴────────────────────────┴─┬─────────────────────┘  │
-                                        │                          │
-         ┌──────────────────────────────┴──────────────────────┐  │
-         │              AWS SERVICES                            │  │
-         │                                                      │  │
-         │  AgentCore    AgentCore    AgentCore                 │  │
-         │  Gateway      Policy       Observability             │  │
-         │  (MCP tools)  (Cedar)      (CloudWatch)              │  │
-         │                                                      │  │
-         │  EventBridge  SQS          DynamoDB    S3            │  │
-         │  (Health)     (Queue)      (State)     (Evidence)    │  │
-         │                                                      │  │
-         │  CloudWatch   Cost         CloudTrail  Bedrock       │  │
-         │  (Metrics)    Explorer     (Audit)     (Model)       │  │
-         │                                                      │  │
-         │  EC2          AWS Support                            │  │
-         │  (Demo)       (Adapter)                              │  │
-         └──────────────────────────────────────────────────────┘
-```
+**Update `architecture/architecture.svg`** to show:
+- Strands Graph (11 nodes: 3 Strands Agent + 8 Deterministic)
+- AgentCore Runtime / Gateway / Policy
+- 17 AWS services
+- STS role chain: RecoupRuntimeRole → STS AssumeRole → RecoupReadOnlyRole / RecoupRemediationRole
+- Recovery Ledger as the closing artifact
 
 ### 7.3 README
 
@@ -88,172 +133,216 @@ After Sep 11:
 ```markdown
 # Recoup — AWS Autonomous Cloud Spend Recovery Agent
 
-> Recoup is a background Strands agent that finds recoverable or preventable AWS spend, 
-> investigates the cause, assembles the evidence, and safely handles the operational 
-> work — involving humans only when a real approval or judgment is required.
+> "AWS provides the FinOps intelligence; Recoup closes the recovery loop."
+> Investigate. Prove. Approve. Recover. Verify.
+
+Recoup is a background Strands Agents graph that detects unintended AWS spend,
+investigates surrounding evidence, applies deterministic Cedar policy, involves
+humans at real approval boundaries, executes bounded AWS actions, and records
+verified recovery — closing the complete loop from anomaly to auditable outcome.
 
 ## Quick Start (Judge Demo)
-1. Visit [https://recoup.example.com] — no AWS credentials required
-2. Click "▶ Run Canonical Replay" 
-3. Watch the agent investigate a synthetic API Gateway SLA breach
-4. Approve the $1,840 claim in the Decision Inbox
-5. View the complete agent trace with policy decisions and evidence
+1. Visit [LIVE_URL] or `http://localhost:3000/opportunities` — no AWS credentials required for replay/scan demo paths
+2. **`/recovery`** — ledger buckets (Remaining / Pending Approval / Recovered)
+3. **`/scan`** — Run Demo Scan → 8+ findings
+4. **Start Recovery** → open **`/opportunities/{id}`**
+5. Root-Cause Hypothesis / trace on opportunity detail (Strands where enabled)
+6. **Approve** on opportunity detail (evidence + risk + rollback on card)
+7. Ledger updates after approval
+
+## How It Works (V1.1 Execution Loop)
+1. Detect — cost anomaly or waste pattern opens a spend incident
+2. Investigate — Strands agent collects cost, utilization, CloudTrail, tag, dependency evidence
+3. Correlate — connect spend to underlying resource graph and recent changes
+4. Explain — generate root-cause hypothesis; classify spend intent
+5. Prove — assemble Recovery Case with confidence and supporting evidence
+6. Plan — bounded remediation sequence with preconditions and rollback
+7. Policy — Cedar policy gate (deterministic, not LLM) evaluates action risk
+8. Approve — HITL approval: evidence + impact + risk + exact action + rollback
+9. Remediate — execute only approved/bounded AWS actions via scoped IAM role
+10. Verify — validate resource state, application health, financial impact
+11. Record — close case in Recovery Ledger (estimated vs realized recovery)
 
 ## What Recoup Proves
-- One real, reversible AWS action (EC2 stop with governed approval)
-- Complex SLA recovery workflow via Verified Replay
-- 0 unsafe external actions across 50+ test scenarios
+- Closed-loop: anomaly → investigation → evidence → policy → approve → action → verify → ledger
+- The LLM proposes. Cedar policy decides. Humans approve destructive changes.
+- 0 unsafe external actions (quality gate); 420 backend tests collected
+- Real AWS action (EC2 stop) executed through 5 safety gates
+- 20/20 deterministic golden replay — financial math is never LLM-generated
+- STS AssumeRole: no long-lived credentials, read-only analysis role, separate remediation role
 
-## Architecture
-[architecture diagram]
+## Why Not [X]?
+- **Why not ProsperOps?** ProsperOps autonomously optimizes cloud economics (commitments, rates, workload scheduling). Recoup investigates *ambiguous* spend incidents: causal evidence, intent inference, staged remediation, HITL approval, technical + financial verification. Different jobs.
+- **Why not AWS FinOps Agent?** AWS FinOps Agent investigates anomalies and routes recommendations. Recoup goes further: it closes the loop — Recovery Case with evidence, Cedar policy gate, explicit HITL, bounded execution, post-action health check, and a Recovery Ledger distinguishing estimated from realized savings.
+- **Why not Compute Optimizer?** Compute Optimizer identifies opportunities. Recoup investigates surrounding context, establishes intent, runs the proposed action through policy, executes with a bounded role, and verifies both technical health and financial outcome.
 
-## Built With
-- Amazon Bedrock Strands Agents (graph orchestration)
-- Amazon Bedrock AgentCore (Runtime, Gateway, Policy, Observability)
-- Amazon Bedrock (model reasoning)
-- AWS EventBridge, SQS, DynamoDB, S3, CloudWatch, Cost Explorer
-- Next.js + FastAPI
+## Frequently Asked Questions
+[6 Q&A pairs from §10 — see phase-9 plan for exact text]
 
-## Repository Structure
-- `backend/` — FastAPI API + Strands graph + deterministic engines
-- `frontend/` — Next.js Command Center UI
-- `infra/` — CDK infrastructure-as-code
-- `sla_catalog/` — Human-verified SLA contract catalog
-- `eval_fixtures/` — Immutable replay seed artifacts
-- `plans/` — Implementation phase plans
-
-## Evaluation Results
-[Link to /quality view screenshot or live URL]
-
-## License
-MIT
+## Judging Criteria — How Recoup Scores
+| Criterion | Evidence |
+|-----------|----------|
+| Technological Implementation | Strands graph (11 nodes), Bedrock reasoning, real multi-step tool calls, Cedar policy, STS AssumeRole |
+| Design | Recovery Dashboard → Pipeline → Evidence → Approval → Verified Ledger: coherent operator experience |
+| Potential Impact | $87.82/mo detected across 8 live scenarios; $0.35 real SLA credit recovery from actual AWS billing demonstrated |
+| Creativity & Originality | Spend incident investigator, not a cost dashboard. LLMs propose; policy decides; humans approve |
+| Presentation | One end-to-end story: anomaly → evidence → approval → live EC2 stop → Recovery Ledger |
 ```
 
 ### 7.4 Video Script (4:40 target + 20s buffer)
 
-**Timing breakdown:**
+**Core narrative:** One excellent end-to-end recovery story (configuration-/deployment-driven spend incident) plus one short secondary scenario (EC2 live action). This is the §18 "safest high-scoring strategy."
 
-| Timestamp | Content | Proof point |
-|-----------|---------|-------------|
-| 0:00–0:15 | Title card: "Recoup — Every cloud dollar accounted for" | Memorable hook |
-| 0:15–0:40 | Problem: Show real scenario. "Your API Gateway was down for 30 minutes. AWS owes you credit. Finding it, proving it, and claiming it takes hours." | Audience pain |
-| 0:40–1:00 | Solution in one sentence: "Recoup is a background agent that does that work — investigating, assembling evidence, and asking you only for the decisions that require a human." | Clear pitch |
-| 1:00–1:20 | Architecture (35 seconds max): Strands Graph + AgentCore Runtime/Gateway/Policy | Technical depth |
-| 1:20–1:40 | Live EC2 demo: Show Command Center → OPTIMIZATION opportunity → LIVE badge → approve → instance stops → trace confirms | Real execution |
-| 1:40–2:10 | Trigger canonical replay: watch nodes execute in real time via SSE | Agentic workflow |
-| 2:10–2:40 | Calculation view: "99.9306% → 10% tier. $18,400 × 10% = $1,840. Every step in the formula is shown." | Deterministic math |
-| 2:40–3:10 | Evidence Room: required fields, sanitized logs, redaction count, hashes | Completeness + safety |
-| 3:10–3:35 | Decision Inbox: "Creating an external financial case is a human boundary. Approving triggers Simulate Submission — REPLAY case id only." | Agents for Humans |
-| 3:35–4:00 | Agent Trace: Strands nodes, Gateway calls, policy decisions, durations | Technical depth |
-| 4:00–4:20 | Quality view: "50 scenarios. Financial math 100% deterministic. 0 unsafe actions." | Engineering rigor |
-| 4:20–4:43 | Closing: same architecture supports anomaly investigation and optimization | Platform credibility |
-| 4:43–4:55 | End card: "Recoup: every cloud dollar accounted for." | Memorable finish |
+**Opening frame must establish:** "This is a spend incident investigator, not a cost optimizer." The approval screen is the demo's "wow moment" (§8): it shows WHY Recoup believes the spend is unintended, the evidence, the risk classification, and the rollback plan.
+
+**Closing frame must be:** the Recovery Ledger entry — "money safely recovered" not "opportunity identified."
+
+| Timestamp | Content | Competitive doc proof point |
+|-----------|---------|----------------------------|
+| 0:00–0:15 | Title: "Recoup — Investigate. Prove. Approve. Recover. Verify." | Tagline from §13 |
+| 0:15–0:40 | Problem: "AWS is wasting money. Finding it, proving it, and fixing it safely takes hours — or just never happens." | Pain statement |
+| 0:40–1:00 | Solution: "Recoup is a spend-incident investigator. AWS provides the FinOps intelligence; Recoup closes the recovery loop." | §17.4 positioning sentence |
+| 1:00–1:20 | Recovery Dashboard: Ledger (Detected → Approved → Recovered → Pending) + 10-step pipeline + 8 scenario tiles | Closed-loop story |
+| 1:20–1:45 | Account Scanner: Role ARN pre-filled (no raw keys) → scan → 6+ findings → "Start Recovery" on EBS/EC2 finding | STS security + breadth |
+| 1:45–2:05 | **"Wow moment" #1** — Opportunity detail: Root-Cause Hypothesis card streams in with Strands agent reasoning | §8 + §14.2 — WHY spend is unintended |
+| 2:05–2:25 | Agent Trace: 11 nodes, `[Strands]` labels on 3 nodes, Cedar policy card shows `REQUIRE_APPROVAL` | §14.3, 4, 11 |
+| 2:25–2:50 | **"Wow moment" #2** — Opportunity detail: full approval card (risk, action description, rollback) → Approve | §8 + §14.5 |
+| 2:50–3:05 | Post-Action Verification panel: resource state STOPPED ✓, health checks ✓, savings monitoring started | §14.7 — technical + financial verification |
+| 3:05–3:20 | Recovery Ledger updates: Pending → Recovered; dollar amounts update | §14.8 — estimated vs realized separated |
+| 3:20–3:35 | (Optional) API-only judge mode: no AWS keys; replay + scorecard curl | Judge-safe experience |
+| 3:35–3:55 | EC2 Demo: CloudWatch 0.17% CPU → LIVE AWS ACTION badge → StopInstances confirmed | Real bounded AWS action |
+| 3:55–4:15 | `GET /api/quality/scorecard`: 6 gates, `all_gates_pass`, 0 unsafe actions | Engineering rigor |
+| 4:15–4:40 | "Why not ProsperOps / AWS FinOps Agent / Compute Optimizer?" (25s total, 3 one-liners) | Competitive clarity |
+| 4:40–4:55 | Architecture overlay (17 services, STS chain) + closing: "Every cloud dollar accounted for." | Technical depth |
 
 **Recording rules:**
 - Record at 1440p or 1080p
-- No terminal scrolling unless it proves one technical point
-- Warm replay before filming; never wait on model during recording
-- Architecture explanation ≤ 35 seconds
-- Use captions; keep text away from YouTube controls
+- Warm the replay before filming — never wait on a network call during recording
+- Architecture explanation ≤ 35 seconds total
+- Use [docs/judge-demo.md](../docs/judge-demo.md) for current UI paths (no Viewer switch in sidebar)
+- Show the Recovery Ledger updating after each recovery step (the closing visual)
 - Record 3 clean takes; edit the best
-- Show mode badges clearly: LIVE AWS ACTION for EC2 demo, VERIFIED REPLAY for SLA
 
 ### 7.5 Builder.aws Posts
 
-Three posts required for +0.6 bonus (0.2 each). Use "Agents for Humans" in each title.
+Three posts required for +0.6 bonus. All must have "Agents for Humans" in the title.
 
-**Post 1 — Architecture (publish by Sep 8):**  
+**Post 1 — Architecture (publish by Sep 8):**
 *"Building Recoup: Agents for Humans — How We Designed a Safe AWS Recovery Workflow with Strands Graph"*
-- Strands Graph design decisions
-- Why we chose deterministic nodes for financial logic
-- Agent/deterministic boundary diagram
-- Code snippets from node definitions
+- The 11-node graph: 5 Strands Agent nodes + 6 deterministic
+- Why LLMs propose but deterministic policy decides (§5 architectural rule)
+- Cedar policy file walkthrough
+- Node-level code snippets from `backend/src/recoup/graph/nodes.py`
+- Key diagram: `normalize_event → incident_correlation [Strands] → … → risk_policy_gate [Cedar] → HITL → submission_adapter → case_monitor`
 
-**Post 2 — Safety (publish by Sep 10):**  
+**Post 2 — Safety (publish by Sep 10):**
 *"Agents for Humans — Making AI Financial Decisions Trustworthy: Cedar Policies, Evidence Redaction, and HITL Approvals in Recoup"*
-- AgentCore Policy design
-- Evidence sanitization pipeline
-- Autonomy class system
-- Example Cedar policy
+- 8-pattern evidence sanitizer (`evidence/sanitizer.py`): auth tokens, JWT, API keys, cookies, emails, AWS account IDs, private IPs, AWS secrets
+- Autonomy class system (GREEN/YELLOW/RED/BLACK) and tool allowlists
+- HITL binding assertions: claim_hash + amount + state_version tamper-proofing
+- Cedar policy permit rules and hard-forbid on `terminate_ec2_instance`
+- Approval card "wow moment": WHY, evidence, risk, rollback shown before Approve button
 
-**Post 3 — Evaluation (publish by Sep 12):**  
-*"Agents for Humans — How We Proved Recoup Works: 50 Scenarios, Deterministic Math, and Zero Unsafe Actions"*
-- Evaluation architecture
-- Golden acceptance tests
-- Ship gate CI pipeline
-- Adversarial testing lessons
+**Post 3 — Evaluation (publish by Sep 12):**
+*"Agents for Humans — How We Proved Recoup Works: 420 Backend + 279 E2E Tests, Deterministic Math, and Zero Unsafe Actions"*
+- 47 YAML scenario categories: sla/, evidence/, exclusions/, policy/, resilience/, sanitization/, anomaly/
+- Golden acceptance tests: 20/20 consecutive deterministic runs at 23ms P95
+- Adversarial suite: prompt injection, evidence hallucination, binding tamper, BLACK tool enforcement
+- Ship gate CI pipeline (`assert_ship_gates.py` + `/api/quality/scorecard` → 6 gates)
+- Key insight: financial math is never LLM-generated — Decimal arithmetic, deterministic
 
 ### 7.6 Submission Checklist
 
-**Final check — run from a different device/account:**
+**Run from a different device/account in incognito:**
 
 ```
 Repository
 [ ] Public GitHub repo accessible without authentication
-[ ] MIT or Apache-2.0 license visible from repo root page
-[ ] README present with problem, solution, quick start, architecture diagram
-[ ] architecture/architecture.png matches deployed reality
-[ ] DISCLOSURE.md present (fresh project disclosure)
-[ ] All source, assets, and instructions included
+[ ] MIT license visible from repo root
+[ ] README has problem, solution, quick start, architecture diagram
+[ ] README has Why-not-ProsperOps, Why-not-AWS-FinOps-Agent, Why-not-Compute-Optimizer
+[ ] README has judge FAQ (6 objection/answer pairs)
+[ ] README has three-way competitive comparison table
+[ ] README has judging rubric callout (5 criteria)
+[ ] DISCLOSURE.md present
 [ ] First commit dated after Aug 10, 2026
 
-Evaluation & Safety
-[ ] 20/20 consecutive golden replay passes in CI
-[ ] 0 unsafe external actions across full test suite
-[ ] /quality page shows current scorecard
-[ ] All ship gates green in last CI run
+Phase 9 UI Gaps (pre-demo checklist §14)
+[ ] Opportunity detail shows Root-Cause Hypothesis (trace.hypothesis_summary)
+[ ] Opportunity detail shows Post-Action Verification (trace.case_outcome)
+[ ] Opportunity detail shows intent classification badge (Abandoned/Anomalous/etc.)
+[ ] Agent Trace labels [Strands] vs [Det.] on each node
+[ ] ALL approval cards show: risk tier + action description + rollback note
+[ ] Dashboard shows "Investigate. Prove. Approve. Recover. Verify." tagline
+[ ] Dashboard shows 10-step V1.1 pipeline
 
-Demo
-[ ] Live URL accessible in incognito (no AWS credentials)
-[ ] Replay can be triggered and completes < 60s
-[ ] Decision Inbox shows approval card correctly
-[ ] EC2 demo path works (or reset script ready)
-[ ] VERIFIED REPLAY badge visible on SLA opportunity
-[ ] LIVE AWS ACTION badge visible on EC2 opportunity
+Demo URL (current IA — Sep 11)
+[ ] `/opportunities` loads (`/` redirects)
+[ ] `/scan` — demo scan + Start Recovery → opportunity
+[ ] `/opportunities/[id]` — HITL approve/decline/investigate
+[ ] `/recovery` — ledger + chart
+[ ] `/replay` — SLA replay (optional deep link)
+[ ] `GET /api/quality/scorecard` → `all_gates_pass`
 [ ] Demo URL budgeted to remain available through Oct 8, 2026
+
+IAM & Multi-Scenario (Phase 6e + 6f)
+[ ] RecoupDemoWorkloadsStack deployed; all 8 scenarios tagged
+[ ] Account Scanner shows ≥ 6 findings via RecoupReadOnlyRole
+[ ] Role ARN form pre-filled; no raw access key visible
+[ ] Analysis role confirmed cannot StopInstances
+[ ] Remediation role used for EC2 stop
+[ ] Cross-account narrative deliverable verbally (30 seconds)
 
 Video
 [ ] Video is ≤ 5:00 (not 5:01)
 [ ] Public on YouTube or Vimeo
-[ ] Covers: problem, audience, why it matters, working end-to-end demo
+[ ] Root-Cause Hypothesis card visible in video
+[ ] Approval "wow moment" shown (evidence + risk + rollback before Approve)
+[ ] Post-Action Verification panel shown
+[ ] Recovery Ledger updating shown (closing visual)
+[ ] Opportunities-first navigation shown (not legacy Command Center)
+[ ] Competitive positioning answered (≤ 25s for each "Why not X?" question)
 [ ] No dead air; replay warmed before recording
 [ ] Captions enabled
 
 Builder.aws
-[ ] Post 1 published with "Agents for Humans" in title
-[ ] Post 2 published with "Agents for Humans" in title
-[ ] Post 3 published with "Agents for Humans" in title
+[ ] Post 1 published with "Agents for Humans" in title (by Sep 8)
+[ ] Post 2 published with "Agents for Humans" in title (by Sep 10)
+[ ] Post 3 published with "Agents for Humans" in title (by Sep 12)
 
 Devpost
-[ ] AWS Builder ID verified and accessible
-[ ] All Devpost fields completed in English
+[ ] AWS Builder ID verified
+[ ] All fields completed in English
 [ ] Video URL entered
 [ ] Repository URL entered (public)
 [ ] Demo URL entered
 [ ] Builder.aws post URLs entered (3)
 [ ] Professional Agents track selected
-[ ] Submitted before Sep 13 internal deadline (not Sep 14)
+[ ] Submitted before Sep 13 internal deadline
 
 Final verification
-[ ] Test all links from incognito on a different device
-[ ] Re-read official Devpost rules on Sep 13–14 for any changes
-[ ] Check that repository is still public
-[ ] Confirm demo URL still works
-[ ] Confirm builder.aws posts are still published
+[ ] All links from incognito on different device
+[ ] Re-read official Devpost rules Sep 13–14
+[ ] Repository still public
+[ ] Demo URL still works
+[ ] Builder.aws posts still published
 ```
 
 ### 7.7 Kill Criteria (Features to Cut if Behind Schedule)
 
-Per the plan: "A smaller flawless agent will score better than an impressive but brittle platform."
+Per the competitive doc §9: "One flagship + one fast secondary scenario is stronger than six shallow examples."
 
-| Feature | Cut if | Safe to cut? |
-|---------|--------|-------------|
+| Feature | Cut if | Safe? |
+|---------|--------|-------|
+| Intent classification badge (Phase 9 A7) | Sep 10 not met | Yes — minor UI |
+| 10-step pipeline visualization | Time risk | Yes — 7-step still tells the story |
+| "Investigate Further" as third HITL state | Sep 10 not met | Yes — Approve/Decline sufficient |
 | Cost anomaly module | Golden SLA replay not 20/20 | Yes — supporting proof only |
-| Cost Optimization Hub integration | Sep 11 feature cutoff not met | Yes — enhances but not core |
-| Case Monitor (live status) | Demo route works | Yes — replace with static SUBMITTED state |
+| CloudTrail standalone scenario in video | Adds complexity | Yes — EC2 + SLA proves the story |
+| EC2 demo path in video | Demo instability | Yes — SLA replay alone proves agentic workflow |
+| 3rd builder.aws post | Sep 11 feature cutoff reached | Yes — 2 posts earns +0.4 |
 | Multi-region SLA contracts | Time risk | Yes — API Gateway only is sufficient |
-| CloudTrail in EC2 demo | EC2 path adds complexity | Yes — simplify to just CW utilization |
-| EC2 demo path entirely | Replay alone proves agentic workflow | Acceptable if safety concern arises |
+| RecoupDemoWorkloadsStack (6f) in video | Time risk | Yes — show 1–2 findings instead of all 8 |
 
 ---
 
@@ -261,23 +350,22 @@ Per the plan: "A smaller flawless agent will score better than an impressive but
 
 | Check | Criteria |
 |-------|----------|
-| Video | ≤ 5:00; public; covers all required content |
+| Phase 9 UI gaps | All 12 pre-demo checklist items pass |
+| Video | ≤ 5:00; public; "wow moment" approval screen shown; closing on Recovery Ledger |
 | Live URL | Works in incognito; replay functional; no AWS credentials |
-| Repository | Public; license visible; README + architecture; disclosure |
-| Builder.aws | 3 posts published with "Agents for Humans" in title |
+| Repository | Public; license; README with Why-not sections + FAQ + rubric table |
+| Builder.aws | 3 posts with "Agents for Humans" in title |
 | Devpost | All fields complete; submitted before Sep 13 |
 | Cross-device | All links verified from different device/account |
-| Rules re-check | Official rules re-read on Sep 13–14 |
+| Rules re-check | Official rules re-read Sep 13–14 |
 
 ---
 
 ## Post-Implementation Documentation
 
-> Created in `plans/docs/` after phase completion.
-
-- `docs/submission-record.md` — Record of submission: timestamp, URLs, field values, final checklist
-- `docs/builder-posts.md` — Links to all three builder.aws posts
-- `docs/video-script.md` — Final video script used in recording
+- `docs/submission-record.md` — timestamp, URLs, field values, final checklist
+- `docs/builder-posts.md` — links to all three builder.aws posts
+- `docs/video-script.md` — final video script used in recording
 
 ---
 
@@ -286,8 +374,9 @@ Per the plan: "A smaller flawless agent will score better than an impressive but
 | Risk | Mitigation |
 |------|-----------|
 | Video runs over 5:00 | Practice run timed to 4:40; leave 20s buffer |
-| Demo URL goes down | Monitor with uptime service; keep cost under free tier; have backup screenshots |
+| Demo URL goes down | Monitor with uptime service; keep cost under demo budget |
 | Builder.aws posts not indexed | Publish by Sep 12; confirm visible to public before submission |
 | Devpost submission fails | Submit by Sep 13; not Sep 14 last minute |
-| Rules changed | Re-read official rules page on Sep 13–14 before final submission |
+| Rules changed | Re-read official rules Sep 13–14 before final submission |
 | Judge cannot access replay | Test in incognito; no AWS credentials; test from mobile |
+| Competitive objection in judging | FAQ in README pre-answers all 6 common objections |

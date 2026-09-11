@@ -1,14 +1,18 @@
 # Phase 6 — Live AWS Action Proof
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 10–12 (Target: by Sep 12, 2026)  
-**Status:** `[ ] Not Started`  
+**Status:** `[x] Complete`  
 **Depends on:** Phase 3 (safety layer), Phase 4 (frontend with approve flow)
 
 ---
 
 ## Objective
 
-Implement and demonstrate the second complementary proof: a real, reversible, governed AWS action against a deliberately tagged sandbox EC2 instance. This path proves Recoup can actually execute — not just replay or recommend — while maintaining the same safety invariants as the full SLA workflow. The live EC2 demo uses the LIVE AWS ACTION badge and a separate opportunity path through the Decision Inbox.
+Implement and demonstrate the second complementary proof: a real, reversible, governed AWS action against a deliberately tagged sandbox EC2 instance. This path proves Recoup can actually execute — not just replay or recommend — while maintaining the same safety invariants as the full SLA workflow. **As-built:** `POST /api/ec2-demo/trigger` → HITL on **`/opportunities/{id}`** → optional `POST /api/ec2-demo/execute/{id}` (LIVE AWS ACTION badge on approval card when applicable).
 
 ---
 

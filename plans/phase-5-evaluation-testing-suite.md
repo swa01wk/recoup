@@ -1,5 +1,9 @@
 # Phase 5 — Evaluation & Testing Suite
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 9–12 (Target: by Sep 12, 2026)  
 **Status:** `[ ] Not Started`  
 **Depends on:** Phases 1–3 complete; Phase 4 in progress
@@ -83,10 +87,10 @@ inputs:
   service: apigateway
   region: us-east-1
   monthly_uptime_pct: "99.9306"
-  billed_charges: "18400.00"
+  billed_charges: "3.51"
 expected:
   tier_pct: "10"
-  potential_credit: "1840.00"
+  potential_credit: "0.35"
   threshold_breached: true
   state: AWAITING_APPROVAL
 pass_criteria:

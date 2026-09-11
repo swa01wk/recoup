@@ -3,7 +3,9 @@
 **Location:** `backend/src/recoup/models/`  
 **Framework:** Pydantic v2 (zero deprecation warnings)  
 **Count:** 9 models (+ graph-internal types in `graph/types.py`)  
-**Status:** Phase 0 + Phase 1 complete; all 9 models pass `pytest -W error::DeprecationWarning`
+**Last updated:** Sep 11, 2026  
+**Status:** Phase 0 + Phase 1 complete; all 9 models pass `pytest -W error::DeprecationWarning`  
+**Playwright tests:** `opportunity-detail.spec.ts`, `recovery-ledger.spec.ts` verify model field shapes via API.
 
 ---
 
@@ -136,7 +138,7 @@ class AvailabilityResult(BaseModel):
     threshold_breached: bool       # True if uptime < service_commitment
     tier_pct: Decimal              # e.g. Decimal("10")
     billed_charges: Decimal        # charges in the affected billing cycle
-    potential_credit: Decimal      # e.g. Decimal("1840.00")
+    potential_credit: Decimal      # e.g. Decimal("0.35")
     calculation_trace: list[str]   # human-readable arithmetic steps for UI
 
     @property
@@ -146,7 +148,7 @@ class AvailabilityResult(BaseModel):
 
 **Golden test values:**
 ```
-8,640 intervals, 6 unavailable → 99.930556% → tier 10% → $18,400 × 10% = $1,840.00
+8,640 intervals, 6 unavailable → 99.930556% → tier 10% → $3.51 × 10% = $0.35
 ```
 
 ---
@@ -247,8 +249,8 @@ class ApprovalRecord(BaseModel):
 record = ApprovalRecord.create(
     approval_id="appr-001",
     principal="ops-team",
-    action="Submit $1,840.00 SLA credit claim to AWS Support",
-    amount=Decimal("1840.00"),
+    action="Submit $0.35 SLA credit claim to AWS Support",
+    amount=Decimal("0.35"),
     claim_hash="sha256:...",
     opportunity_id="opp-replay-001",
     state_version=3,
@@ -315,7 +317,6 @@ class RecoveryOpportunity(BaseModel):
     potential_value: Decimal
     confidence: float              # 0.0 – 1.0
     state: OpportunityState
-    simulation_mode: bool = True   # gates all real external actions
     state_version: int             # increments atomically on every state change
     idempotency_key: str
     active_claim_hash: str | None
@@ -324,8 +325,7 @@ class RecoveryOpportunity(BaseModel):
 **`account_id_masked` validator:**
 The 12-digit AWS account ID is always masked to only the last 4 digits before storage (e.g. `"123456789012"` → `"****9012"`).
 
-**`simulation_mode`:**
-Always `True` by default. Must be explicitly set to `False` to enable live external actions. This is a defense-in-depth measure — even if Cedar policy grants `ALLOW`, a simulation-mode opportunity never submits a real support case.
+> **Phase 6d note:** `simulation_mode` was removed from `RecoveryOpportunity`. Real AWS Support submission is now gated exclusively by `recoup_enable_real_support_submission` in config + Cedar policy ALLOW + valid `ApprovalRecord`.
 
 ---
 

@@ -1,0 +1,17 @@
+id: pol-005
+name: "Simulation mode — blocks real submission even with approval"
+category: policy
+description: "simulation_mode=True → Cedar denies submit_support_case even with valid approval"
+inputs:
+  approval_state: "APPROVED"
+  simulation_mode: true
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - simulation_mode
+  - safety

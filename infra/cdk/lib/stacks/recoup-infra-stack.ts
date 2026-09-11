@@ -37,6 +37,7 @@ export class RecoupInfraStack extends cdk.Stack {
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: evidenceKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,  // Sprint 2: require TLS for all S3 operations
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       lifecycleRules: [
         {
@@ -49,6 +50,12 @@ export class RecoupInfraStack extends cdk.Stack {
             },
           ],
         },
+        {
+          // Sprint 2: purge sanitized judge evidence after 90 days
+          id: "expire-sanitized-evidence",
+          prefix: "evidence/sanitized/",
+          expiration: cdk.Duration.days(90),
+        },
       ],
     });
 
@@ -57,6 +64,7 @@ export class RecoupInfraStack extends cdk.Stack {
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -65,6 +73,7 @@ export class RecoupInfraStack extends cdk.Stack {
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -95,7 +104,11 @@ export class RecoupInfraStack extends cdk.Stack {
       tableName: "recoup-approvals",
       partitionKey: { name: "approval_id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      timeToLiveAttribute: "expires_at",
+      // Sprint 2: Fix TTL attribute name — code writes "expires_at_epoch" (Unix int);
+      // CDK was incorrectly using "expires_at" (ISO string) which silently broke TTL.
+      timeToLiveAttribute: "expires_at_epoch",
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+      encryptionKey: evidenceKey,  // Sprint 2: extend CMK to approvals
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -104,6 +117,8 @@ export class RecoupInfraStack extends cdk.Stack {
       partitionKey: { name: "trace_id", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "timestamp", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+      encryptionKey: evidenceKey,  // Sprint 2: extend CMK to tool-audits
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -111,13 +126,17 @@ export class RecoupInfraStack extends cdk.Stack {
       tableName: "recoup-outcome-metadata",
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+      encryptionKey: evidenceKey,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // ── SQS ─────────────────────────────────────────────────────────────────
+    // Sprint 2: extend CMK encryption to SQS queues
     const dlq = new sqs.Queue(this, "RecoupRecoveryEventsDLQ", {
       queueName: "recoup-recovery-events-dlq",
       retentionPeriod: cdk.Duration.days(14),
+      encryptionMasterKey: evidenceKey,
     });
 
     const recoveryEventsQueue = new sqs.Queue(this, "RecoupRecoveryEventsQueue", {
@@ -125,6 +144,7 @@ export class RecoupInfraStack extends cdk.Stack {
       visibilityTimeout: cdk.Duration.seconds(300),
       retentionPeriod: cdk.Duration.days(14),
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
+      encryptionMasterKey: evidenceKey,
     });
 
     // ── EventBridge — AWS Health events ─────────────────────────────────────
@@ -137,7 +157,7 @@ export class RecoupInfraStack extends cdk.Stack {
 
     // ── VPC (minimal; for EC2 demo instance) ────────────────────────────────
     this.vpc = new ec2.Vpc(this, "RecoupVpc", {
-      maxAzs: 1,
+      maxAzs: 2,
       natGateways: 0,
       subnetConfiguration: [
         { name: "Public", subnetType: ec2.SubnetType.PUBLIC, cidrMask: 24 },
@@ -211,6 +231,23 @@ export class RecoupInfraStack extends cdk.Stack {
     evalFixturesBucket.grantRead(this.runtimeRole);
     evidenceKey.grantEncryptDecrypt(this.runtimeRole);
     runtimeLogGroup.grantWrite(this.runtimeRole);
+
+    // Sprint 1: grant sts:AssumeRole so the runtime can obtain short-lived
+    // credentials for customer accounts via RecoupReadOnlyRole /
+    // RecoupRemediationRole (which are created by RecoupIamStack).
+    // The exact role ARNs are added by RecoupIamStack; here we grant a
+    // pattern-based allow so the infra stack doesn't need to import IAM stack.
+    this.runtimeRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AllowAssumeCustomerRolesPattern",
+        effect: iam.Effect.ALLOW,
+        actions: ["sts:AssumeRole"],
+        resources: [
+          `arn:aws:iam::*:role/RecoupReadOnlyRole`,
+          `arn:aws:iam::*:role/RecoupRemediationRole`,
+        ],
+      })
+    );
 
     // RecoupGatewayExecutionRole — used by AgentCore Gateway to invoke Lambda tools
     this.gatewayExecutionRole = new iam.Role(this, "RecoupGatewayExecutionRole", {

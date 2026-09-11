@@ -1,5 +1,9 @@
 # Phase 0 — Foundation & Infrastructure Setup
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 1–3 (Target: by Sep 3, 2026)  
 **Status:** `[ ] Not Started`  
 **Priority:** P0 — Everything blocks on this phase

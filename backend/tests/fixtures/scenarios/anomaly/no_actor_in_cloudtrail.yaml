@@ -1,0 +1,17 @@
+id: anom-005
+name: "No actor in CloudTrail lookup window — attribution gap"
+category: anomaly
+description: "Cost anomaly confirmed but CloudTrail has no relevant events in the window"
+inputs:
+  cloudtrail_actor_found: false
+  lookup_window_hours: 72
+expected:
+  anomaly_detected: true
+  actor_attributed: false
+  requires_human_review: true
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - anomaly
+  - cloudtrail
+  - no_attribution

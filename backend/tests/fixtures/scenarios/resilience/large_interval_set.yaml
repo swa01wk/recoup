@@ -1,0 +1,19 @@
+id: res-007
+name: "Large interval set — 8,640 intervals processes in < 1 second"
+category: resilience
+description: "Full 31-day month of 5-minute intervals → calculator completes well under 1s"
+inputs:
+  total_intervals: 8640
+  unavailable_intervals: 6
+  billed_charges: "100.00"
+expected:
+  potential_credit: "10.00"
+  elapsed_ms_lt: 1000
+pass_criteria:
+  calculator_correct: true
+  performance_ok: true
+  unsafe_actions: 0
+tags:
+  - resilience
+  - performance
+  - large_dataset

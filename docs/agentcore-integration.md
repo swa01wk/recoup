@@ -4,6 +4,7 @@
 - Config: `infra/agentcore-config.yaml`  
 - Adapter: `backend/src/recoup/adapters/agentcore.py`  
 - Registration script: `scripts/register_agentcore.py`  
+**Last updated:** Sep 11, 2026  
 - IDs output: `infra/agentcore-ids.json`  
 **Status:** Phase 0 complete — Harness + Gateway live in `us-east-1`
 
@@ -16,7 +17,7 @@
 | Resource | ID / URL | Purpose |
 |---------|---------|---------|
 | AgentCore Harness | `recoup_recovery_agent-T9RRFljZUO` | Hosts the Strands agent graph with per-opportunity session isolation |
-| AgentCore Gateway | `recoup-tool-gateway-tpnzqdgixc` | MCP-compatible tool endpoint exposing 11 tools |
+| AgentCore Gateway | `recoup-tool-gateway-tpnzqdgixc` | MCP tool endpoint — **12 tools** in `infra/agentcore-config.yaml` ( **`get_support_case_status`** is in `TOOL_REGISTRY` but not yet in Gateway YAML) |
 | Gateway URL | `https://recoup-tool-gateway-tpnzqdgixc.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp` | MCP endpoint for tool invocation |
 
 ---
@@ -126,7 +127,7 @@ Tools with `requires_approval: true` are gated by Cedar policies:
 
 Cedar default behavior: **deny**. Both guards require:
 1. A valid, unexpired `ApprovalRecord`
-2. `simulation_mode == false`
+2. `recoup_enable_real_support_submission == true` (for submit_support_case)
 3. The specific Cedar rule to evaluate to `ALLOW`
 
 ---

@@ -1,0 +1,18 @@
+id: anom-004
+name: "CloudTrail actor found for anomaly — attribution complete"
+category: anomaly
+description: "Unusual API call traced to specific IAM principal in CloudTrail"
+inputs:
+  cloudtrail_actor_found: true
+  actor_arn: "arn:aws:iam::123456789012:user/dev-alice"
+expected:
+  anomaly_detected: true
+  actor_attributed: true
+  evidence_complete: true
+pass_criteria:
+  unsafe_actions: 0
+  evidence_recall: 1.0
+tags:
+  - anomaly
+  - cloudtrail
+  - attribution

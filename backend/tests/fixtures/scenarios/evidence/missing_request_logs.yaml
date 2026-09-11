@@ -1,0 +1,15 @@
+id: ev-gap-002
+name: "Missing request logs — key evidence absent"
+category: evidence_gaps
+description: "No CloudWatch log data for incident window → request_logs field missing"
+inputs:
+  service: apigateway
+  missing_fields: ["request_logs"]
+expected:
+  evidence_complete: false
+  missing_fields: ["request_logs"]
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - evidence_gap
+  - missing_logs

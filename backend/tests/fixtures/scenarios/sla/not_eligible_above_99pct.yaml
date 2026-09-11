@@ -1,0 +1,19 @@
+id: sla-inelig-005
+name: "Uptime between 99.00% and 99.95% — 10% tier (boundary awareness)"
+category: valid_sla
+description: "In 10% tier zone: 99.50% uptime → 10% credit"
+inputs:
+  total_intervals: 1000
+  unavailable_intervals: 5
+  billed_charges: "20000.00"
+expected:
+  threshold_breached: true
+  tier_pct: "10"
+  potential_credit: "2000.00"
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - valid_sla
+  - sla_10pct
+  - boundary_zone

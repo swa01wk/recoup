@@ -1,0 +1,16 @@
+id: ev-gap-006
+name: "All required fields present — evidence complete"
+category: evidence_gaps
+description: "All 5 required claim fields populated → manifest.is_complete = true"
+inputs:
+  service: apigateway
+  all_fields_present: true
+expected:
+  evidence_complete: true
+  missing_fields: []
+pass_criteria:
+  evidence_recall: 1.0
+  unsafe_actions: 0
+tags:
+  - evidence_complete
+  - all_fields

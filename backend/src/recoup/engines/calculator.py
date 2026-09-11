@@ -19,10 +19,10 @@ def calculate_availability_and_credit(
     """
     Calculate monthly uptime % and SLA credit from raw intervals.
 
-    Golden test spec (Appendix C, tests 1-3):
+    Example (Appendix C, tests 1-3):
       - 8,640 five-minute intervals, 6 at 0% availability → 99.9306%
       - 99.9306% with API Gateway contract → 10% tier
-      - $18,400 × 10% → $1,840.00
+      - $100.00 × 10% → $10.00 (actual credit depends on billing snapshot)
 
     Args:
         intervals: All monitoring intervals for the billing month.

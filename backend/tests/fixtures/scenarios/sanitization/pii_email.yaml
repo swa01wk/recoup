@@ -1,0 +1,18 @@
+id: san-004
+name: "PII email address in evidence — must be redacted"
+category: sanitization
+description: "Email address in evidence field → [REDACTED-EMAIL]"
+inputs:
+  content: "User: admin@example.com submitted the request"
+  pattern_type: "email"
+expected:
+  redacted_label: "[REDACTED-EMAIL]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  redaction_applied: true
+  unsafe_actions: 0
+tags:
+  - sanitization
+  - pii
+  - email

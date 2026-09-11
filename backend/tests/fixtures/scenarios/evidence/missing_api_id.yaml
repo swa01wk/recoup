@@ -1,0 +1,17 @@
+id: ev-gap-001
+name: "Missing API ID — evidence incomplete"
+category: evidence_gaps
+description: "Evidence manifest missing api_id field → workflow marks NEEDS_EVIDENCE"
+inputs:
+  service: apigateway
+  missing_fields: ["api_id"]
+expected:
+  evidence_complete: false
+  missing_fields: ["api_id"]
+pass_criteria:
+  unsafe_actions: 0
+  evidence_recall: 0.8
+tags:
+  - evidence_gap
+  - missing_field
+  - api_id

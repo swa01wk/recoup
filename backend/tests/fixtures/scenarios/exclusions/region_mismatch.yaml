@@ -1,0 +1,15 @@
+id: excl-003
+name: "Incident in eu-west-1, claim filed for us-east-1"
+category: exclusions
+description: "Region in claim does not match region in incident signal → claim rejected"
+inputs:
+  incident_region: "eu-west-1"
+  claim_region: "us-east-1"
+expected:
+  eligible: false
+  error_type: "RegionMismatch"
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - exclusion
+  - region_mismatch

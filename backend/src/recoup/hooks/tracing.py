@@ -103,11 +103,9 @@ class RecoupTracingHooks:
         self,
         opportunity_id: str,
         principal: str = "system",
-        simulation_mode: bool = True,
     ) -> None:
         self._opportunity_id = opportunity_id
         self._principal = principal
-        self._simulation_mode = simulation_mode
         self._spans: dict[str, Any] = {}
 
     # -----------------------------------------------------------------------
@@ -167,7 +165,6 @@ class RecoupTracingHooks:
 
         ctx.inject("opportunity_id", self._opportunity_id)
         ctx.inject("session_principal", self._principal)
-        ctx.inject("simulation_mode", self._simulation_mode)
 
         log.info(
             "tool.start",

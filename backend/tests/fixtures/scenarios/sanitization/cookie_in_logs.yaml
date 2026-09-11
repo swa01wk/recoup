@@ -1,0 +1,17 @@
+id: san-002
+name: "Cookie header in logs — must be redacted"
+category: sanitization
+description: "Session cookie in log line → [REDACTED-COOKIE]"
+inputs:
+  content: "Cookie: session=abc123xyz; path=/"
+  pattern_type: "cookie"
+expected:
+  redacted_label: "[REDACTED-COOKIE]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  redaction_applied: true
+  unsafe_actions: 0
+tags:
+  - sanitization
+  - cookie

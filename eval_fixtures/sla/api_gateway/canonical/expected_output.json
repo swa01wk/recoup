@@ -1,0 +1,20 @@
+{
+  "scenario_id": "replay-apigateway-2026-09-sla-001",
+  "calculator_inputs": {
+    "total_intervals": 8640,
+    "unavailable_intervals": 6,
+    "billed_amount_usd": "3.51",
+    "service_commitment_pct": "99.95"
+  },
+  "calculator_outputs": {
+    "monthly_uptime_pct": "99.930556",
+    "threshold_breached": true,
+    "tier_pct": "10",
+    "billed_charges": "3.51",
+    "potential_credit": "0.35"
+  },
+  "formula": "(8640 - 6) / 8640 * 100 = 99.930555... => 99.930556% (6dp, ROUND_HALF_UP)",
+  "credit_formula": "3.51 * 10 / 100 = 0.35",
+  "_recoup_fixture_version": "1.0.0",
+  "_recoup_scenario_id": "replay-apigateway-2026-09-sla-001"
+}

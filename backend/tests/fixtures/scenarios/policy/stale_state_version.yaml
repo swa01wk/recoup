@@ -1,0 +1,19 @@
+id: pol-004
+name: "Stale state version after approval — DENY"
+category: policy
+description: "State changed after human approved (version incremented) → binding violation"
+inputs:
+  approved_state_version: 1
+  current_state_version: 2
+  approval_state: "APPROVED"
+  simulation_mode: false
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - hitl
+  - stale_state

@@ -1,0 +1,18 @@
+id: anom-001
+name: "Planned spend spike — cost anomaly detected, low confidence"
+category: anomaly
+description: "Cost spike detected but matches a known scheduled event → low-confidence anomaly"
+inputs:
+  cost_spike_pct: 45
+  cloudtrail_actor_found: false
+  planned_event: true
+expected:
+  anomaly_detected: true
+  confidence_lt: 0.6
+  requires_human_review: true
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - anomaly
+  - cost_spike
+  - low_confidence

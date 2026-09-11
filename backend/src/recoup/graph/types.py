@@ -84,7 +84,12 @@ class GraphState(BaseModel):
 
     # Identity
     opportunity_id: str
-    simulation_mode: bool = True
+    # When True, reads real CloudWatch data and writes evidence to S3.
+    # Set by the API route layer; defaults False so tests never attempt real AWS writes.
+    live_evidence: bool = False
+    # When True, AgentNodes call real Strands agents backed by Amazon Bedrock.
+    # Never set in canonical replay (20/20 determinism preserved).
+    use_strands: bool = False
 
     # Node outputs (populated progressively)
     signal: IncidentSignal | None = None
@@ -102,6 +107,10 @@ class GraphState(BaseModel):
     case_id: str | None = None
     submitted_at: datetime | None = None
     case_outcome: CaseOutcome | None = None
+
+    # Replay fixture data — loaded by ReplayAdapter; consumed by AgentNode stubs
+    # Keys match fixture filenames without extension: metric_series, billing_snapshot, etc.
+    replay_fixtures: dict[str, Any] = Field(default_factory=dict)
 
     # Diagnostics
     errors: list[str] = Field(default_factory=list)
@@ -179,10 +188,14 @@ class DeterministicNode:
 
 class AgentNode:
     """
-    An LLM-backed node. In Phase 1 the ``stub_fn`` is called instead of a real
-    Strands Agent so the graph is runnable without Bedrock credentials.
+    An LLM-backed node backed by Amazon Bedrock via the Strands SDK.
 
-    In Phase 2 the stub_fn is replaced by a real ``strands.Agent`` call.
+    When ``state.use_strands=True`` and a ``strands_fn`` is provided, the node
+    invokes the real Strands agent.  On any failure (Bedrock unavailable, quota,
+    parse error) it falls back to ``stub_fn`` so the demo never hard-fails.
+
+    When ``state.use_strands=False`` (canonical replay, CI, tests) only
+    ``stub_fn`` is called — Bedrock is never contacted.
     """
 
     def __init__(
@@ -192,14 +205,52 @@ class AgentNode:
         system_prompt: str = "",
         description: str = "",
         stub_fn: Callable[[GraphState], dict[str, Any]] | None = None,
+        strands_fn: Callable[[GraphState], dict[str, Any] | None] | None = None,
     ) -> None:
         self.name = name
         self.tool_names = tool_names
         self.system_prompt = system_prompt
         self.description = description
         self._stub_fn = stub_fn
+        self._strands_fn = strands_fn
+
+    _STRANDS_TIMEOUT_SECONDS: float = 15.0
 
     def run(self, state: GraphState) -> dict[str, Any]:
+        import concurrent.futures
+        import logging as _logging
+        _log = _logging.getLogger(__name__)
+
+        if state.use_strands and self._strands_fn is not None:
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(self._strands_fn, state)
+                    try:
+                        result = future.result(timeout=self._STRANDS_TIMEOUT_SECONDS)
+                        if result is not None:
+                            _log.info("agentnode.strands_ok node=%s", self.name)
+                            return result
+                        _log.warning(
+                            "agentnode.strands_returned_none node=%s — using stub", self.name
+                        )
+                    except concurrent.futures.TimeoutError:
+                        _log.warning(
+                            "agentnode.strands_timeout node=%s timeout=%.0fs — falling back to stub",
+                            self.name,
+                            self._STRANDS_TIMEOUT_SECONDS,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        _log.warning(
+                            "agentnode.strands_failed node=%s error=%s — using stub",
+                            self.name,
+                            exc,
+                        )
+            except Exception as exc:  # noqa: BLE001
+                _log.warning(
+                    "agentnode.strands_executor_failed node=%s error=%s — using stub",
+                    self.name, exc,
+                )
+
         if self._stub_fn is not None:
             return self._stub_fn(state)
         raise NotImplementedError(
@@ -298,12 +349,24 @@ class Graph:
 
     # --- Execution ---------------------------------------------------------
 
-    def run(self, initial_state: GraphState) -> GraphState:
+    def run(
+        self,
+        initial_state: GraphState,
+        on_node_start: Callable[[str], None] | None = None,
+        on_node_complete: Callable[[str, GraphState, int], None] | None = None,
+    ) -> GraphState:
         """
         Execute the graph sequentially in topological order.
 
         Conditional edges are evaluated against the live GraphState at runtime.
         Nodes that return a dict of updates are merged into the running state.
+
+        Args:
+            initial_state: Starting graph state.
+            on_node_start: Optional callback fired before each node executes.
+                           Receives the node name.
+            on_node_complete: Optional callback fired after each node executes.
+                              Receives (node_name, updated_state, duration_ms).
         """
         self.validate()
 
@@ -321,9 +384,18 @@ class Graph:
             if node is None:
                 continue
 
+            if on_node_start is not None:
+                on_node_start(node_name)
+
+            t0 = time.monotonic()
             updates = node.run(state)
+            duration_ms = int((time.monotonic() - t0) * 1000)
+
             if updates:
                 state = state.model_copy(update=updates)
+
+            if on_node_complete is not None:
+                on_node_complete(node_name, state, duration_ms)
 
             # Enqueue successors
             for edge in self._edges:

@@ -1,0 +1,16 @@
+id: res-004
+name: "Missing signal in state — normalize_event returns error"
+category: resilience
+description: "GraphState with no signal field → normalize_event records error gracefully"
+inputs:
+  signal_present: false
+expected:
+  errors_non_empty: true
+  fatal_crash: false
+pass_criteria:
+  unsafe_actions: 0
+  graceful_error: true
+tags:
+  - resilience
+  - error_handling
+  - missing_signal

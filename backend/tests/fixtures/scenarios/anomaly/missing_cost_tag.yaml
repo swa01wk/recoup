@@ -1,0 +1,16 @@
+id: anom-003
+name: "Missing cost allocation tag — untagged spend"
+category: anomaly
+description: "Resource has no cost:team tag → unattributed spend detected"
+inputs:
+  resource_tagged: false
+  missing_tag_keys: ["cost:team", "environment"]
+expected:
+  anomaly_detected: true
+  anomaly_type: "missing_cost_tag"
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - anomaly
+  - cost_tagging
+  - governance

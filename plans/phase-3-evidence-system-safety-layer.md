@@ -1,5 +1,9 @@
 # Phase 3 — Evidence System, Safety Layer & HITL Approval
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 7–10 (Target: by Sep 10, 2026)  
 **Status:** `[ ] Not Started`  
 **Depends on:** Phase 1 complete; Phase 2 can run in parallel
@@ -265,8 +269,8 @@ def test_policy_denies_stale_approval():
 def test_policy_denies_amount_mismatch():
     ctx = build_context(
         approval_state="APPROVED",
-        approval_amount=Decimal("1840"),
-        claim_amount=Decimal("1900"),  # regenerated package
+        approval_amount=Decimal("0.35"),
+        claim_amount=Decimal("0.50"),  # regenerated package — mismatch causes DENY
     )
     assert evaluate_policy("submit_support_case", ctx) == "DENY"
 
@@ -333,7 +337,7 @@ async def decline_opportunity(id: str, principal: str = Depends(get_principal)) 
 **Approval card content (what the human sees):**
 ```
 ACTION: Submit SLA Credit Claim to AWS Support
-AMOUNT: $1,840.00 (10% of $18,400.00 billed charges)
+AMOUNT: $0.35 (10% of $3.51 billed charges — real AWS billing from inject_sla_traffic.py)
 SERVICE: Amazon API Gateway — us-east-1
 BILLING CYCLE: August 2026
 EVIDENCE: 4/4 required fields present; 0 missing

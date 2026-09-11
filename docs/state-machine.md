@@ -2,7 +2,9 @@
 
 **File:** `backend/src/recoup/graph/state_machine.py`  
 **Persistence:** DynamoDB table `recoup-opportunities` (with in-memory fallback for unit tests)  
-**Status:** Phase 1 complete — DynamoDB transitions + optimistic locking implemented
+**Last updated:** Sep 11, 2026  
+**Status:** Phase 1 complete — DynamoDB transitions + optimistic locking implemented  
+**Playwright tests:** `journey-operator-primary.spec.ts`, `journey-decision-inbox.spec.ts`, `journey-security.spec.ts` verify all transitions and state_version binding.
 
 ---
 
@@ -42,12 +44,12 @@ Every `RecoveryOpportunity` moves through a defined set of states as the agent g
 ┌────▼──────┐      ┌────▼──┐      ┌───▼──┐
 │AWAITING_  │      │DENIED │      │FAILED│
 │ APPROVAL  │      └───────┘      └──────┘
-└────┬──────┘  ← HITL Decision Inbox
+└────┬──────┘  ← HITL (opportunity detail / approvals API)
      │
      ├── DECLINED ──► DENIED
      │
      ▼
-  APPROVED ← human approves in Decision Inbox
+  APPROVED ← human approves (UI: `/opportunities/{id}` or `POST .../approvals/opportunity/{id}/approve`)
      │
      ▼
  SUBMITTING ← submission_adapter executing
@@ -77,7 +79,7 @@ Every `RecoveryOpportunity` moves through a defined set of states as the agent g
 | `EVIDENCE_READY` | All required evidence has been collected and sanitized |
 | `NEEDS_EVIDENCE` | Evidence collection incomplete; retrying investigation |
 | `ELIGIBILITY_REVIEWED` | `eligibility_reasoner` and `risk_policy_gate` have run |
-| `AWAITING_APPROVAL` | Waiting for human to approve/decline in Decision Inbox |
+| `AWAITING_APPROVAL` | Waiting for human approve/decline/investigate on opportunity detail |
 | `APPROVED` | Human approved the action |
 | `SUBMITTING` | `submission_adapter` is submitting to AWS Support |
 | `SUBMITTED` | AWS Support case has been created (real or simulated) |
@@ -231,7 +233,6 @@ def get_state_machine(
 | `discovered_at` | String | ISO-8601 timestamp |
 | `potential_value` | String | Decimal as string (avoids DynamoDB float) |
 | `confidence` | Number | 0.0 – 1.0 |
-| `simulation_mode` | Boolean | Must be `false` for real submissions |
 | `idempotency_key` | String | Prevents duplicate processing |
 | `active_claim_hash` | String | SHA-256 of current ClaimPackage |
 

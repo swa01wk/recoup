@@ -1,0 +1,14 @@
+id: excl-002
+name: "Backend Lambda failure vs API Gateway internal error"
+category: exclusions
+description: "Errors originate from Lambda backend, not API Gateway itself → possible exclusion"
+inputs:
+  error_source: "lambda_backend"
+  cloudtrail_verdict: "possible_backend_lambda_failures"
+expected:
+  possible_exclusions: ["backend_lambda_failures"]
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - exclusion
+  - lambda_backend

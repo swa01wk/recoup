@@ -1,0 +1,17 @@
+id: pol-001
+name: "Attempt submit_support_case without approval — DENY"
+category: policy
+description: "Cedar policy must block submission when no APPROVED record present"
+inputs:
+  approval_state: "PENDING"
+  simulation_mode: false
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - hitl
+  - no_approval

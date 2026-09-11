@@ -10,6 +10,11 @@ Usage:
     final_state = graph.run(initial_state)
 """
 
+from ..agents.strands_agents import (
+    run_claim_package_generator_agent,
+    run_eligibility_reasoner_agent,
+    run_incident_correlation_agent,
+)
 from .nodes import (
     availability_calculator_fn,
     case_monitor_stub,
@@ -51,6 +56,7 @@ incident_correlation = AgentNode(
     ),
     description="Correlate signal with AWS data → IncidentHypothesis",
     stub_fn=incident_correlation_stub,
+    strands_fn=run_incident_correlation_agent,
 )
 
 sla_contract_resolver = DeterministicNode(
@@ -100,6 +106,7 @@ eligibility_reasoner = AgentNode(
     ),
     description="Assess contractual eligibility → EligibilityAssessment",
     stub_fn=eligibility_reasoner_stub,
+    strands_fn=run_eligibility_reasoner_agent,
 )
 
 risk_policy_gate = DeterministicNode(
@@ -119,6 +126,7 @@ claim_package_generator = AgentNode(
     ),
     description="Assemble the complete ClaimPackage from sanitized evidence",
     stub_fn=claim_package_generator_stub,
+    strands_fn=run_claim_package_generator_agent,
 )
 
 submission_adapter = DeterministicNode(

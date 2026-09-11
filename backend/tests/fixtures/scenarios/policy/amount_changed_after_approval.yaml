@@ -1,0 +1,19 @@
+id: pol-003
+name: "Amount changed after approval — DENY (amount mismatch)"
+category: policy
+description: "Credit amount recalculated to different value after human approved → binding violation"
+inputs:
+  approved_amount: "35.00"
+  current_claim_amount: "1900.00"
+  approval_state: "APPROVED"
+  simulation_mode: false
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - hitl
+  - amount_mismatch

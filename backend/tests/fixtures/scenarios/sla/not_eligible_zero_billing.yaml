@@ -1,0 +1,17 @@
+id: sla-inelig-003
+name: "Zero billed charges — $0.00 credit regardless of uptime"
+category: not_eligible
+description: "6 unavailable of 8,640 but $0.00 billing → $0.00 credit"
+inputs:
+  total_intervals: 8640
+  unavailable_intervals: 6
+  billed_charges: "0.00"
+expected:
+  potential_credit: "0.00"
+  threshold_breached: true
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - not_eligible
+  - zero_billing

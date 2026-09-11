@@ -54,6 +54,7 @@ TRANSITIONS: dict[OpportunityState, set[OpportunityState]] = {
     OpportunityState.AWAITING_APPROVAL: {
         OpportunityState.APPROVED,
         OpportunityState.DENIED,
+        OpportunityState.NEEDS_FOLLOWUP,  # "Send for Investigation" from Decision Inbox
     },
     OpportunityState.APPROVED: {OpportunityState.SUBMITTING},
     OpportunityState.SUBMITTING: {
@@ -71,7 +72,9 @@ TRANSITIONS: dict[OpportunityState, set[OpportunityState]] = {
     OpportunityState.REJECTED: set(),
     OpportunityState.DENIED: set(),
     OpportunityState.FAILED: set(),
-    OpportunityState.NEEDS_FOLLOWUP: set(),
+    OpportunityState.NEEDS_FOLLOWUP: {
+        OpportunityState.INVESTIGATING,  # Re-run investigation from opportunity detail
+    },
 }
 
 

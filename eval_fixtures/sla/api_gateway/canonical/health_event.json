@@ -1,0 +1,35 @@
+{
+  "version": "0",
+  "id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+  "source": "aws.health",
+  "detail-type": "AWS Health Event",
+  "account": "625962218034",
+  "time": "2026-09-07T19:19:24Z",
+  "region": "us-east-1",
+  "resources": [
+    "arn:aws:apigateway:us-east-1::/restapis/oya8d708h5"
+  ],
+  "detail": {
+    "service": "APIGATEWAY",
+    "eventTypeCode": "AWS_APIGATEWAY_OPERATIONAL_ISSUE",
+    "eventTypeCategory": "issue",
+    "region": "us-east-1",
+    "startTime": "2026-09-07T19:19:05Z",
+    "endTime": "2026-09-07T19:19:24Z",
+    "statusCode": "closed",
+    "affectedResources": [
+      {
+        "entityValue": "arn:aws:apigateway:us-east-1::/restapis/oya8d708h5"
+      }
+    ],
+    "eventDescription": [
+      {
+        "language": "en_US",
+        "latestDescription": "Between 02:00 UTC and 02:30 UTC on August 1, 2026, API Gateway in us-east-1 experienced elevated error rates. The issue has been resolved."
+      }
+    ]
+  },
+  "_recoup_replay": true,
+  "_recoup_fixture_version": "1.1.0",
+  "_recoup_scenario_id": "replay-apigateway-2026-09-sla-001"
+}

@@ -1,0 +1,18 @@
+id: sla-inelig-002
+name: "Above 99.95% — clearly not eligible"
+category: not_eligible
+description: "0 unavailable intervals → 100% uptime → NOT eligible"
+inputs:
+  total_intervals: 8640
+  unavailable_intervals: 0
+  billed_charges: "100.00"
+expected:
+  threshold_breached: false
+  potential_credit: "0.00"
+  tier_pct: "0"
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - not_eligible
+  - full_uptime

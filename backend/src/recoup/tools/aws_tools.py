@@ -163,7 +163,7 @@ def get_cost_and_usage(
             {
                 "start": start_date,
                 "end": end_date,
-                "total_usd": "18400.00",
+                "total_usd": "3.51",
                 "_stub": True,
             }
         ],
@@ -189,9 +189,54 @@ def get_cost_anomalies(
         min_impact_usd: Minimum anomaly impact in USD to include.
 
     Returns:
-        {'anomalies': [{id, service, region, start_date, end_date, impact_usd}]}
+        {'anomalies': [{id, service, region, start_date, end_date, impact_usd,
+                        root_causes, impact}]}
     """
-    return {"anomalies": [], "_stub": True}
+    from .._live_flag import recoup_live_aws_enabled  # noqa: PLC0415
+
+    if not recoup_live_aws_enabled():
+        return {"anomalies": [], "_stub": True}
+
+    try:
+        import boto3
+
+        ce = boto3.client("ce", region_name="us-east-1")
+        resp = ce.get_anomalies(
+            DateInterval={"StartDate": start_date, "EndDate": end_date},
+            TotalImpact={"NumericOperator": "GREATER_THAN_OR_EQUAL", "StartValue": min_impact_usd},
+        )
+        anomalies: list[dict[str, Any]] = []
+        for a in resp.get("Anomalies", []):
+            impact = a.get("Impact", {})
+            anomalies.append(
+                {
+                    "id": a.get("AnomalyId", ""),
+                    "service": service,
+                    "region": "us-east-1",
+                    "start_date": a.get("AnomalyStartDate", start_date),
+                    "end_date": a.get("AnomalyEndDate", end_date),
+                    "impact_usd": float(impact.get("TotalImpact", 0)),
+                    "impact": {
+                        "max_impact": float(impact.get("MaxImpact", 0)),
+                        "total_impact": float(impact.get("TotalImpact", 0)),
+                        "total_actual_spend": float(impact.get("TotalActualSpend", 0)),
+                        "total_expected_spend": float(impact.get("TotalExpectedSpend", 0)),
+                    },
+                    "root_causes": [
+                        {
+                            "service": rc.get("Service", ""),
+                            "region": rc.get("Region", ""),
+                            "linked_account": rc.get("LinkedAccount", ""),
+                            "usage_type": rc.get("UsageType", ""),
+                            "operation": rc.get("Operation", ""),
+                        }
+                        for rc in a.get("RootCauses", [])
+                    ],
+                }
+            )
+        return {"anomalies": anomalies, "_stub": False}
+    except Exception:  # noqa: BLE001
+        return {"anomalies": [], "_stub": True, "_error": "live_call_failed"}
 
 
 @tool
@@ -209,9 +254,41 @@ def list_cost_optimization_recommendations(
         region: Optional region filter.
 
     Returns:
-        {'recommendations': [{id, service, region, estimated_savings_usd, action}]}
+        {'recommendations': [{id, service, region, estimated_savings_usd, action,
+                              action_type, current_resource_type, recommended_resource_type}]}
     """
-    return {"recommendations": [], "_stub": True}
+    from .._live_flag import recoup_live_aws_enabled  # noqa: PLC0415
+
+    if not recoup_live_aws_enabled():
+        return {"recommendations": [], "_stub": True}
+
+    try:
+        import boto3
+
+        hub = boto3.client("cost-optimization-hub", region_name="us-east-1")
+        kwargs: dict[str, Any] = {}
+        if service:
+            kwargs["filter"] = {"services": [service]}
+        resp = hub.list_recommendations(**kwargs)
+
+        recommendations: list[dict[str, Any]] = []
+        for r in resp.get("items", []):
+            rec: dict[str, Any] = {
+                "id": r.get("recommendationId", ""),
+                "service": r.get("service", ""),
+                "region": r.get("region", region or "us-east-1"),
+                "estimated_savings_usd": float(
+                    r.get("estimatedMonthlySavings", 0)
+                ),
+                "action": r.get("actionType", ""),
+                "action_type": r.get("actionType", ""),
+                "current_resource_type": r.get("currentResourceType", ""),
+                "recommended_resource_type": r.get("recommendedResourceType", ""),
+            }
+            recommendations.append(rec)
+        return {"recommendations": recommendations, "_stub": False}
+    except Exception:  # noqa: BLE001
+        return {"recommendations": [], "_stub": True, "_error": "live_call_failed"}
 
 
 # ---------------------------------------------------------------------------

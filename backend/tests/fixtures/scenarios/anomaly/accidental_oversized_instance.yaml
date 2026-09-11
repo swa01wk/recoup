@@ -1,0 +1,17 @@
+id: anom-002
+name: "Accidental oversized EC2 instance — cost waste"
+category: anomaly
+description: "EC2 instance launched at r5.8xlarge instead of r5.xlarge → cost anomaly"
+inputs:
+  instance_type_actual: "r5.8xlarge"
+  instance_type_expected: "r5.xlarge"
+  cost_difference_usd: "3200.00"
+expected:
+  anomaly_detected: true
+  anomaly_type: "oversized_resource"
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - anomaly
+  - ec2
+  - oversized

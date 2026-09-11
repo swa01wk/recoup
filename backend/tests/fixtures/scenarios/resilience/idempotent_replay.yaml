@@ -1,0 +1,17 @@
+id: res-001
+name: "Idempotent replay — same idempotency key produces identical result"
+category: resilience
+description: "Running the same replay scenario twice with the same key produces identical output"
+inputs:
+  idempotency_key: "replay:test-idempotency-001"
+  runs: 2
+expected:
+  both_results_identical: true
+  unsafe_actions: 0
+pass_criteria:
+  idempotent: true
+  unsafe_actions: 0
+tags:
+  - resilience
+  - idempotency
+  - replay

@@ -1,0 +1,19 @@
+# SLA contract reference for the canonical API Gateway replay scenario.
+# Points to the locally-catalogued contract file used during claim computation.
+# This file is immutable once committed — never overwrite after a CI run.
+
+service: api_gateway
+catalog_path: sla_catalog/api_gateway/2022-05-05.yaml
+incident_date: "2026-08-01"
+contract_version: "2022-05-05"
+service_commitment_pct: "99.95"
+applicable_tiers:
+  - range: "99.00 <= uptime < 99.95"
+    credit_pct: 10
+  - range: "95.00 <= uptime < 99.00"
+    credit_pct: 25
+  - range: "0.00 <= uptime < 95.00"
+    credit_pct: 100
+
+_recoup_fixture_version: "1.0.0"
+_recoup_scenario_id: "replay-apigateway-2026-08-sla-001"

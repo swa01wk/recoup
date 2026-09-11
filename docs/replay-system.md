@@ -3,8 +3,10 @@
 **Files:**  
 - Adapter: `backend/src/recoup/adapters/replay.py`  
 - API Route: `backend/src/recoup/api/routes/replay.py`  
-- Fixtures dir: `eval_fixtures/`  
-**Status:** Phase 1 complete — canonical $1,840 scenario runs end-to-end
+- Fixtures dir: `eval_fixtures/sla/api_gateway/canonical/`  
+**Last updated:** Sep 11, 2026  
+**Playwright tests:** `journey-sla-replay-full.spec.ts` (10 tests), `sla-replay.spec.ts` (4 tests) — see Journey J4 in `USER_JOURNEY_CHECKLIST.md`.  
+**Status:** Phase 2 complete — real SLA scenario deterministic across 20/20 consecutive runs; P95 = 23 ms
 
 ---
 
@@ -13,12 +15,12 @@
 A Verified Replay is a **seedable, deterministic execution** of the full Recoup agent graph using a pre-recorded synthetic incident. It:
 
 1. Loads a canonical event payload from `eval_fixtures/` (no live AWS incident required)
-2. Sets `simulation_mode=True` (no real AWS Support submission)
+2. Gates real AWS Support submission via `recoup_enable_real_support_submission=False` (default)
 3. Runs the complete 11-node graph
-4. Produces the same numerical result — **$1,840.00** — on every run
+4. Produces the same numerical result — **$0.35** — on every run
 5. Finishes in P95 ≤ 60 seconds
 
-The replay is the **primary judge demo path**. No AWS credentials, no live incident, no Bedrock model calls needed in Phase 1 (all AgentNode stubs are deterministic).
+The replay is the **primary judge demo path**. No live AWS incident needed — all AgentNode stubs are deterministic. Bedrock is bypassed (`use_strands=False`).
 
 ---
 
@@ -27,10 +29,10 @@ The replay is the **primary judge demo path**. No AWS credentials, no live incid
 | Problem | Replay Solution |
 |---------|----------------|
 | Live AWS incidents are unpredictable | Replay is seeded from immutable `eval_fixtures/` |
-| Real credit claims have consequences | `simulation_mode=True` prevents real submissions |
+| Real credit claims have consequences | `recoup_enable_real_support_submission=False` (default) prevents real submissions |
 | Evaluation reproducibility | Same input → same `case_id`, always |
 | Demo during judging | No AWS credentials required for the judge to verify |
-| CI golden test | `pytest` verifies `potential_credit == Decimal("1840.00")` on every run |
+| CI golden test | `pytest` verifies `potential_credit == Decimal("0.35")` on every run |
 
 ---
 
@@ -46,10 +48,10 @@ CANONICAL_SCENARIO = ReplayScenario(
     description=(
         "6 unavailable 5-minute intervals in a 31-day month "
         "(8,640 total). Monthly uptime: 99.9306%. 10% credit tier. "
-        "$18,400 billed charges → $1,840.00 potential credit."
+        "$3.51 billed charges → $0.35 potential credit."
     ),
     event=_CANONICAL_EVENT,
-    expected_credit_usd=Decimal("1840.00"),
+    expected_credit_usd=Decimal("0.35"),
     expected_uptime_pct=Decimal("99.930556"),
     tags=["golden", "apigateway", "sla_10pct"],
 )
@@ -112,7 +114,7 @@ class ReplayAdapter:
 1. Defaults to `CANONICAL_SCENARIO` if no scenario provided
 2. Generates `opportunity_id` as `f"opp-{scenario.scenario_id}"` unless overridden
 3. Parses the event dict into a typed `IncidentSignal`
-4. Sets `simulation_mode=True`
+4. Runs with real-submission gated off (default)
 5. Generates a deterministic `idempotency_key`:
    ```python
    "replay:" + sha256(scenario_id.encode()).hexdigest()[:16]
@@ -134,7 +136,7 @@ adapter = ReplayAdapter()
 state = adapter.build_state(CANONICAL_SCENARIO)
 final_state = recoup_graph.run(state)
 
-assert final_state.availability_result.potential_credit == Decimal("1840.00")
+assert final_state.availability_result.potential_credit == Decimal("0.35")
 assert final_state.case_id is not None
 ```
 
@@ -152,13 +154,12 @@ curl -X POST http://localhost:8000/api/replay/run \
 {
   "opportunity_id": "opp-replay-apigateway-2026-08-sla-001",
   "scenario_id": "replay-apigateway-2026-08-sla-001",
-  "simulation_mode": true,
   "monthly_uptime_pct": "99.930556",
   "threshold_breached": true,
   "tier_pct": "10",
-  "billed_charges": "18400.00",
-  "potential_credit": "1840.00",
-  "case_id": "sim-a3f9c12b4d01",
+  "billed_charges": "3.51",
+  "potential_credit": "0.35",
+  "case_id": "replay-a3f9c12b4d01",
   "errors": []
 }
 ```
@@ -171,7 +172,7 @@ OPPORTUNITY_ID="opp-$(date +%s)"
 
 curl -X POST http://localhost:8000/api/opportunities/$OPPORTUNITY_ID/run \
   -H "Content-Type: application/json" \
-  -d '{"simulation_mode": true}'
+  -d '{}'
 
 curl http://localhost:8000/api/opportunities/$OPPORTUNITY_ID/trace
 ```
@@ -188,7 +189,7 @@ curl http://localhost:8000/api/opportunities/$OPPORTUNITY_ID/trace
 | `AvailabilityResult` | Pure Decimal math — no float, no randomness |
 | `EvidenceManifest` | Evidence IDs derived from SHA-256 of `{opportunity_id}:{field_name}` |
 | `ClaimPackage` | Body assembled from deterministic inputs |
-| `case_id` | `"sim-" + sha256(calculator_result_hash)[:12]` — same input → same ID |
+| `case_id` | **`submission_adapter` node:** `"replay-" + sha256(…)[:12]`. **`simulate_support_case` tool** (if invoked directly): `"sim-" + sha256(calculator_result_hash)[:12]`. Canonical replay API uses the graph path → `replay-` prefix. |
 | `idempotency_key` | `"replay:" + sha256(scenario_id)[:16]` — fixed per scenario |
 
 ---
@@ -202,11 +203,18 @@ The `eval_fixtures/` directory holds immutable replay seed artifacts. Files in t
 
 ```
 eval_fixtures/
-└── replay/
-    └── apigateway-2026-08-sla-001.json   (Phase 2 — not yet created)
+└── sla/
+    └── api_gateway/
+        └── canonical/
+            ├── health_event.json       — synthetic AWS Health event (full EventBridge schema)
+            ├── metric_series.json      — 8,640 five-minute intervals; 6 at 0% (02:00–02:30 UTC Aug 1)
+            ├── billing_snapshot.json   — August 2026 billing: $3.51 for API Gateway us-east-1
+            ├── cloudtrail_events.json  — benign events; verdict: no_customer_caused_errors
+            ├── sla_contract_ref.yaml   — points to sla_catalog/api_gateway/2022-05-05.yaml
+            └── expected_output.json    — calculator result: 99.930556%, tier=10%, credit=$0.35
 ```
 
-Phase 1 uses the in-code `_CANONICAL_EVENT` constant. Phase 2 will persist the full event JSON to `eval_fixtures/` and load it via `ReplayAdapter.load_scenario_from_file()`.
+`ReplayAdapter._load_fixtures()` loads these files into `GraphState.replay_fixtures` at state-build time. The `incident_correlation` stub parses intervals from `metric_series.json` and billing from `billing_snapshot.json` before falling back to golden constants.
 
 ---
 
@@ -215,21 +223,27 @@ Phase 1 uses the in-code `_CANONICAL_EVENT` constant. Phase 2 will persist the f
 The `ship-gates` CI job runs:
 
 ```bash
-pytest tests/unit/test_calculator.py -W error::DeprecationWarning
+pytest tests/unit/ tests/e2e/test_golden_replay.py -W error::DeprecationWarning
+python scripts/assert_ship_gates.py scorecard.json
 ```
 
-The test includes a replay assertion:
+The golden replay test (Phase 2 e2e suite):
 
 ```python
-def test_canonical_replay_produces_1840():
+def test_canonical_replay_produces_real_credit():
     adapter = ReplayAdapter()
     state = adapter.build_state(CANONICAL_SCENARIO)
     final_state = recoup_graph.run(state)
-    assert final_state.availability_result.potential_credit == Decimal("1840.00")
+    assert final_state.availability_result.potential_credit == Decimal("0.35")
     assert final_state.availability_result.monthly_uptime_pct == Decimal("99.930556")
+
+def test_canonical_replay_20_consecutive_runs():
+    # 20/20 must return identical $0.35
+    results = [recoup_graph.run(adapter.build_state()) for _ in range(20)]
+    assert all(r.availability_result.potential_credit == Decimal("0.35") for r in results)
 ```
 
-This test is also enforced in the `ship-gates` job comment in STATUS.md as a blocking gate for Phase 2 completion.
+The `assert_ship_gates.py` script enforces ship-gate metrics from the scorecard JSON (aligned with the six live gates in `/api/quality/scorecard` plus legacy threshold fields where configured).
 
 ---
 

@@ -31,7 +31,7 @@ def _utcnow() -> datetime:
 
 
 class TestRecoveryOpportunity:
-    def test_default_simulation_mode_is_true(self) -> None:
+    def test_default_state_is_detected(self) -> None:
         opp = RecoveryOpportunity(
             id="opp-001",
             type="SLA",
@@ -39,11 +39,11 @@ class TestRecoveryOpportunity:
             service="apigateway",
             region="us-east-1",
             discovered_at=_utcnow(),
-            potential_value=Decimal("1840.00"),
+            potential_value=Decimal("35.00"),
             confidence=0.92,
             state=OpportunityState.DETECTED,
         )
-        assert opp.simulation_mode is True
+        assert opp.state == OpportunityState.DETECTED
 
     def test_account_id_is_masked(self) -> None:
         opp = RecoveryOpportunity(
@@ -284,7 +284,7 @@ class TestApprovalRecord:
             approval_id="apr-001",
             principal="user@example.com",
             action="submit_sla_claim",
-            amount=Decimal("1840.00"),
+            amount=Decimal("35.00"),
             claim_hash="sha256:abc",
             opportunity_id="opp-001",
             state_version=3,

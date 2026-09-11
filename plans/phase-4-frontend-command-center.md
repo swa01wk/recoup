@@ -1,8 +1,17 @@
 # Phase 4 — Frontend Command Center
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 8–11 (Target: by Sep 11, 2026)  
-**Status:** `[ ] Not Started`  
+**Status:** `[✅] Complete — Sep 1, 2026`  
+**Superseded by:** `plans/phase-8-frontend-redesign.md` (Sep 3, 2026)  
 **Depends on:** Phase 1 (API contracts); Phases 2 & 3 can be partially parallel
+
+> **Note (Sep 3, 2026):** Phase 4 was completed as planned. The resulting UI (dark "SLA Recovery Command Center") is being replaced by Phase 8 — a full redesign aligned with the hackathon winning strategy: Recovery Dashboard, Recovery Ledger hero metric, role system (Operator / Viewer), IAM security boundary visualization, and a Finding → Opportunity promotion bridge. See `plans/phase-8-frontend-redesign.md`.
+
+> **As-built (Sep 11):** Phase 8/9 delivered ledger + promote + detail HITL; current IA is **opportunities-first** — see Phase 8 as-built and [docs/frontend-guide.md](../docs/frontend-guide.md). This document describes the **original** six-view Command Center spec (superseded).
 
 ---
 
@@ -82,14 +91,14 @@ frontend/src/
 ├────────────────┬────────────────┬────────────────────────┤
 │ Potential      │ Recovered      │ Active                  │
 │ Recovery       │ (Confirmed)    │ Investigations          │
-│ $1,840         │ $0             │ 1                       │
-│ [Simulated]    │                │                         │
+│ $0.35          │ $0             │ 1                       │
+│ [Real billing] │                │                         │
 ├─────────────────────────────────────────────────────────┤
 │ OPPORTUNITIES                    [▶ Run Canonical Replay] │
 ├────────┬────────────┬───────────┬───────────┬────────────┤
 │ ID     │ Service    │ State     │ Value     │ Mode        │
 ├────────┼────────────┼───────────┼───────────┼────────────┤
-│ op-... │ API GW     │ AWAITING  │ $1,840    │ [REPLAY]   │
+│ op-... │ API GW     │ AWAITING  │ $0.35     │ [REPLAY]   │
 │        │ us-east-1  │ APPROVAL  │ Potential │            │
 └────────┴────────────┴───────────┴───────────┴────────────┘
 ```
@@ -226,15 +235,15 @@ function EvidenceItemRow({ item }: { item: EvidenceItem }) {
 │ ACTION                                                   │
 │ Submit SLA Credit Claim to AWS Support                   │
 │                                                          │
-│ AMOUNT         $1,840.00                                 │
-│ BASIS          10% of $18,400.00 billed charges          │
+│ AMOUNT         $0.35 (real AWS billing)                  │
+│ BASIS          10% of $3.51 billed charges               │
 │ SERVICE        Amazon API Gateway — us-east-1            │
-│ BILLING CYCLE  August 2026                               │
+│ BILLING CYCLE  Sep 2026                                  │
 │ EVIDENCE       4 of 4 required fields present            │
 │                                                          │
 │ CALCULATION                                              │
 │ (8,634 / 8,640) × 100 = 99.9306% → 10% tier             │
-│ $18,400 × 10% = $1,840.00                                │
+│ $3.51 × 10% = $0.35                                      │
 │                                                          │
 │ SLA BASIS      API Gateway SLA 2022-05-05                │
 │                sha256:abc123...                          │

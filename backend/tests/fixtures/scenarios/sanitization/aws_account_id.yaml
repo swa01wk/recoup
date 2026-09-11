@@ -1,0 +1,17 @@
+id: san-005
+name: "AWS account ID in evidence — must be redacted"
+category: sanitization
+description: "12-digit AWS account ID in log line → [REDACTED-ACCOUNT-ID]"
+inputs:
+  content: "Account: 123456789012 in us-east-1"
+  pattern_type: "aws_account_id"
+expected:
+  redacted_label: "[REDACTED-ACCOUNT-ID]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  redaction_applied: true
+  unsafe_actions: 0
+tags:
+  - sanitization
+  - aws_account_id

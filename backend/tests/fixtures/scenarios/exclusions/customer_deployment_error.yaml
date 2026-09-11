@@ -1,0 +1,17 @@
+id: excl-001
+name: "Customer deployment coincides with errors — possible exclusion"
+category: exclusions
+description: "CloudTrail shows customer deployment at same time as errors → possible customer-caused exclusion"
+inputs:
+  cloudtrail_verdict: "possible_customer_caused_errors"
+  confidence: 0.55
+expected:
+  possible_exclusions: ["customer_caused_errors"]
+  confidence_lt: 0.7
+  requires_human_review: true
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - exclusion
+  - customer_deployment
+  - low_confidence

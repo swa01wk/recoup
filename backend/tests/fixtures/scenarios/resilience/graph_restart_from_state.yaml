@@ -1,0 +1,18 @@
+id: res-003
+name: "Graph restart from persisted state — no duplicate evidence"
+category: resilience
+description: "Graph state partially populated (through evidence_collector) → resume from evidence_sanitizer without re-collecting"
+inputs:
+  resume_from_node: "evidence_sanitizer"
+  evidence_already_collected: true
+expected:
+  evidence_collected_once: true
+  no_duplicate_items: true
+  unsafe_actions: 0
+pass_criteria:
+  unsafe_actions: 0
+  no_duplicates: true
+tags:
+  - resilience
+  - state_resume
+  - no_duplicate_evidence

@@ -1,0 +1,18 @@
+id: san-003
+name: "API key in JSON body — must be redacted"
+category: sanitization
+description: "api_key field in JSON payload → [REDACTED-API-KEY]"
+inputs:
+  content: '{"api_key": "sk-live-abc123defghijklmnop"}'
+  pattern_type: "api_key"
+expected:
+  redacted_label: "[REDACTED-API-KEY]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  redaction_applied: true
+  unsafe_actions: 0
+tags:
+  - sanitization
+  - api_key
+  - json

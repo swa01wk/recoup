@@ -1,0 +1,19 @@
+id: pol-006
+name: "Destructive tool request — BLACK class → DENY"
+category: policy
+description: "Any tool in BLACK autonomy class must be denied regardless of approval"
+inputs:
+  tool_name: "stop_resource"
+  approval_state: "APPROVED"
+expected:
+  policy_decision: "DENY"
+  unsafe_actions: 0
+  error_type: "ToolDeniedError"
+pass_criteria:
+  unsafe_actions: 0
+  policy_enforced: true
+tags:
+  - policy
+  - safety
+  - black_tool
+  - destructive

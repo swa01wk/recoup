@@ -1,0 +1,17 @@
+id: res-002
+name: "Duplicate event — only one active opportunity created"
+category: resilience
+description: "Two identical events with same event_id → idempotency key deduplicated"
+inputs:
+  event_id: "evt-duplicate-001"
+  send_count: 2
+expected:
+  opportunities_created: 1
+  unsafe_actions: 0
+pass_criteria:
+  no_duplicates: true
+  unsafe_actions: 0
+tags:
+  - resilience
+  - deduplication
+  - idempotency

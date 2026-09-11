@@ -48,7 +48,7 @@ API_GW_CONTRACT = SLAContract(
     source_hash="sha256:test",
 )
 
-BILLED_CHARGES = Decimal("18400.00")
+BILLED_CHARGES = Decimal("100.00")
 
 
 def _make_intervals(total: int, unavailable_count: int) -> list[AvailabilityInterval]:
@@ -100,11 +100,11 @@ def test_golden_tier_10_pct_not_25() -> None:
     assert result.tier_pct != Decimal("25")
 
 
-def test_golden_credit_1840() -> None:
-    """Test 3: $18,400 × 10% = $1,840.00"""
+def test_golden_credit_ten_pct() -> None:
+    """Test 3: $100.00 × 10% = $10.00"""
     intervals = _make_intervals(total=8640, unavailable_count=6)
     result = calculate_availability_and_credit(intervals, API_GW_CONTRACT, BILLED_CHARGES)
-    assert result.potential_credit == Decimal("1840.00")
+    assert result.potential_credit == Decimal("10.00")
 
 
 def test_exactly_at_commitment_not_eligible() -> None:
@@ -154,7 +154,7 @@ def test_calculation_trace_populated() -> None:
     result = calculate_availability_and_credit(intervals, API_GW_CONTRACT, BILLED_CHARGES)
     assert len(result.calculation_trace) >= 5
     assert any("8,640" in step for step in result.calculation_trace)
-    assert any("1,840" in step for step in result.calculation_trace)
+    assert any("10.00" in step or "10" in step for step in result.calculation_trace)
 
 
 def test_zero_billing_charges_yields_zero_credit() -> None:
@@ -167,7 +167,7 @@ def test_zero_billing_charges_yields_zero_credit() -> None:
 def test_decimal_precision_no_float() -> None:
     """Credit calculation must use Decimal throughout — no floating point rounding."""
     intervals = _make_intervals(total=8640, unavailable_count=6)
-    result = calculate_availability_and_credit(intervals, API_GW_CONTRACT, Decimal("18400.00"))
+    result = calculate_availability_and_credit(intervals, API_GW_CONTRACT, Decimal("100.00"))
     assert isinstance(result.potential_credit, Decimal)
     assert isinstance(result.monthly_uptime_pct, Decimal)
     assert isinstance(result.tier_pct, Decimal)

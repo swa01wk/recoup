@@ -1,0 +1,15 @@
+id: ev-gap-003
+name: "Missing billing record — cannot compute credit"
+category: evidence_gaps
+description: "Billing snapshot not available → billing_record field absent"
+inputs:
+  service: apigateway
+  missing_fields: ["billing_record"]
+expected:
+  evidence_complete: false
+  missing_fields: ["billing_record"]
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - evidence_gap
+  - missing_billing

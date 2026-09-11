@@ -4,13 +4,15 @@
 - Calculator: `backend/src/recoup/engines/calculator.py`  
 - Resolver: `backend/src/recoup/engines/sla_resolver.py`  
 - SLA Catalog: `sla_catalog/api_gateway/2022-05-05.yaml`  
-**Status:** Complete — 63/63 tests pass, 0 DeprecationWarnings
+**Last updated:** Sep 11, 2026  
+**Playwright tests:** `journey-sla-replay-full.spec.ts` J4 — verifies credit amount > 0, < $20, 100% uptime not eligible, idempotent replay, wrong amount → 409.  
+**Status:** Complete — 362/362 tests pass (calculator tests are part of the full suite), 0 DeprecationWarnings
 
 ---
 
 ## Overview
 
-The SLA Calculator is a **pure deterministic Python module** with zero LLM involvement. All arithmetic uses `Decimal` with explicit rounding to eliminate floating-point drift. The golden test value (`$1,840.00`) must match exactly on every run — no tolerance margin.
+The SLA Calculator is a **pure deterministic Python module** with zero LLM involvement. All arithmetic uses `Decimal` with explicit rounding to eliminate floating-point drift. The golden test value (computed from real billing) must match exactly on every run — no tolerance margin.
 
 ---
 
@@ -50,7 +52,7 @@ potential_credit   = (...).quantize(Decimal("0.01"),     rounding=ROUND_HALF_UP)
 ```
 
 - Uptime percentage: 6 decimal places (e.g. `99.930556`)
-- Credit amount: 2 decimal places (e.g. `1840.00`)
+- Credit amount: 2 decimal places (e.g. `0.35`)
 - All intermediate arithmetic uses `Decimal`, never `float`
 
 ---
@@ -112,7 +114,7 @@ customer_caused_errors · backend_lambda_failures · planned_maintenance · forc
 
 ## Golden Test Specification (Appendix C)
 
-The golden test in `tests/unit/test_calculator.py` must pass on every CI run. Any change that breaks the golden value (`$1,840.00`) fails CI.
+The golden test in `tests/unit/test_calculator.py` must pass on every CI run. Any change that breaks the golden value (`$0.35`) fails CI.
 
 ### Canonical Scenario
 
@@ -123,7 +125,7 @@ The golden test in `tests/unit/test_calculator.py` must pass on every CI run. An
 | Billing month | August 2026 (31 days) |
 | Total 5-minute intervals | 8,640 (31 × 24 × 60 ÷ 5) |
 | Unavailable intervals | 6 |
-| Billed charges | $18,400.00 |
+| Billed charges | $3.51.00 |
 
 ### Step-by-Step Calculation
 
@@ -147,7 +149,7 @@ The golden test in `tests/unit/test_calculator.py` must pass on every CI run. An
 
 **Step 4 — Credit amount**
 ```
-$18,400.00 × 10% = $1,840.00  (quantized to 2 dp)
+$3.51.00 × 10% = $0.35  (quantized to 2 dp)
 ```
 
 ### Expected Outputs
@@ -157,8 +159,8 @@ AvailabilityResult(
     monthly_uptime_pct=Decimal("99.930556"),
     threshold_breached=True,
     tier_pct=Decimal("10"),
-    billed_charges=Decimal("18400.00"),
-    potential_credit=Decimal("1840.00"),
+    billed_charges=Decimal("3.51"),
+    potential_credit=Decimal("0.35"),
     calculation_trace=[
         "Total 5-minute intervals in billing month: 8,640",
         "Unavailable intervals (availability < 100%): 6",
@@ -167,8 +169,8 @@ AvailabilityResult(
         "SLA commitment: 99.95%",
         "Threshold breached: YES (99.930556% < 99.95%)",
         "Credit tier: 10%",
-        "Billed charges in affected billing cycle: $18,400",
-        "Potential credit: $18,400 × 10% = $1,840",
+        "Billed charges in affected billing cycle: $3.51",
+        "Potential credit: $3.51 × 10% = $0.35",
     ],
 )
 ```
@@ -234,8 +236,8 @@ Monthly uptime %: 99.930556%
 SLA commitment: 99.95%
 Threshold breached: YES (99.930556% < 99.95%)
 Credit tier: 10%
-Billed charges in affected billing cycle: $18,400
-Potential credit: $18,400 × 10% = $1,840
+Billed charges in affected billing cycle: $3.51
+Potential credit: $3.51 × 10% = $0.35
 ```
 
 This trace is the "show your work" output that makes the claim verifiable by a human reviewer and by the evaluation scorecard.

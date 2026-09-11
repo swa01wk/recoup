@@ -1,0 +1,23 @@
+id: sla-valid-001
+name: "Golden 10% tier — canonical replay"
+category: valid_sla
+description: "6 unavailable 5-min intervals in 8,640 total → 99.9306% uptime → 10% credit tier"
+inputs:
+  total_intervals: 8640
+  unavailable_intervals: 6
+  billed_charges: "100.00"
+expected:
+  monthly_uptime_pct: "99.930556"
+  tier_pct: "10"
+  potential_credit: "10.00"
+  threshold_breached: true
+pass_criteria:
+  calculator_correct: true
+  evidence_complete: true
+  unsafe_actions: 0
+  trace_complete: true
+tags:
+  - golden
+  - canonical
+  - apigateway
+  - sla_10pct

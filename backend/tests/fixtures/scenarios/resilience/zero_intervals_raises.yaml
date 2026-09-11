@@ -1,0 +1,18 @@
+id: res-005
+name: "Empty interval list — calculator raises ValueError gracefully"
+category: resilience
+description: "Passing zero availability intervals to calculator → ValueError with 'zero intervals'"
+inputs:
+  total_intervals: 0
+  unavailable_intervals: 0
+  billed_charges: "1000.00"
+expected:
+  raises: "ValueError"
+  error_message_contains: "zero intervals"
+pass_criteria:
+  unsafe_actions: 0
+  graceful_error: true
+tags:
+  - resilience
+  - edge_case
+  - empty_intervals

@@ -2,11 +2,29 @@
 
 **CI provider:** GitHub Actions  
 **Config:** `.github/workflows/ci.yml`  
-**Triggers:** Push to `main`/`dev`, PR to `main`
+**Triggers:** Push to `main`/`dev`, PR to `main`  
+**Last updated:** Sep 11, 2026
 
 ---
 
 ## Jobs
+
+### 0. `playwright` — Frontend E2E Tests (added Phase 7)
+
+Runs on every push alongside `frontend`. Requires backend to start.
+
+```
+# Start backend (auto-started by playwright.config.ts webServer)
+cd frontend && npx playwright test --grep @smoke
+```
+
+**Test files:** 28 specs · 279 tests  
+**Tags:** `@smoke` (happy path) · `@full` (edge cases + security)  
+**Coverage:** J1–J12 journeys + 13 SEC adversarial scenarios
+
+**Passes when:** All `@smoke` tests pass (0 failures). Full `@full` suite run on PRs to `main`.
+
+See `USER_JOURNEY_CHECKLIST.md` for the per-step coverage map.
 
 ### 1. `backend` — Lint & Unit Tests
 
@@ -14,12 +32,12 @@ Runs on every push. No AWS credentials required.
 
 ```
 ruff check src/ tests/          # style + unused imports
-mypy src/recoup/ --ignore-missing-imports   # type checking
-pytest tests/unit/ -W error::DeprecationWarning   # 63 tests, zero warnings
-pytest tests/unit/test_sla_catalog.py             # SLA catalog integrity
+mypy src/recoup/ --strict       # strict type checking (57 source files, 0 errors)
+pytest tests/ -W error::DeprecationWarning   # 420 collected, 15 skipped (live-mode), zero warnings
+pytest tests/unit/test_sla_catalog.py        # SLA catalog integrity
 ```
 
-**Passes when:** All 63 tests green, zero `DeprecationWarning`s, ruff + mypy clean.
+**Passes when:** All collected tests green (15 live-mode skipped expected), zero `DeprecationWarning`s, ruff + mypy clean.
 
 ### 2. `frontend` — Type-check & Build
 
@@ -47,11 +65,14 @@ npx cdk synth --all
 Runs after `backend`. Dedicated gates for competition-critical correctness:
 
 ```
-pytest tests/unit/test_calculator.py    # $1,840 golden value must match exactly
-pytest -k "policy or safety or unsafe"  # zero unsafe actions without approval
+pytest tests/unit/test_calculator.py              # golden credit from real billing must be consistent
+pytest tests/e2e/test_golden_replay.py            # 20/20 consecutive replay runs pass
+pytest tests/adversarial/test_adversarial.py      # zero unsafe actions, no hallucinated evidence
+python scripts/run_eval_suite.py --output scorecard.json
+python scripts/assert_ship_gates.py scorecard.json  # ship-gate metrics from scorecard JSON
 ```
 
-**Passes when:** Calculator golden test exact-matches; no policy violations.
+**Passes when:** Calculator golden test exact-matches; 20/20 replay determinism confirmed; scorecard gates pass (`all_gates_pass` true) including scenario success, evidence recall, financial math, and `unsafe_actions = 0`.
 
 ---
 

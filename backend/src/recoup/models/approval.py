@@ -26,10 +26,29 @@ class ApprovalRecord(BaseModel):
     amount: Decimal
     claim_hash: str = Field(description="SHA-256 of the ClaimPackage JSON")
     opportunity_id: str
+    # resource_id tracks the underlying AWS resource so that duplicate
+    # approvals for the same resource can be detected and revoked even after
+    # server restarts (when opportunity_ids are regenerated).
+    resource_id: str = Field(
+        default="",
+        description="Underlying AWS resource ID — used for cross-restart deduplication",
+    )
     state_version: int = Field(description="Bound to this exact state version; stale if changed")
     timestamp: datetime
     expires_at: datetime
     state: ApprovalState = ApprovalState.PENDING
+    risk_tier: str = Field(
+        default="YELLOW",
+        description="GREEN | YELLOW | RED — derived from Cedar policy context",
+    )
+    action_description: str = Field(
+        default="",
+        description="Human-readable action summary for the Decision Inbox",
+    )
+    rollback_context: str = Field(
+        default="",
+        description="Reversibility and safety notes shown before approval",
+    )
 
     @property
     def is_valid(self) -> bool:
@@ -50,6 +69,10 @@ class ApprovalRecord(BaseModel):
         opportunity_id: str,
         state_version: int,
         ttl_hours: int = 24,
+        risk_tier: str = "YELLOW",
+        action_description: str = "",
+        rollback_context: str = "",
+        resource_id: str = "",
     ) -> "ApprovalRecord":
         now = _utcnow()
         return cls(
@@ -59,8 +82,12 @@ class ApprovalRecord(BaseModel):
             amount=amount,
             claim_hash=claim_hash,
             opportunity_id=opportunity_id,
+            resource_id=resource_id,
             state_version=state_version,
             timestamp=now,
             expires_at=now + timedelta(hours=ttl_hours),
             state=ApprovalState.PENDING,
+            risk_tier=risk_tier,
+            action_description=action_description,
+            rollback_context=rollback_context,
         )

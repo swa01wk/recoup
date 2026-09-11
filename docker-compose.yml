@@ -1,0 +1,24 @@
+# Local full-stack demo — backend + frontend
+# Usage: cp .env.example .env && docker compose up --build
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./eval_fixtures:/app/eval_fixtures:ro
+      - ./sla_catalog:/app/sla_catalog:ro
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend

@@ -2,7 +2,9 @@
 
 **File:** `backend/src/recoup/hooks/tracing.py`  
 **Class:** `RecoupTracingHooks`  
-**Status:** Phase 1 complete — all 6 hook types implemented; DynamoDB writes + X-Ray spans are no-ops without credentials
+**Last updated:** Sep 11, 2026  
+**Status:** Phase 3 complete — all 6 hook types active; DynamoDB audit writes live; X-Ray spans no-op without credentials  
+**Playwright tests:** `journey-security.spec.ts` SEC-5/SEC-6 verify `X-Request-ID` on all responses including 409 rejections.
 
 ---
 
@@ -26,7 +28,6 @@ from recoup.graph.types import NodeContext, ToolContext
 hooks = RecoupTracingHooks(
     opportunity_id="opp-replay-001",
     principal="ops-team",
-    simulation_mode=True,
 )
 
 # Before a node runs
@@ -107,7 +108,6 @@ Fires before any tool is invoked by an AgentNode. This is the **primary security
 ```python
 ctx.inject("opportunity_id", self._opportunity_id)
 ctx.inject("session_principal", self._principal)
-ctx.inject("simulation_mode", self._simulation_mode)
 ```
 
 **Emits:**
@@ -287,13 +287,14 @@ All hooks use `structlog` for structured JSON logging. Log fields are consistent
 
 ---
 
-## Phase 1 vs Phase 2 Behavior
+## Current Feature Status
 
-| Feature | Phase 1 | Phase 2 |
-|---------|---------|---------|
-| Allowlist enforcement | ✅ Active | ✅ Active |
-| Redaction | ✅ Active | ✅ Active |
-| Structured logging | ✅ Active | ✅ Active |
-| X-Ray spans | No-op (no credentials) | Active (aws-xray-sdk) |
-| DynamoDB audit writes | No-op → logged warning | Active → `recoup-tool-audits` |
-| `on_error` classification | ✅ Active | ✅ Active |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Allowlist enforcement | ✅ Active | Enforced pre-tool-call; `PermissionError` on violation |
+| Redaction | ✅ Active | 7 `_HIGH_RISK_PATTERNS`; fail-closed |
+| Structured logging | ✅ Active | `structlog` JSON output |
+| X-Ray spans | No-op | Requires `aws-xray-sdk` + credentials; safe no-op otherwise |
+| DynamoDB audit writes | ✅ Active | Writes to `recoup-tool-audits`; fails silently without credentials |
+| `on_error` classification | ✅ Active | `RETRY` for throttle; `FATAL` for everything else |
+| CloudWatch Logs HITL audit | ✅ Active (Phase 6b) | `HITLFlow` writes `APPROVAL_REQUESTED/GRANTED/DECLINED` to `/recoup/runtime` |

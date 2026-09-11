@@ -1,0 +1,18 @@
+id: sla-inelig-004
+name: "No requests in affected interval — cannot prove impact"
+category: not_eligible
+description: "Intervals show downtime but zero request_count → cannot establish customer impact"
+inputs:
+  total_intervals: 100
+  unavailable_intervals: 5
+  request_count_in_down_intervals: 0
+  billed_charges: "5000.00"
+expected:
+  threshold_breached: true
+  eligible: false
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - not_eligible
+  - no_impact

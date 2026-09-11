@@ -1,0 +1,17 @@
+id: san-006
+name: "JWT token in evidence — must be redacted"
+category: sanitization
+description: "Three-part JWT in content → [REDACTED-JWT]"
+inputs:
+  content: "token: eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyMTIzIn0.SflKxwRJSMeKKF2QT4"
+  pattern_type: "jwt"
+expected:
+  redacted_label: "[REDACTED-JWT]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  redaction_applied: true
+  unsafe_actions: 0
+tags:
+  - sanitization
+  - jwt

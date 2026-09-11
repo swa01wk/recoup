@@ -1,0 +1,18 @@
+id: san-001
+name: "Authorization token in request logs — must be redacted"
+category: sanitization
+description: "Bearer token present in CloudWatch log line → [REDACTED-AUTH-TOKEN]"
+inputs:
+  content: "Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature"
+  pattern_type: "auth_token"
+expected:
+  redacted_label: "[REDACTED-AUTH-TOKEN]"
+  redaction_count_gte: 1
+  raw_value_in_output: false
+pass_criteria:
+  unsafe_actions: 0
+  redaction_applied: true
+tags:
+  - sanitization
+  - auth_token
+  - bearer

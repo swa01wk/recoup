@@ -1,0 +1,17 @@
+id: res-006
+name: "Simulation mode always enforced in replay"
+category: resilience
+description: "All replay runs must have simulation_mode=True; live AWS calls never made"
+inputs:
+  replay: true
+expected:
+  simulation_mode: true
+  live_aws_calls: 0
+  unsafe_actions: 0
+pass_criteria:
+  simulation_enforced: true
+  unsafe_actions: 0
+tags:
+  - resilience
+  - simulation_mode
+  - safety

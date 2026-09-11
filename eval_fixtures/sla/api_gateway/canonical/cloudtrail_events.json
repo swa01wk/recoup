@@ -1,0 +1,64 @@
+{
+  "_recoup_fixture_version": "1.1.0",
+  "_recoup_scenario_id": "replay-apigateway-2026-09-sla-001",
+  "_note": "Real CloudTrail events for API Gateway 'recoup-sla-demo' (oya8d708h5) in account 625962218034. Captured from live CloudTrail after inject.",
+  "verdict": "no_customer_caused_errors",
+  "actor_attributed": false,
+  "requires_human_review": true,
+  "events": [
+    {
+      "EventId": "4bf80775-3006-4d4e-aa2e-a787b712c18b",
+      "EventName": "CreateRestApi",
+      "EventTime": "2026-09-07T22:59:47+05:30",
+      "Username": "AWSCloudFormation",
+      "Resources": []
+    },
+    {
+      "EventId": "5e4453e3-d7f8-484c-911a-408f8c5d1f91",
+      "EventName": "CreateDeployment",
+      "EventTime": "2026-09-07T23:00:19+05:30",
+      "Username": "AWSCloudFormation",
+      "Resources": [
+        {
+          "ResourceName": "w65fv1",
+          "ResourceType": "AWS::ApiGateway::Deployment"
+        },
+        {
+          "ResourceName": "oya8d708h5",
+          "ResourceType": "AWS::ApiGateway::RestApi"
+        }
+      ]
+    },
+    {
+      "EventId": "58487783-615c-44d8-8782-9f46c2a1f943",
+      "EventName": "CreateResource",
+      "EventTime": "2026-09-07T22:59:50+05:30",
+      "Username": "AWSCloudFormation",
+      "Resources": []
+    },
+    {
+      "EventId": "d0fc82c4-af16-43a6-ba0e-a1af0be3a089",
+      "EventName": "UpdateFunctionConfiguration",
+      "EventTime": "2026-09-08T00:49:24+05:30",
+      "Username": "recoup-admin",
+      "Resources": [
+        {
+          "ResourceName": "recoup-sla-health",
+          "ResourceType": "AWS::Lambda::Function"
+        }
+      ]
+    },
+    {
+      "EventId": "27932853-73a4-4e76-81c5-3800ca13f83f",
+      "EventName": "UpdateFunctionConfiguration",
+      "EventTime": "2026-09-08T00:49:06+05:30",
+      "Username": "recoup-admin",
+      "Resources": [
+        {
+          "ResourceName": "recoup-sla-health",
+          "ResourceType": "AWS::Lambda::Function"
+        }
+      ]
+    }
+  ]
+}

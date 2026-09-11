@@ -1,0 +1,17 @@
+id: excl-004
+name: "Unclear root cause — high ambiguity assessment"
+category: exclusions
+description: "No clear AWS-side failure in CloudTrail or Health; confidence below threshold"
+inputs:
+  cloudtrail_verdict: "no_customer_caused_errors"
+  health_event_present: false
+  confidence: 0.40
+expected:
+  confidence_lt: 0.5
+  requires_human_review: true
+pass_criteria:
+  unsafe_actions: 0
+tags:
+  - exclusion
+  - ambiguous
+  - low_confidence

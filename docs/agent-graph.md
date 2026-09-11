@@ -2,8 +2,10 @@
 
 **File:** `backend/src/recoup/graph/`  
 **Entry point:** `recoup_graph.build_recoup_graph()` → `Graph`  
-**Node count:** 11 (4 Deterministic · 5 Agent · 2 Hybrid)  
-**Status:** Phase 1 complete — all nodes have deterministic stubs; AgentNode stubs replaced by real Strands Agents in Phase 2
+**Node count:** 11 (6 Deterministic · 5 Agent)  
+**Last updated:** Sep 11, 2026  
+**Status:** Phase 6c — `incident_correlation`, `eligibility_reasoner`, and `claim_package_generator` wired with real Strands agents (`strands_fn`); `ec2_stop_decision` Strands agent in `EC2DemoAdapter`. Deterministic stub path always available for replay/CI.  
+**Playwright tests:** `journey-sla-replay-full.spec.ts` verifies the SLA replay pipeline; `journey-opportunity-detail.spec.ts` verifies trace output (11 graph nodes; UI pipeline strip may show a shorter stage list).
 
 ---
 
@@ -74,11 +76,13 @@ class AgentNode:
     system_prompt: str
     description: str
     stub_fn: Callable[[GraphState], dict[str, Any]] | None
+    strands_fn: Callable[[GraphState], dict[str, Any]] | None  # real Strands agent
 ```
 
-- Backed by Amazon Bedrock (Claude 3.5 Sonnet) via Strands
-- Has a `stub_fn` for Phase 1 that returns deterministic typed data
-- Phase 2 replaces `stub_fn` with a real `strands.Agent` call
+- Backed by Amazon Bedrock via the Strands SDK when `GraphState.use_strands=True`
+- `strands_fn` is the real Strands agent call; `stub_fn` is the deterministic fallback
+- Invocation priority: `strands_fn` (when `use_strands=True`) → fallback to `stub_fn` on any Bedrock failure
+- The canonical replay path always uses `stub_fn` (`use_strands=False`) to guarantee 20/20 determinism
 
 ---
 
@@ -113,7 +117,7 @@ class AgentNode:
 | Tools | `get_cloudwatch_metrics`, `get_health_event`, `lookup_cloudtrail_events`, `get_cost_anomalies` |
 | Input | `GraphState.signal` |
 | Output | `hypothesis: IncidentHypothesis` |
-| Stub behavior | Produces 6 bad intervals in 8,640 total → 99.9306% uptime, $18,400 billed, confidence=0.92 |
+| Stub behavior | Produces 6 bad intervals in 8,640 total → 99.9306% uptime, $3.51 billed (real AWS billing from inject_sla_traffic.py), confidence=0.92 |
 
 **System prompt (summarized):**
 > You are a cloud reliability engineer analyzing an AWS incident. Correlate the signal with CloudWatch metrics, health events, and CloudTrail to form a hypothesis. Output ONLY factual observations. Never conclude financial eligibility.
@@ -205,8 +209,8 @@ See [sla-calculator.md](sla-calculator.md) for the full formula reference and go
 | Output | `sanitized_manifest: EvidenceManifest`, `redaction_report: RedactionReport` |
 
 **Redaction behavior:**
-- Phase 1: Copies manifest to sanitized path, records 0 redactions
-- Phase 3: Applies `_HIGH_RISK_PATTERNS` (account IDs, IPs, tokens, passwords) — fails closed on any HIGH_RISK match
+- Applies 8 compiled `_HIGH_RISK_PATTERNS` (auth tokens, JWT, API keys, cookies, emails, AWS account IDs, private IPs, AWS secrets)
+- Two-pass design with `HIGH_RISK_SCANNER`; fails closed on any surviving high-risk pattern (`SanitizationError`)
 
 **Fail-closed:** If a high-risk pattern remains after redaction, a `SanitizationError` is raised and the pipeline halts.
 
@@ -236,16 +240,11 @@ See [sla-calculator.md](sla-calculator.md) for the full formula reference and go
 | Attribute | Value |
 |-----------|-------|
 | Type | `DeterministicNode` |
-| Tools | `create_approval_request` (called if REQUIRE_APPROVAL) |
+| Tools | none (Cedar evaluation in Python — no registry tool calls) |
 | Input | `GraphState.eligibility_assessment`, `GraphState.availability_result` |
 | Output | `policy_decision: PolicyDecision` |
 
-**Decision rules (in order):**
-```
-1. If not eligible → DENY
-2. If eligible AND confidence ≥ 0.8 AND credit > $0 → REQUIRE_APPROVAL
-3. Otherwise → DENY
-```
+**Implementation:** `evaluate_policy("submit_support_case", …)` in `safety/cedar.py`. Maps Cedar ALLOW → `ALLOW`; otherwise → `REQUIRE_APPROVAL` for the replay path. HITL approval records are created via the FastAPI approval flow, not via `create_approval_request` inside this node.
 
 **All financial mutations require explicit human approval.** There is no code path that submits a real claim without a valid `ApprovalRecord`.
 
@@ -277,24 +276,16 @@ See [sla-calculator.md](sla-calculator.md) for the full formula reference and go
 
 ### Node 10 — `submission_adapter` (Deterministic)
 
-**Purpose:** Submit the `ClaimPackage` to AWS Support, or produce a simulated case ID if `simulation_mode=True`.
+**Purpose:** Submit the `ClaimPackage` to AWS Support, or produce a replay case ID when real submission is not enabled.
 
 | Attribute | Value |
 |-----------|-------|
 | Type | `DeterministicNode` |
-| Tools | `submit_support_case` / `simulate_support_case` |
-| Input | `GraphState.claim_package`, `GraphState.approval_record`, `GraphState.simulation_mode` |
+| Tools | none at runtime (registry exposes `submit_support_case` / `simulate_support_case` for Gateway) |
+| Input | `GraphState.claim_package`, `GraphState.approval_record` |
 | Output | `case_id: str`, `submitted_at: datetime` |
 
-**Submission gate:**
-```python
-if simulation_mode:
-    case_id = "sim-" + sha256(package.calculator_result_hash)[:12]
-    # No real AWS Support call
-else:
-    assert approval is not None and approval.is_valid
-    # Real submission (Phase 2)
-```
+**Current behavior:** Without a valid approval, returns `case_id = "replay-" + hash[:12]`. Live AWS Support submission returns an error until `RECOUP_ENABLE_REAL_SUPPORT_SUBMISSION` and full approval binding are implemented. Quality gate accepts `replay-` and `sim-` prefixes as safe case IDs.
 
 ---
 
@@ -329,7 +320,7 @@ The `GraphState` is the immutable-by-convention snapshot of all accumulated data
 class GraphState(BaseModel):
     # Identity
     opportunity_id: str
-    simulation_mode: bool = True
+    use_strands: bool = False  # True → real Bedrock; False → deterministic stubs (replay)
 
     # Node outputs (populated progressively)
     signal: IncidentSignal | None
@@ -348,6 +339,12 @@ class GraphState(BaseModel):
     submitted_at: datetime | None
     case_outcome: CaseOutcome | None
 
+    # Replay fixture data (loaded by ReplayAdapter from eval_fixtures/)
+    replay_fixtures: dict[str, Any] | None
+
+    # Phase 6b: S3 URIs of evidence files written during the run
+    evidence_s3_uris: list[str]
+
     # Diagnostics
     errors: list[str]
     current_state: OpportunityState
@@ -362,29 +359,25 @@ The `Graph.validate()` method is called at build time and at import time (via th
 
 ---
 
-## Phase 2 Upgrade Path
+## Strands Agent Wiring (Phase 6c)
 
-To replace a stub with a real Strands Agent:
+The three primary reasoning nodes call real Strands agents when `GraphState.use_strands=True`. The `stub_fn` remains as a fallback (used by canonical replay):
 
 ```python
-# Phase 1 (stub):
+# backend/src/recoup/agents/strands_agents.py
+# Four Strands agents:
+#   run_incident_correlation_agent(state)  → IncidentHypothesis
+#   run_eligibility_reasoner_agent(state)  → EligibilityAssessment
+#   run_claim_package_generator_agent(state) → ClaimPackage
+#   run_ec2_stop_decision_agent(state)     → used by EC2DemoAdapter
+
+# In recoup_graph.py, nodes are wired as:
 incident_correlation = AgentNode(
     name="incident_correlation",
-    tool_names=["get_cloudwatch_metrics", "get_health_event"],
     stub_fn=incident_correlation_stub,
-)
-
-# Phase 2 (real agent):
-from strands import Agent
-from ..tools.registry import TOOL_REGISTRY
-
-incident_correlation = AgentNode(
-    name="incident_correlation",
-    tool_names=["get_cloudwatch_metrics", "get_health_event"],
-    # stub_fn=None  ← remove the stub
-    agent=Agent(
-        tools=[TOOL_REGISTRY[t].fn for t in ["get_cloudwatch_metrics", "get_health_event"]],
-        system_prompt=incident_correlation.system_prompt,
-    ),
+    strands_fn=run_incident_correlation_agent,   # ← real Bedrock
+    ...
 )
 ```
+
+**Design invariant:** `use_strands` is only set to `True` in live-mode paths (EC2 demo, future real incidents). The canonical SLA replay always runs with `use_strands=False` to guarantee 20/20 deterministic results regardless of Bedrock availability.

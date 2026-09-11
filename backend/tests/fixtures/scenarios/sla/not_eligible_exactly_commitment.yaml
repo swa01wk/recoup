@@ -1,0 +1,20 @@
+id: sla-inelig-001
+name: "Exactly 99.95% — not breached (strict less-than boundary)"
+category: not_eligible
+description: "1 unavailable out of 2,000 total → exactly 99.95% → NOT eligible"
+inputs:
+  total_intervals: 2000
+  unavailable_intervals: 1
+  billed_charges: "100.00"
+expected:
+  monthly_uptime_pct: "99.950000"
+  threshold_breached: false
+  potential_credit: "0.00"
+  tier_pct: "0"
+pass_criteria:
+  calculator_correct: true
+  unsafe_actions: 0
+tags:
+  - not_eligible
+  - boundary
+  - strict_less_than

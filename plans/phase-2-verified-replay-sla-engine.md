@@ -1,5 +1,9 @@
 # Phase 2 — Verified Replay & SLA Recovery Engine
 
+> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+
+
+
 **Timeline:** Day 6–9 (Target: by Sep 9, 2026)  
 **Status:** `[ ] Not Started`  
 **Depends on:** Phase 1 complete
@@ -8,7 +12,7 @@
 
 ## Objective
 
-Build the hero demo path end-to-end. This phase implements the full canonical SLA claim workflow as a **Verified Replay** — a deterministic, immutable, seedable execution that produces the same $1,840 result on every run and proves the complete agent workflow without requiring a live AWS incident. The Verified Replay is the primary judge demo path.
+Build the hero demo path end-to-end. This phase implements the full canonical SLA claim workflow as a **Verified Replay** — a deterministic, immutable, seedable execution that produces the same credit result on every run and proves the complete agent workflow. Credit amount comes from real AWS billing data in billing_snapshot.json (e.g. $0.35 for demo account). The Verified Replay is the primary judge demo path.
 
 ---
 
@@ -18,7 +22,7 @@ Build the hero demo path end-to-end. This phase implements the full canonical SL
 - [ ] `normalize_event` node correctly parses replay and live schema
 - [ ] `incident_correlation` agent correctly correlates synthetic API Gateway SLA incident
 - [ ] `sla_contract_resolver` loads the correct 2022-05-05 contract by incident date
-- [ ] `availability_calculator` deterministically produces `99.9306%` and `$1,840` from seed data
+- [ ] `availability_calculator` deterministically produces `99.9306%` and a positive credit from real billing data
 - [ ] Full end-to-end replay executes in < 60 seconds (P95)
 - [ ] Replay can be triggered via `POST /api/replay/api-gateway-sla` and monitored via SSE/WebSocket
 - [ ] All golden acceptance tests pass (Appendix C from spec)
@@ -39,10 +43,10 @@ These are immutable, committed artifacts. Never overwrite once used in a CI run.
 eval_fixtures/sla/api_gateway/canonical/
 ├── health_event.json          # Synthetic AWS Health event (same schema as real EventBridge event)
 ├── metric_series.json         # 8,640 five-minute intervals; 6 at 0% availability
-├── billing_snapshot.json      # August billing record: $18,400 for API Gateway in us-east-1
-├── cloudtrail_events.json     # Benign events — no customer-caused errors
+├── billing_snapshot.json      # Real AWS billing from inject_sla_traffic.py (e.g. $3.51 for demo account)
+├── cloudtrail_events.json     # Real CloudTrail events captured by inject script
 ├── sla_contract_ref.yaml      # Points to sla_catalog/api_gateway/2022-05-05.yaml
-└── expected_output.json       # Calculator result: 99.9306%, tier=10%, credit=$1,840
+└── expected_output.json       # Calculator result: 99.9306%, tier=10%, credit=real amount (e.g. $0.35)
 ```
 
 **Canonical `health_event.json`:**
@@ -175,10 +179,10 @@ def test_golden_tier_10_pct():
     result = resolve_tier(Decimal("99.9306"), api_gateway_contract)
     assert result == Decimal("10")
 
-def test_golden_credit_1840():
-    """Spec test 3: $18,400 × 10% = $1,840.00"""
-    credit = calculate_credit(Decimal("18400.00"), Decimal("10"))
-    assert credit == Decimal("1840.00")
+def test_golden_credit_real():
+    """Spec test 3: real billed amount × 10% = real credit (e.g. $3.51 × 10% = $0.351)"""
+    credit = calculate_credit(Decimal("3.51"), Decimal("10"))
+    assert credit == Decimal("0.351")
 
 def test_exact_commitment_not_eligible():
     """Spec test 4: 99.95% is not breached (less-than boundary)"""
