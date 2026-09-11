@@ -573,8 +573,8 @@ def _confidence_for_severity(severity: str) -> float:
 
 
 def _recovery_action_for_finding(finding: Finding) -> str:
-    if finding.finding_type == "IDLE_INSTANCE" or finding.service == "EC2":
-        return "stop_demo_instance"
+    """J-FULL: all scan promotions use cost-recovery action (no ec2-demo stop path)."""
+    _ = finding
     return "apply_cost_recovery"
 
 

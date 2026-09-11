@@ -89,24 +89,17 @@ test("@smoke S4 — evidence sanitizer redacts auth tokens and API keys", async 
 test("S4 — evidence sanitizer unit: PII patterns are redacted via backend API", async ({
   request,
 }) => {
-  /**
-   * Tests that the sanitizer is wired correctly by running the SLA replay
-   * (which passes evidence through the sanitizer) and verifying the claim
-   * package does NOT contain raw AWS account IDs or credentials.
-   *
-   * The sanitizer redacts: auth tokens, API keys, AWS access keys, JWTs,
-   * AWS account IDs, emails, phone numbers, AWS secret keys.
-   */
-  const replayRes = await request.post(`${BACKEND}/api/replay/api-gateway-sla`, { data: {} });
-  if (!replayRes.ok()) return;
+  /** J-FULL: promote a scan finding and inspect trace for credential leak markers. */
+  const scanRes = await request.post(`${BACKEND}/api/scan/demo`);
+  if (!scanRes.ok()) return;
+  const scan = (await scanRes.json()) as { findings: Array<Record<string, unknown>> };
+  const promoteRes = await request.post(`${BACKEND}/api/scan/findings/promote`, {
+    data: scan.findings[0],
+  });
+  if (!promoteRes.ok()) return;
+  const { opportunity_id } = (await promoteRes.json()) as { opportunity_id: string };
 
-  const replay = (await replayRes.json()) as { opportunity_id: string; errors: string[] };
-  // Replay should complete without sanitization errors
-  const sanitizerErrors = replay.errors.filter((e: string) => e.includes("sanitiz"));
-  expect(sanitizerErrors.length).toBe(0);
-
-  // Trace should not contain raw credentials in evidence
-  const traceRes = await request.get(`${BACKEND}/api/opportunities/${replay.opportunity_id}/trace`);
+  const traceRes = await request.get(`${BACKEND}/api/opportunities/${opportunity_id}/trace`);
   if (!traceRes.ok()) return;
 
   const trace = (await traceRes.json()) as { errors: string[] };

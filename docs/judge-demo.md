@@ -67,15 +67,17 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 
 **Optional talking points (not in sidebar):**
 
-- **SLA verified replay** — `POST /api/replay/api-gateway-sla` or `/replay` — full 11-node graph, ~$0.35 credit ([replay-system.md](replay-system.md))  
-- **Live EC2 stop** — `POST /api/ec2-demo/trigger` — bounded `StopInstances` after approve ([demo-playbook.md](demo-playbook.md) S3)  
-- **Governance APIs** — CloudTrail / tags / Cost Explorer demo endpoints (J10–J12)
+- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **393** backend pytest include golden replay; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
+- **Six quality gates** — scorecard already shown in Scene 6  
+- **Optional agent re-run** — `POST /api/opportunities/{id}/run` on detail (not required for J-FULL)
+
+Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo HTTP.
 
 ---
 
 ## Scene 7 — Architecture (4:15–5:00)
 
-Next.js + FastAPI · promote path + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **279** Playwright tests · **420** backend tests.
+Next.js + FastAPI · promote path + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **118** Playwright tests (15 specs) · **393** backend tests collected.
 
 Diagram: [architecture/architecture.svg](../architecture/architecture.svg)
 

@@ -3,9 +3,9 @@
 > **Last updated:** Sep 11, 2026  
 > **Primary operator lifecycle (product):** **[J-FULL](docs/operator-journey.md)** — scan → 3 distinct services → approve / investigate / decline → Recovery Ledger + SNS.  
 > **Authoritative E2E:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`  
-> **Test suite:** 28 Playwright specs · 279 tests (`cd frontend && npx playwright test --list`)  
+> **Test suite:** 15 Playwright specs · 118 tests (`cd frontend && npx playwright test --list`)  
 > **UI:** Sidebar = Opportunities · Account Scanner · Recovery Ledger only. HITL on `/opportunities/[id]`. `/approvals` and `/quality` redirect to `/opportunities`.  
-> **Not primary UI:** `/replay`, EC2 demo card, governance dashboard tiles (API/tests may still exist).  
+> **Removed Sep 2026:** `/replay` page, `/api/replay/*`, ec2/governance demo HTTP, J4/J5/J10–J12 Playwright specs. SLA replay adapter + golden **pytest** remain.  
 > **Tags:** `@smoke` · `@full` · `@e2e` (J-FULL mega journey)
 
 ---
@@ -25,7 +25,7 @@
 
 **Playwright:** `cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts`
 
-Overlaps: **J2** (single-finding loop), **J6** (HITL paths), **J9** (ledger). Distinct from **J4** (SLA replay) and **J5** (EC2 demo API).
+Overlaps: **J2** (single-finding loop), **J6** (HITL paths), **J9** (ledger). Optional SLA depth: backend pytest + WF-11 (not J-FULL).
 
 ---
 
@@ -75,8 +75,8 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J2-5 | Promoted `opportunity_id` matches `recovery-` prefix | scan J2-2 | `@smoke` | ✅ |
 | J2-6 | Promoted opportunity is `AWAITING_APPROVAL` and listed in `/api/approvals/pending` | scan J2-3 | `@smoke` | ✅ |
 | J2-7 | Approve with full claim binding → `APPROVED` state | scan J2-4 | `@smoke` | ✅ |
-| J2-8 | SNS notification flag (`sns_notification_sent=true`) | decision-inbox.spec | `@smoke` | ✅ |
-| J2-9 | Pending list decrements after approve | decision-inbox.spec | — | ✅ |
+| J2-8 | SNS notification flag (`sns_notification_sent=true`) | journey-decision-inbox.spec | `@smoke` | ✅ |
+| J2-9 | Pending list decrements after approve | journey-decision-inbox.spec | — | ✅ |
 | J2-10 | Scan audit record written (`GET /api/scan/audit`) | scan J2-5 | `@smoke` | ✅ |
 | J2-11 | Promote is idempotent (same resource → same opportunity) | scan J2-6 | `@full` | ✅ |
 | J2-12 | Each of 8 scenario_tags produces separate opportunity | scan.spec S6 | — | ✅ |
@@ -114,53 +114,25 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 
 ---
 
-## J4 — SLA Verified Replay (optional — not primary UI)
+## J4 / J5 / J10–J12 — Removed optional journeys (Sep 2026)
 
-> **File:** `journey-sla-replay-full.spec.ts` · `sla-replay.spec.ts`
+HTTP demo routes and dedicated Playwright specs for SLA replay (J4), EC2 stop (J5), and governance S7–S9 (J10–J12) were removed in the J-FULL cleanup.
 
-| # | Step | Test ID | Tag | Status |
-|---|------|---------|-----|--------|
-| J4-1 | `POST /api/replay/api-gateway-sla` creates opportunity | sla-replay @smoke, journey-sla J4 | `@smoke` | ✅ |
-| J4-2 | Policy decision is `REQUIRE_APPROVAL` or `ALLOW` (Cedar) | sla-replay @smoke | `@smoke` | ✅ |
-| J4-3 | `potential_credit` is numeric and > $0 | journey-sla | `@smoke` | ✅ |
-| J4-4 | Credit amount is < $20 (not cost savings scale) | sla-replay approve-button | `@smoke` | ✅ |
-| J4-5 | Trace returns `availability_result.monthly_uptime_pct` | sla-replay detail | — | ✅ |
-| J4-6 | Uptime % is in valid range (0–100) | sla-replay detail | — | ✅ |
-| J4-7 | 100% uptime scenario is NOT eligible for credit | journey-sla | `@full` | ✅ |
-| J4-8 | Replay scorecard / quality gate passes | journey-sla | `@full` | ✅ |
-| J4-9 | Idempotent replay (re-running same period) | journey-sla | `@full` | ✅ |
-| J4-10 | Wrong amount on approve returns 409 | journey-sla | `@full` | ✅ |
-| J4-11 | SSE stream endpoint (`GET /api/opportunities/{id}/stream`) responds | sla-replay SSE | — | ✅ |
-| J4-12 | `GET /api/replay/scenarios` returns scenario list | journey-sla | `@smoke` | ✅ |
-| J4-13 | Approve SLA credit → `APPROVED` state | journey-sla | `@smoke` | ✅ |
-| J4-14 | SLA replay UI page (`/replay`) renders | `journey-ui-browser.spec.ts` UI-7 | `@ui @smoke` | ✅ |
+| Depth | Replacement proof |
+|-------|-------------------|
+| SLA math & graph fixtures | `pytest tests/unit/test_replay_phase2.py` · `tests/e2e/test_golden_replay.py` |
+| Quality gates using replay metrics | `journey-quality-gates.spec.ts` · `GET /api/quality/scorecard` |
+| Optional 11-node graph smoke | `workflow-stages.spec.ts` WF-11 (`POST /api/opportunities/{id}/run`) |
+| `/replay` absent | `journey-ui-browser.spec.ts` UI-7 (404) |
 
----
-
-## J5 — EC2 Idle Stop (Live AWS Action)
-
-> **File:** `journey-ec2-stop.spec.ts` · `ec2-stop.spec.ts`
-
-| # | Step | Test ID | Tag | Status |
-|---|------|---------|-----|--------|
-| J5-1 | `POST /api/ec2-demo/trigger` creates HITL opportunity | ec2-stop @smoke, journey-ec2 J5 | `@smoke` | ✅ |
-| J5-2 | Triggered approval has `action=stop_demo_instance` | ec2-stop @smoke | `@smoke` | ✅ |
-| J5-3 | EC2 opportunity detail visible (`GET /api/ec2-demo/opportunity/{id}`) | journey-ec2 | `@smoke` | ✅ |
-| J5-4 | Opportunity list (`GET /api/ec2-demo/opportunities`) returns entry | journey-ec2 | `@smoke` | ✅ |
-| J5-5 | Opportunity is `AWAITING_APPROVAL` before approve | journey-ec2 | `@smoke` | ✅ |
-| J5-6 | Approve → `APPROVED` + `sns_notification_sent=true` | ec2-stop approve | `@smoke` | ✅ |
-| J5-7 | Execute without prior approval returns 409/403 | journey-ec2 | `@full` | ✅ |
-| J5-8 | Execute mocked — response has `verified_stopped=true` | ec2-stop mock | — | ✅ |
-| J5-9 | Unknown opportunity ID returns 404 | journey-ec2 | `@full` | ✅ |
-| J5-10 | Trigger is repeatable (fresh state after reset) | journey-ec2 | `@full` | ✅ |
-| J5-11 | Live `StopInstances` (real AWS) | 🚀 Live only | — | 🚀 |
+Historical step tables archived in git history pre–Sep 11, 2026.
 
 ---
 
 ## J6 — HITL approval (Approve / Decline / Investigate)
 
 > **UI:** `/opportunities/[id]` · **API:** `/api/approvals/opportunity/{id}/…`  
-> **Files:** `journey-decision-inbox.spec.ts` · `decision-inbox.spec.ts`
+> **File:** `journey-decision-inbox.spec.ts`
 
 | # | Step | Test ID | Tag | Status |
 |---|------|---------|-----|--------|
@@ -173,13 +145,13 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J6-7 | Pending list decrements after any terminal action | decision-inbox bucket invariant | — | ✅ |
 | J6-8 | `/api/approvals/pending` lists all queued items | multiple specs | — | ✅ |
 | J6-9 | Declined opportunities excluded from Recovery Ledger | journey-recovery | `@full` | ✅ |
-| J6-10 | UI opportunity detail renders Approve / Decline / Investigate | `journey-opportunity-detail.spec.ts`, `opportunity-detail.spec.ts` | `@ui` | ✅ |
+| J6-10 | UI opportunity detail renders Approve / Decline / Investigate | `journey-opportunity-detail.spec.ts` | `@ui` | ✅ |
 
 ---
 
 ## J7 — Opportunity Detail & SSE Agent Trace
 
-> **File:** `journey-opportunity-detail.spec.ts` · `opportunity-detail.spec.ts`
+> **File:** `journey-opportunity-detail.spec.ts`
 
 | # | Step | Test ID | Tag | Status |
 |---|------|---------|-----|--------|
@@ -187,7 +159,7 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J7-2 | `state_version ≥ 1` on opportunity | opp-detail @smoke | `@smoke` | ✅ |
 | J7-3 | `potential_value > 0` on cost recovery opp | opp-detail @smoke | `@smoke` | ✅ |
 | J7-4 | `GET /api/opportunities/{id}/trace` returns node data | journey-opp detail+SSE | `@smoke` | ✅ |
-| J7-5 | SSE stream (`GET /api/opportunities/{id}/stream`) responds | sla-replay SSE, journey-opp | — | ✅ |
+| J7-5 | SSE stream (`GET /api/opportunities/{id}/stream`) responds | journey-opp, workflow WF-11 | — | ✅ |
 | J7-6 | Approve via opp-level endpoint → `APPROVED` | journey-opp | `@smoke` | ✅ |
 | J7-7 | Decline via opp-level endpoint → `DECLINED` | journey-opp | `@smoke` | ✅ |
 | J7-8 | Investigate via opp-level endpoint → `NEEDS_FOLLOWUP` | journey-opp | `@smoke` | ✅ |
@@ -214,13 +186,13 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J8-8 | `X-Request-ID` on scorecard response | journey-quality | `@full` | ✅ |
 | J8-9 | S4 evidence sanitizer: no PII in replay trace | quality-dashboard S4 | `@smoke` | ✅ |
 | J8-10 | S4 unit: auth tokens / API keys pattern redacted | quality-dashboard S4 unit | — | ✅ |
-| J8-11 | UI `/quality` page renders scorecard tiles | `journey-ui-browser.spec.ts` UI-9 | `@ui @smoke` | ✅ |
+| J8-11 | `/quality` redirects to opportunities (no scorecard page) | `journey-ui-browser.spec.ts` UI-9 | `@ui @smoke` | ✅ |
 
 ---
 
 ## J9 — Recovery Ledger (State Buckets)
 
-> **File:** `journey-recovery-ledger.spec.ts` · `recovery-ledger.spec.ts`
+> **File:** `journey-recovery-ledger.spec.ts`
 
 | # | Step | Test ID | Tag | Status |
 |---|------|---------|-----|--------|
@@ -229,60 +201,13 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J9-3 | After approve: APPROVED state in opportunities list | ledger approved bucket | — | ✅ |
 | J9-4 | Pending decrements, Approved increments | ledger buckets invariant | — | ✅ |
 | J9-5 | Bucket invariant: scan total ≥ sum of opp values | ledger bucket invariant | — | ✅ |
-| J9-6 | Credit from SLA replay matches approved amount | journey-recovery | `@full` | ✅ |
+| J9-6 | Approved amount matches claim on cost-recovery opp | journey-recovery | `@full` | ✅ |
 | J9-7 | DECLINED opportunities NOT counted in ledger | journey-recovery | `@full` | ✅ |
 | J9-8 | APPROVED via ledger endpoint reflects correctly | journey-recovery | `@smoke` | ✅ |
 | J9-9 | UI `/recovery` page renders savings chart | `journey-ui-browser.spec.ts` UI-6 | `@ui @smoke` | ✅ |
 
 ---
 
-## J10 — CloudTrail No-Actor Detection (Governance S7)
-
-> **File:** `journey-governance.spec.ts` · `governance.spec.ts`
-
-| # | Step | Test ID | Tag | Status |
-|---|------|---------|-----|--------|
-| J10-1 | `GET /api/cloudtrail-demo/check` returns 200 | governance @smoke S7 | `@smoke` | ✅ |
-| J10-2 | `actor_attributed` field is boolean | governance S7 | `@smoke` | ✅ |
-| J10-3 | `requires_human_review` field is boolean | governance S7 | `@smoke` | ✅ |
-| J10-4 | `finding` text is non-empty | governance S7 | `@smoke` | ✅ |
-| J10-5 | Live mode: `actor_attributed=false`, `human_events=0` | governance S7 live | 🚀 Live | 🚀 |
-| J10-6 | Event breakdown array and `actor_type_breakdown` map | governance S7 breakdown | — | ✅ |
-| J10-7 | Response includes `X-Request-ID` header | journey-governance | `@full` | ✅ |
-
----
-
-## J11 — Missing Cost-Allocation Tags (Governance S8)
-
-> **File:** `journey-governance.spec.ts` · `governance.spec.ts`
-
-| # | Step | Test ID | Tag | Status |
-|---|------|---------|-----|--------|
-| J11-1 | `GET /api/tagging-demo/scan` returns 200 | governance @smoke S8 | `@smoke` | ✅ |
-| J11-2 | `resources_scanned` is a number | governance S8 | `@smoke` | ✅ |
-| J11-3 | `resources_missing_tags` is a number | governance S8 | `@smoke` | ✅ |
-| J11-4 | `findings` is an array | governance S8 | `@smoke` | ✅ |
-| J11-5 | `required_tags` includes governance tag (cost/env/team) | governance S8 tags | — | ✅ |
-| J11-6 | Live mode: ≥5 resources missing tags, ARNs valid | governance S8 live | 🚀 Live | 🚀 |
-| J11-7 | `estimated_attribution_gap_usd_monthly > 0` in live mode | governance S8 live | 🚀 Live | 🚀 |
-
----
-
-## J12 — Cost Explorer Account Spend (Governance S9)
-
-> **File:** `journey-governance.spec.ts` · `governance.spec.ts`
-
-| # | Step | Test ID | Tag | Status |
-|---|------|---------|-----|--------|
-| J12-1 | `GET /api/cost-demo/summary` returns 200 | governance @smoke S9 | `@smoke` | ✅ |
-| J12-2 | `total_usd` is a number | governance S9 | `@smoke` | ✅ |
-| J12-3 | `billing_period_start` / `_end` are valid dates | governance S9 | `@smoke` | ✅ |
-| J12-4 | `breakdown` array items have `service` + `cost_usd` | governance S9 | `@smoke` | ✅ |
-| J12-5 | `fetched_at` is present | governance S9 | `@smoke` | ✅ |
-| J12-6 | Billing period start ≤ end | governance S9 | — | ✅ |
-| J12-7 | `total_usd` can be 0 or negative (credits OK) | governance S9 invariant | — | ✅ |
-
----
 
 ## SEC — Security & Adversarial Tests
 
@@ -308,20 +233,19 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 
 ## UI Smoke Walk (Browser — Automated)
 
-> **Current product IA:** `/opportunities`, `/scan`, `/recovery`, `/opportunities/[id]`, `/replay` (deep link).  
-> Prefer **`live-ec2-demo-removed.spec.ts`**, **`journey-opportunity-detail.spec.ts`**, and journey specs for current UI.  
-> `journey-ui-browser.spec.ts` still targets legacy `/approvals`, `/quality`, and Viewer role — may conflict with redirects; treat as cleanup candidate.
+> **Current product IA:** `/opportunities`, `/scan`, `/recovery`, `/opportunities/[id]` only (`/replay` page removed Sep 11 cleanup).  
+> **`journey-ui-browser.spec.ts`** — J-FULL-aligned UI smoke. **`live-ec2-demo-removed.spec.ts`** — absent legacy chrome.
 
 | # | Page / Action | Spec | Tag | Status |
 |---|---------------|------|-----|--------|
 | UI-1 | `/opportunities` hub loads | `live-ec2-demo-removed`, journey specs | `@smoke` | ✅ |
 | UI-2 | `/scan` — demo scan finding tiles | `scan.spec.ts`, journeys | `@ui` | ✅ |
 | UI-3 | "Start Recovery" promotes finding | journey-operator-primary | `@smoke` | ✅ |
-| UI-4 | HITL on `/opportunities/[id]` (not `/approvals` redirect) | opportunity-detail, decision-inbox API | `@smoke` | ✅ |
+| UI-4 | HITL on `/opportunities/[id]` (not `/approvals` redirect) | journey-opportunity-detail | `@smoke` | ✅ |
 | UI-5 | Claim-bound approve | journey-decision-inbox | `@smoke` | ✅ |
-| UI-6 | `/recovery` ledger buckets | recovery-ledger | `@smoke` | ✅ |
-| UI-7 | `/replay` SLA replay | sla-replay, journey-sla-replay-full | `@smoke` | ✅ |
-| UI-8 | Pipeline strip on opportunity detail | opportunity-detail | `@ui` | ✅ |
+| UI-6 | `/recovery` ledger buckets | journey-recovery-ledger | `@smoke` | ✅ |
+| UI-7 | `/replay` removed (404) | `journey-ui-browser` UI-replay-removed | `@smoke` | ✅ |
+| UI-8 | Pipeline strip on opportunity detail | journey-opportunity-detail | `@ui` | ✅ |
 | UI-9 | Quality gates via API (`/api/quality/scorecard`) | journey-quality-gates | `@full` | ✅ |
 
 ---
@@ -330,56 +254,44 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 
 | Spec file | Tests | Journeys |
 |-----------|------:|---------|
-| `scan.spec.ts` | 8 | J2 |
-| `decision-inbox.spec.ts` | 4 | J6 |
-| `sla-replay.spec.ts` | 4 | J4 |
-| `ec2-stop.spec.ts` | 3 | J5 |
-| `opportunity-detail.spec.ts` | 3 | J7 |
-| `recovery-ledger.spec.ts` | 4 | J9 |
-| `governance.spec.ts` | 6 | J10–J12 |
-| `quality-dashboard.spec.ts` | 4 | J8 |
+| `journey-full-discovery-triage-ledger.spec.ts` | 4 | **J-FULL** |
 | `journey-operator-primary.spec.ts` | 9 | J2 |
+| `scan.spec.ts` | 8 | J2 |
 | `journey-cross-account-connect.spec.ts` | 8 | J3 |
-| `journey-sla-replay-full.spec.ts` | 10 | J4 |
-| `journey-ec2-stop.spec.ts` | 9 | J5 |
-| `journey-decision-inbox.spec.ts` | 10 | J6 |
+| `journey-decision-inbox.spec.ts` | 11 | J6 |
 | `journey-opportunity-detail.spec.ts` | 9 | J7 |
 | `journey-quality-gates.spec.ts` | 8 | J8 |
+| `quality-dashboard.spec.ts` | 4 | J8 |
 | `journey-recovery-ledger.spec.ts` | 8 | J9 |
-| `journey-governance.spec.ts` | 13 | J10–J12 |
+| `journey-dashboard-ledger-consistency.spec.ts` | 3 | J9 |
+| `journey-scan-idempotency.spec.ts` | 4 | J2 |
 | `journey-security.spec.ts` | 13 | SEC |
-| `journey-ui-browser.spec.ts` | 18 | UI-1–UI-10 |
-| `journey-bedrock-strands-e2e.spec.ts` | 11 | BS-1–BS-10 + BS-LIVE |
-| `journey-sse-stream-nodes.spec.ts` | 10 | SSE-1–SSE-10 |
-| `journey-strands-all-lifecycles.spec.ts` | 64 | LC-J1–J12 + LC-SEC + LC-FULL |
-| `journey-full-discovery-triage-ledger.spec.ts` | 4 | **J-FULL** (see below) |
-| **Total** | run `npx playwright test --list` to refresh | **J1–J12 + SEC + UI + BS + SSE + LC + J-FULL** |
+| `journey-ui-browser.spec.ts` | 10 | UI |
+| `live-ec2-demo-removed.spec.ts` | 5 | UI / regression |
+| `workflow-stages.spec.ts` | 14 | WF / pipeline |
+| **Total** | **118** (15 files) | J-FULL + J2–J9 + SEC + UI + WF |
+
+**Removed Sep 2026 (consolidated or deleted):** `decision-inbox`, `recovery-ledger`, `opportunity-detail`, `journey-full-recovery`, plus J4/J5/J10–J12 and Strands lifecycle mega-specs.
 
 ---
 
 ## How to run
 
 ```bash
-# All tests (API + Browser UI + SSE + Bedrock)
+# All tests
 cd frontend && npx playwright test
 
-# Smoke tests only (fast, ~2 min)
+# Smoke tests only
 npx playwright test --grep @smoke
 
 # Full suite including edge cases
 npx playwright test --grep @full
 
+# Authoritative J-FULL mega journey
+npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
+
 # UI browser click-through tests only
 npx playwright test journey-ui-browser --grep @ui
-
-# Bedrock/Strands E2E lifecycle (stub-safe, no real AWS needed)
-npx playwright test journey-bedrock-strands-e2e
-
-# SSE node-by-node stream assertions
-npx playwright test journey-sse-stream-nodes
-
-# All-journey Strands agent stream lifecycle suite (J1–J12 + SEC + FULL)
-npx playwright test journey-strands-all-lifecycles
 
 # Strands lifecycle smoke only (~60 s, no real AWS required)
 npx playwright test journey-strands-all-lifecycles --grep @smoke

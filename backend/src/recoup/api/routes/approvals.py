@@ -89,24 +89,6 @@ def _transition_opportunity_state(
     except Exception as exc:  # noqa: BLE001
         log.warning("state_machine.transition_failed", error=str(exc))
 
-    # 3. Always update EC2 demo in-memory store (adapter-level dict)
-    try:
-        from ...adapters.ec2_demo import _EC2_DEMO_OPPORTUNITIES  # noqa: PLC0415
-
-        if opportunity_id in _EC2_DEMO_OPPORTUNITIES:
-            record = _EC2_DEMO_OPPORTUNITIES[opportunity_id]
-            opp = record.get("opportunity", {})
-            opp["state"] = new_state.value
-            opp["state_version"] = opp.get("state_version", 1) + 1
-            log.info(
-                "state_machine.transition",
-                opportunity_id=opportunity_id,
-                new_state=new_state.value,
-                via="ec2_demo",
-            )
-    except Exception as exc:  # noqa: BLE001
-        log.warning("state_machine.ec2_demo_transition_failed", error=str(exc))
-
 router = APIRouter()
 
 # ---------------------------------------------------------------------------

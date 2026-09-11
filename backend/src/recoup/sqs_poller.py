@@ -2,9 +2,8 @@
 SQS Poller — Phase 6b Priority 7.
 
 Polls ``recoup-recovery-events`` on a background thread when the backend starts
-with live AWS resources configured.  When a Health event message arrives
-(e.g. fired by ``scripts/fire_demo_event.py`` via EventBridge), the poller
-automatically starts the canonical replay workflow — no manual API call needed.
+with live AWS resources configured.  When a Health event message arrives (e.g. from EventBridge), the poller
+**acks the message only** — auto SLA replay is disabled for the J-FULL product path.
 
 The poller is non-blocking: it runs as a daemon thread and never prevents
 graceful shutdown.  Failures are logged and retried on the next poll cycle.
@@ -39,28 +38,12 @@ def _process_message(body: str, receipt_handle: str, sqs_client: Any, queue_url:
     source = payload.get("source", "")
     event_type = payload.get("event_type", "")
 
-    # Health event routed by EventBridge → auto-trigger replay
+    # Health events: ack only (J-FULL — no auto SLA replay)
     if source == "aws.health" or detail_type == "AWS Health Event":
         logger.info(
-            "SQS poller: AWS Health event received — auto-triggering canonical replay"
+            "SQS poller: AWS Health event received — ack (auto-replay disabled for J-FULL)"
         )
-        try:
-            from .api.routes.replay import _run_canonical  # noqa: PLC0415
-
-            result = _run_canonical(opportunity_id=None)
-            logger.info(
-                "SQS poller: replay triggered — opportunity %s, credit %s",
-                result.get("opportunity_id"),
-                result.get("potential_credit"),
-            )
-            # Only ack AFTER successful processing
-            sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "SQS poller: replay trigger failed — message left in queue for retry",
-                exc_info=True,
-            )
-            # Do NOT delete — let SQS redeliver up to maxReceiveCount then route to DLQ
+        sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
         return
 
     # ACTION_EXECUTED or OPPORTUNITY_DETECTED — log and delete

@@ -15,15 +15,15 @@
 Do **not** follow the legacy Command Center / Decision Inbox / Viewer checklist below without reading this block.
 
 1. `docker compose up` or local backend **8000** / frontend **3000**
-2. **`/opportunities`** — hub ( `/` redirects here )
-3. **`/scan`** — Run Demo Scan → Start Recovery
-4. **`/opportunities/{id}`** — approve with claim-bound amount
-5. **`/replay`** — canonical SLA replay (~$0.35)
-6. **`/recovery`** — ledger buckets
-7. Quality: `curl /api/quality/scorecard` → `all_gates_pass` (**6 gates**)
-8. Script: [docs/video-script.md](../docs/video-script.md) · [docs/judge-demo.md](../docs/judge-demo.md)
+2. **`/scan`** — consent → Demo Scan → **`/opportunities`**
+3. Three findings, **three services** → **Start Recovery** on each
+4. **`/opportunities/{id}`** — Approve / Investigate / Decline (claim-bound)
+5. **`/recovery`** — ledger buckets (+ SNS on approve)
+6. Quality: `curl /api/quality/scorecard` → `all_gates_pass` (**6 gates**)
+7. Canonical doc: [docs/operator-journey.md](../docs/operator-journey.md) · [docs/judge-demo.md](../docs/judge-demo.md) · [docs/video-script.md](../docs/video-script.md)
+8. Optional depth: `curl /api/quality/scorecard`; pytest golden replay; `POST /api/opportunities/{id}/run` (no `/api/replay/*`)
 
-**Tests:** 420 backend collected · 279 Playwright (28 specs).
+**Tests:** 393 backend collected · 118 Playwright (15 specs) — see [docs/README.md](../docs/README.md).
 
 ---
 

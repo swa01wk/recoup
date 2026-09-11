@@ -116,17 +116,16 @@ test("@smoke J9-3 after approval, approved opportunity is in opportunities list"
   expect(["APPROVED", "SUBMITTING", "SUBMITTED"]).toContain(found!.state);
 });
 
-test("@smoke J9-4 replay approve adds entry to approved list", async ({ request }) => {
-  const replayRes = await request.post(`${BACKEND}/api/replay/api-gateway-sla`);
-  expect(replayRes.ok()).toBeTruthy();
-  const { opportunity_id } = (await replayRes.json()) as { opportunity_id: string };
-
+test("@smoke J9-4 second promote+approve adds another approved entry", async ({ request }) => {
+  const scan = await runDemoScan(request);
+  const findings = scan.findings as Array<Record<string, unknown>>;
+  expect(findings.length).toBeGreaterThan(1);
+  const { opportunity_id } = await promoteFinding(request, findings[1]);
   await approveOpportunity(request, opportunity_id);
-
   const ledger = await getLedger(request);
   const found = ledger.entries.find((e) => e.opportunity_id === opportunity_id);
   expect(found).toBeTruthy();
-  expect(["APPROVED", "SUBMITTING", "SUBMITTED", "MONITORING", "RECOVERED"]).toContain(found!.state);
+  expect(["APPROVED", "RECOVERED", "SUBMITTING", "SUBMITTED"]).toContain(found!.state);
 });
 
 // ---------------------------------------------------------------------------
@@ -207,14 +206,11 @@ test("@full J9-7 declined opportunity does NOT appear in approved entries", asyn
   expect(ids).not.toContain(opportunity_id);
 });
 
-test("@full J9-8 replay credit_amount is non-zero for eligible scenario", async ({
-  request,
-}) => {
-  const replayRes = await request.post(`${BACKEND}/api/replay/api-gateway-sla`);
-  const { opportunity_id, credit_amount } = (await replayRes.json()) as {
-    opportunity_id: string;
-    credit_amount: string;
-  };
-  expect(parseFloat(credit_amount)).toBeGreaterThan(0);
-  expect(opportunity_id).toBeTruthy();
+test("@full J9-8 promoted approval amount is non-zero", async ({ request }) => {
+  const scan = await runDemoScan(request);
+  const findings = scan.findings as Array<Record<string, unknown>>;
+  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const pendingRes = await request.get(`${BACKEND}/api/approvals/opportunity/${opportunity_id}`);
+  const pending = (await pendingRes.json()) as { amount: string };
+  expect(parseFloat(pending.amount)).toBeGreaterThan(0);
 });

@@ -32,7 +32,7 @@ router = APIRouter()
 _state_machine = InMemoryStateMachine()
 
 # Shared across routers — replay.py imports and writes to this dict so that
-# GET /api/opportunities reflects opportunities created via POST /api/replay/*
+# Shared in-memory graph states for scan-promoted and agent-run opportunities
 _graph_states: dict[str, GraphState] = {}
 
 
@@ -104,28 +104,6 @@ def list_opportunities() -> list[OpportunityResponse]:
                     region=gs.signal.region if gs.signal else None,
                 )
             )
-
-    # Also include EC2 demo opportunities (stored separately in adapter)
-    try:
-        from ...adapters.ec2_demo import _EC2_DEMO_OPPORTUNITIES  # noqa: PLC0415
-
-        existing_ids = {r.id for r in results}
-        for opp_id, record in _EC2_DEMO_OPPORTUNITIES.items():
-            if opp_id in existing_ids:
-                continue
-            opp = record.get("opportunity", {})
-            results.append(
-                OpportunityResponse(
-                    id=opp.get("id", opp_id),
-                    state=opp.get("state", OpportunityState.DETECTED.value),
-                    state_version=opp.get("state_version", 1),
-                    potential_value=record.get("monthly_waste_usd"),
-                    service=opp.get("service"),
-                    region=opp.get("region"),
-                )
-            )
-    except Exception:  # noqa: BLE001
-        pass
 
     return results
 
@@ -363,32 +341,6 @@ async def stream_opportunity_progress(opportunity_id: str) -> StreamingResponse:
         if existing.current_state == OpportunityState.NEEDS_FOLLOWUP:
             return _stream_reinvestigation(opportunity_id, existing)
         return _stream_from_stored(opportunity_id, existing)
-
-    # EC2 demo opportunities are tracked separately; avoid running the SLA
-    # canonical replay for them (which would create a duplicate approval and
-    # confuse the state machine).  Build a synthetic GraphState from the EC2
-    # demo record so the SSE stream terminates correctly.
-    try:
-        from ...adapters.ec2_demo import _EC2_DEMO_OPPORTUNITIES  # noqa: PLC0415
-
-        if opportunity_id in _EC2_DEMO_OPPORTUNITIES:
-            ec2_record = _EC2_DEMO_OPPORTUNITIES[opportunity_id]
-            ec2_opp = ec2_record.get("opportunity", {})
-            state_str = ec2_opp.get("state", OpportunityState.AWAITING_APPROVAL.value)
-            ec2_state = OpportunityState(state_str)
-            synthetic_gs = GraphState(
-                opportunity_id=opportunity_id,
-                current_state=ec2_state,
-                policy_decision=PolicyDecision.REQUIRE_APPROVAL
-                if ec2_state == OpportunityState.AWAITING_APPROVAL
-                else None,
-                state_version=ec2_opp.get("state_version", 1),
-            )
-            # Cache in _graph_states so subsequent calls (approve, list) use it
-            _graph_states[opportunity_id] = synthetic_gs
-            return _stream_from_stored(opportunity_id, synthetic_gs)
-    except Exception:  # noqa: BLE001
-        pass
 
     return await _stream_live(opportunity_id)
 

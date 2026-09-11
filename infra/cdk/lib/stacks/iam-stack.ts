@@ -184,7 +184,7 @@ export class RecoupIamStack extends cdk.Stack {
           "ce:Get*",
           "ce:List*",
           "cost-optimization-hub:List*",
-          // CloudTrail (cloudtrail_demo)
+          // CloudTrail (scanners + agent tools)
           "cloudtrail:Lookup*",
           "cloudtrail:Describe*",
           // LBScanner

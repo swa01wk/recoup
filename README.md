@@ -49,13 +49,13 @@ Built for the [AWS Agents for Humans Hackathon](https://agentsforhumans.devpost.
 
 ---
 
-## Primary demo vs optional depth
+## Primary demo (J-FULL)
 
-| Layer | What it shows |
-|-------|----------------|
-| **J-FULL (product UI)** | Real account scan → promote → HITL on opportunity detail → Recovery Ledger + SNS on approve — **sidebar: Opportunities · Account Scanner · Recovery Ledger** |
-| **Optional — SLA verified replay** | API Gateway credit path (~**$0.35**), full 11-node graph + SSE — **`/replay` or API only** (not in sidebar). See [docs/replay-system.md](docs/replay-system.md) |
-| **Optional — EC2 live stop** | `POST /api/ec2-demo/*` after approve — no dashboard card; see [docs/demo-playbook.md](docs/demo-playbook.md) S3 |
+Real account scan → promote → HITL on opportunity detail → Recovery Ledger + SNS on approve.
+
+**Sidebar:** Opportunities · Account Scanner · Recovery Ledger.
+
+Canonical doc: [docs/operator-journey.md](docs/operator-journey.md). SLA replay engine remains for **unit tests / scorecard** only (no public `/api/replay` or `/replay` UI).
 
 ---
 
@@ -107,14 +107,14 @@ Frontend (Next.js 16)
 |--------|--------|--------|
 | Golden-path success (20 runs) | 20/20 (100%) | ✓ 100% |
 | Overall scenario success | ≥ 92% | ✓ 47/47 scenarios defined |
-| Financial math correctness | 100% | ✓ **420** backend tests collected (0 warnings) |
-| Playwright E2E tests | 279 tests | ✓ 28 specs · **J-FULL** + J1–J12 + 13 SEC |
+| Financial math correctness | 100% | ✓ **393** backend tests collected (0 warnings) |
+| Playwright E2E tests | 118 tests | ✓ 15 specs · **J-FULL** + J2–J9 + 13 SEC |
 | Unsafe external actions | 0 | ✓ quality gate |
 | Replay P95 | < 60s | ✓ ~23 ms |
 | Tampered claim rejection | 100% | ✓ 409 on hash/amount/version tamper |
 
 See `GET /api/quality/scorecard` for live gate status.  
-Primary journey: [docs/operator-journey.md](docs/operator-journey.md). Full test map: [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md). **Now vs later (code):** [docs/code-changes-timing.md](docs/code-changes-timing.md). Stale code cleanup: [docs/stale-code-removal-plan.md](docs/stale-code-removal-plan.md).
+Primary journey: [docs/operator-journey.md](docs/operator-journey.md). Full test map: [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md). Doc index: [docs/README.md](docs/README.md) · archived meta/cleanup: [docs/archive/meta/](docs/archive/meta/).
 
 ---
 
@@ -129,7 +129,7 @@ recoup/
 ├── eval_fixtures/         Immutable replay seed artifacts
 ├── USER_JOURNEY_CHECKLIST.md   Test ↔ journey map
 ├── STATUS.md              Phase tracker
-└── DEMO_SCENARIOS.md      → stub; see docs/demo-playbook.md
+└── docs/demo-playbook.md  Demo scenarios (J-FULL + optional)
 ```
 
 ---
@@ -159,7 +159,7 @@ cd frontend && npx playwright test
 | Suite | Count | Command |
 |-------|------:|---------|
 | Backend unit tests | 420 collected | `cd backend && pytest tests/` |
-| Playwright E2E | 279 (28 specs) | `cd frontend && npx playwright test` |
+| Playwright E2E | 118 (15 specs) | `cd frontend && npx playwright test` |
 | Primary operator journey | J-FULL | [docs/operator-journey.md](docs/operator-journey.md) |
 | Extended test map | J1–J12 + SEC + J-FULL | [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md) |
 | Quality gates | 6 | `GET /api/quality/scorecard` |
@@ -168,7 +168,7 @@ cd frontend && npx playwright test
 
 ## Disclosure
 
-This project was created fresh during the AWS Agents for Humans Hackathon (Aug 10 – Sep 14, 2026). See [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+This project was created fresh during the AWS Agents for Humans Hackathon (Aug 10 – Sep 14, 2026). See [docs/archive/submit/DISCLOSURE.md](docs/archive/submit/DISCLOSURE.md).
 
 ---
 

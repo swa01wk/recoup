@@ -109,9 +109,9 @@ export const CARD_ANATOMY = {
 export const PAGE_JOBS = {
   "/":           "monitor: current recovery state, pending actions, operating picture",
   "/scan":       "discover: connect AWS, scan, start recovery",
-  "/approvals":  "approve: centralized HITL queue",
+  "/approvals":  "redirect: legacy inbox URL → opportunities hub",
   "/recovery":   "audit: closed-loop financial and event history",
-  "/quality":    "trust: 5 KPIs, agent vs human vs outcome",
+  "/quality":    "redirect: legacy scorecard page → opportunities (use GET /api/quality/scorecard)",
 } as const;
 
 // ---------------------------------------------------------------------------

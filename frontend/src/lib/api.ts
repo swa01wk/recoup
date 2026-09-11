@@ -54,7 +54,8 @@ export interface ApprovalRecord {
   rollback_context?: string;
 }
 
-export interface ReplayResult {
+/** Response from POST /api/opportunities/{id}/run (optional agent graph; not the removed /api/replay HTTP). */
+export interface RunResult {
   opportunity_id: string;
   scenario_id: string;
   live_evidence: boolean;
@@ -70,15 +71,6 @@ export interface ReplayResult {
   case_id: string | null;
   errors: string[];
   sse_url: string;
-}
-
-export interface Scenario {
-  scenario_id: string;
-  name: string;
-  description: string;
-  expected_credit_usd: string;
-  expected_uptime_pct: string;
-  tags: string[];
 }
 
 export interface SseEvent {
@@ -109,104 +101,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`${res.status} ${text}`);
   }
   return res.json() as Promise<T>;
-}
-
-export interface EC2DemoOpportunity {
-  opportunity: {
-    id: string;
-    type: "OPTIMIZATION";
-    service: string;
-    region: string;
-    potential_value: string;
-    state: string;
-  };
-  instance_id: string;
-  instance_type: string;
-  cloudwatch_check: {
-    avg_cpu_pct: number;
-    max_cpu_pct: number;
-    period_days: number;
-    idle: boolean;
-    note: string;
-    simulated: boolean;
-    agent_driven?: boolean;
-  };
-  cloudtrail_check: {
-    recent_events: number;
-    blocking_changes: boolean;
-    verdict: string;
-    note: string;
-    simulated: boolean;
-    agent_driven?: boolean;
-  };
-  monthly_waste_usd: string;
-  waste_note: string;
-  approval_id: string;
-  action_hash: string;
-  triggered_at: string;
-  agent_reasoning?: string | null;
-  stop_result: {
-    instance_id: string;
-    previous_state: string;
-    current_state: string;
-    stopped_at: string | null;
-    verified_stopped?: boolean;
-    simulated: boolean;
-    audit_trail: string[];
-  } | null;
-  executed_at?: string;
-}
-
-export interface CloudTrailCheckResult {
-  instance_id: string;
-  window_hours: number;
-  simulated: boolean;
-  data_source: string;
-  checked_at: string;
-  total_events: number;
-  actor_attributed: boolean;
-  human_events: number;
-  actor_type_breakdown: Record<string, number>;
-  requires_human_review: boolean;
-  finding: string;
-  events: Array<{
-    event_name: string;
-    event_time: string;
-    user_identity_type: string;
-    username: string;
-    request_id: string;
-  }>;
-  _aws: { service: string; api: string; live: boolean };
-}
-
-export interface TaggingScanResult {
-  scanned_at: string;
-  simulated: boolean;
-  data_source: string;
-  required_tags: string[];
-  resources_scanned: number;
-  resources_missing_tags: number;
-  estimated_attribution_gap_usd_monthly: number;
-  findings: Array<{
-    arn: string;
-    resource_type: string;
-    present_tags: Record<string, string>;
-    missing_tags: string[];
-    estimated_monthly_cost_usd: number;
-  }>;
-  summary: string;
-  _aws: { service: string; api: string; live: boolean };
-}
-
-export interface CostSummaryResult {
-  fetched_at: string;
-  simulated: boolean;
-  data_source: string;
-  total_usd: number;
-  billing_period_start: string;
-  billing_period_end: string;
-  breakdown: Array<{ service: string; cost_usd: number }>;
-  _aws: { service: string; api: string; live: boolean };
 }
 
 export interface Finding {
@@ -293,7 +187,7 @@ export const api = {
     list: () => request<Opportunity[]>("/api/opportunities"),
     get: (id: string) => request<Opportunity>(`/api/opportunities/${id}`),
     run: (id: string, signal?: Record<string, unknown>) =>
-      request<ReplayResult>(`/api/opportunities/${id}/run`, {
+      request<RunResult>(`/api/opportunities/${id}/run`, {
         method: "POST",
         body: JSON.stringify({ signal }),
       }),
@@ -356,41 +250,6 @@ export const api = {
           sns_sent_at?: string | null;
         }>
       >("/api/approvals/outcomes"),
-  },
-  replay: {
-    run: (opportunityId?: string) =>
-      request<ReplayResult>("/api/replay/api-gateway-sla", {
-        method: "POST",
-        body: JSON.stringify(
-          opportunityId ? { opportunity_id: opportunityId } : {}
-        ),
-      }),
-    scenarios: () => request<Scenario[]>("/api/replay/scenarios"),
-  },
-  ec2Demo: {
-    trigger: (instanceId?: string) =>
-      request<EC2DemoOpportunity>("/api/ec2-demo/trigger", {
-        method: "POST",
-        body: JSON.stringify({ instance_id: instanceId ?? "" }),
-      }),
-    list: () => request<EC2DemoOpportunity[]>("/api/ec2-demo/opportunities"),
-    get: (id: string) => request<EC2DemoOpportunity>(`/api/ec2-demo/opportunity/${id}`),
-    execute: (id: string) =>
-      request<EC2DemoOpportunity>(`/api/ec2-demo/execute/${id}`, {
-        method: "POST",
-      }),
-  },
-  cloudtrailDemo: {
-    check: (instanceId?: string) =>
-      request<CloudTrailCheckResult>(
-        `/api/cloudtrail-demo/check${instanceId ? `?instance_id=${instanceId}` : ""}`
-      ),
-  },
-  taggingDemo: {
-    scan: () => request<TaggingScanResult>("/api/tagging-demo/scan"),
-  },
-  costDemo: {
-    summary: () => request<CostSummaryResult>("/api/cost-demo/summary"),
   },
   scan: {
     full: (req: ScanRequest) =>

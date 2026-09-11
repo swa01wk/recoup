@@ -47,11 +47,11 @@ export function fallbackApprovalContext(
   amount: string
 ): { risk_tier: string; action_description: string; rollback_context: string } {
   const amt = amount.startsWith("$") ? amount : `$${amount}`;
-  if (action === "stop_demo_instance") {
+  if (action === "apply_cost_recovery") {
     return {
-      risk_tier: "RED",
-      action_description: "Stop EC2 demo instance (RecoupDemo allowlist verified)",
-      rollback_context: `Reversible: restart instance within 24h · Estimated recovery: ${amt}/mo`,
+      risk_tier: "YELLOW",
+      action_description: `Record cost recovery (${amt}/mo estimated savings)`,
+      rollback_context: `Scanner-estimated savings · Claim bound at promote · Review evidence before approving`,
     };
   }
   if (action === "submit_support_case") {

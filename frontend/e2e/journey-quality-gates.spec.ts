@@ -5,7 +5,7 @@
  *   GET /api/quality/scorecard — returns valid structure (or 503 when Bedrock absent)
  *   Scorecard fields are numeric, within valid ranges
  *   unsafe_external_actions is always 0
- *   POST /api/replay/run       — replay button feeds into scorecard
+ *   Scan/promote path feeds scorecard gates (no /api/replay HTTP)
  *   Scorecard is NOT the hardcoded DEMO_SCORECARD when API is reachable
  *
  * Tags:
@@ -91,27 +91,11 @@ test("@smoke J8-4 scorecard metric rates are between 0 and 1", async ({ request 
 // J8 — @full: edge cases
 // ---------------------------------------------------------------------------
 
-test("@full J8-5 replay run returns a valid result that could populate scorecard", async ({
-  request,
-}) => {
-  const res = await request.post(`${BACKEND}/api/replay/run`, {
-    data: {
-      availability_pct: 99.0,
-      request_count: 50000,
-      error_count: 500,
-      monthly_billing_usd: 2500,
-    },
-  });
-  expect(res.ok()).toBeTruthy();
-  const result = (await res.json()) as {
-    opportunity_id: string;
-    eligible: boolean;
-    credit_amount: string;
-    availability_pct: number;
-  };
-  expect(result.opportunity_id).toBeTruthy();
-  expect(result.eligible).toBe(true);
-  expect(result.availability_pct).toBeCloseTo(99.0, 1);
+test("@full J8-5 scorecard includes build timestamp when 200", async ({ request }) => {
+  const res = await request.get(`${BACKEND}/api/quality/scorecard`);
+  if (res.status() !== 200) return;
+  const card = (await res.json()) as { build?: string; all_gates_pass?: boolean };
+  expect(card.build).toBeTruthy();
 });
 
 test("@full J8-6 replay p95 in scorecard is a positive number in seconds", async ({

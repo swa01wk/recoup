@@ -95,15 +95,6 @@ export async function declineOpportunity(
   return res.json();
 }
 
-/** Trigger the EC2 demo and return the opportunity. */
-export async function triggerEc2Demo(
-  request: APIRequestContext
-): Promise<{ opportunity: { id: string; state: string } }> {
-  const res = await request.post(`${BACKEND}/api/ec2-demo/trigger`);
-  expect(res.ok()).toBeTruthy();
-  return res.json();
-}
-
 /** Wait for a page element containing text to appear. */
 export async function waitForText(page: Page, text: string, timeout = 10_000): Promise<void> {
   await expect(page.getByText(text)).toBeVisible({ timeout });

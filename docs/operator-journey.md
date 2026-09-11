@@ -20,7 +20,7 @@ Recoup’s **operator loop** is:
 
 This path is **implemented end-to-end** in frontend + backend, covered by **Playwright J-FULL** and overlapping journeys (J2, J6, inbox, UI), and **manually verified** (including live SNS to `recoup-alerts`).
 
-It is **not** the same as the **SLA verified replay** journey (`/replay`, J4), which runs the full 11-node graph for API Gateway credits. Both coexist in Recoup; **J-FULL is the account-scanner operator story**.
+**J-FULL is the account-scanner operator story.** The full **11-node Strands graph** (SLA replay engine) still exists for pytest and the quality scorecard, but it is **not** required to walk this journey — see [Agent aspects vs J-FULL](#agent-aspects-vs-j-full) below.
 
 ---
 
@@ -52,7 +52,60 @@ It is **not** the same as the **SLA verified replay** journey (`/replay`, J4), w
 - **UI (detail page):** 6 stages — `Detect → Investigate → Plan → Policy → Approve → Record` — see `COST_RECOVERY_STAGES` in `frontend/src/lib/recovery-storage.ts`.  
 - **UI (dashboard):** 11-step V1.1 strip — see `pipelineStageForOpportunity()` in the same file.
 
-**Agent graph (11 nodes):** **Not streamed on promote.** Promote builds a ready-to-approve `GraphState` from scanner output. Optional **Re-run agent investigation** on opportunity detail calls `POST /api/opportunities/{id}/run` with Strands/Bedrock. Full graph execution is central to **SLA replay**, not this loop.
+**Agent graph (11 nodes):** **Not streamed on promote.** Promote builds a ready-to-approve `GraphState` from scanner output. Optional **Re-run agent investigation** on opportunity detail calls `POST /api/opportunities/{id}/run` with Strands/Bedrock. Node-by-node reference: [agent-code-architecture.md](agent-code-architecture.md) (detailed: [archive/superseded/agent-graph.md](archive/superseded/agent-graph.md)).
+
+---
+
+## Agent aspects vs J-FULL
+
+This section records **who does what** for discovery, evidence, dollars, and approval — without requiring the full agent graph on every promote.
+
+### Three layers (do not conflate)
+
+| Layer | What it is | J-FULL uses it? |
+|-------|------------|-------------------|
+| **Operator journey** | Human steps 1–6 (reset → scan → promote → HITL → ledger) | **Yes — primary demo** |
+| **11-step UI pipeline** | Product language: Detect → … → Record (`PIPELINE_STEPS` in `frontend/src/lib/recoup-ui-rules.ts`) | **Yes — lifecycle strip on detail** |
+| **11-node agent graph** | Strands/Bedrock + deterministic nodes (normalize → correlate → … → monitor) | **Optional** (`POST /api/opportunities/{id}/run`) or **pytest replay** — see [agent-code-architecture.md](agent-code-architecture.md) |
+
+The **6-step** strip on opportunity detail (`COST_RECOVERY_STAGES` in `recovery-storage.ts`) is the same story with coarser labels: Detect → Investigate → Plan → Policy → Approve → Record.
+
+### Who performs each concern
+
+| Concern | J-FULL (shipped loop) | Full agent graph (optional depth) |
+|---------|------------------------|----------------------------------|
+| **Discovery** | Nine **read-only scanners** (`scan.py` `_ALL_SCANNERS`) — live AWS APIs per service | `normalize_event`, `incident_correlation`, … |
+| **Data on the finding** | `Finding.evidence` + `estimated_monthly_savings_usd` from scanner rules — [scanner-coverage.md](scanner-coverage.md) | `evidence_collector`, multi-source fetch |
+| **Cross-check / trust** | Per-scanner logic (e.g. EC2 describe + CloudWatch CPU); `scan_hash`; finding `content_hash`; regex finding sanitizer | Correlation, sanitizer node, eligibility reasoner |
+| **Package for approval** | **`promote`** synthesizes `GraphState` + HITL request from the finding (no graph stream) | Same shapes, produced by running nodes |
+| **Policy gate** | `REQUIRE_APPROVAL` set at promote | `risk_policy_gate` (Cedar) in graph |
+| **Human decision** | Operator on **`/opportunities/[id]`** — approve / investigate / decline | Same HITL contract (`claim_hash`, `amount`, `state_version`) |
+| **Recoverable amount** | Scanner **`estimated_monthly_savings_usd`** → `potential_credit` / approval **`amount`** | SLA path uses calculator outputs (replay fixtures) |
+| **Record / ledger** | Approve → state + `outcome_repo`; **`/recovery`** buckets | `case_monitor` / Record stage in 11-step language |
+
+### 11-step UI vs what J-FULL actually runs
+
+After **Start Recovery**, backend state is usually **`AWAITING_APPROVAL`**, which maps to **step 8 (Approve)** on the strip — steps **1–7 are collapsed**, not skipped in the product story:
+
+| Step | Label | J-FULL meaning |
+|------|--------|----------------|
+| 1 | Detect | Account scan — findings appear on `/opportunities` |
+| 2–7 | Investigate → Policy | **At promote:** finding → synthetic trace, eligibility text, `REQUIRE_APPROVAL`, **claim_hash** bound to packaged availability JSON |
+| 8 | Approve | Human HITL; wrong `amount` / `claim_hash` → **409** |
+| 9–10 | Remediate / Verify | Cost recovery: approve transitions toward **RECOVERED** (no separate live remediation in the canonical demo) |
+| 11 | Record | Ledger + outcomes (+ **SNS** on approve) |
+
+So the **11-step process covers the narrative** (collect context → justify $ → gate → human → record). It does **not** mean each step ran as a separate graph node or opportunity state in J-FULL.
+
+### Data and trust model (summary)
+
+1. **Collect** — scanners attach service-specific **evidence** to each finding.  
+2. **Quantify** — each finding carries **`estimated_monthly_savings_usd`** (scanner heuristics / pricing).  
+3. **Promote** — freeze **amount** + **claim_hash** on the approval record; idempotent by resource + **content_hash**.  
+4. **Approve** — operator confirms; claim binding enforced in `HITLFlow.approve()`.  
+5. **Ledger** — detected total (scan) vs pending vs recovered (opportunities + outcomes).
+
+Optional **agent re-run** on detail deepens investigation; **golden replay pytest** proves SLA math for scorecard gates — neither is on the judge-critical path documented in [judge-demo.md](judge-demo.md).
 
 ---
 
@@ -240,14 +293,9 @@ Key effects (same handler):
 
 - `GraphState` with `current_state=AWAITING_APPROVAL`, `policy_decision=REQUIRE_APPROVAL`.  
 - `HITLFlow.create_request` with **claim_hash**, **amount**, **state_version**.  
-- Action: `apply_cost_recovery` or `stop_demo_instance` for idle EC2 — `_recovery_action_for_finding()`.
+- Action: **`apply_cost_recovery`** for all promoted scan findings (`_recovery_action_for_finding()` in `scan.py`).
 
-```575:578:backend/src/recoup/api/routes/scan.py
-def _recovery_action_for_finding(finding: Finding) -> str:
-    if finding.finding_type == "IDLE_INSTANCE" or finding.service == "EC2":
-        return "stop_demo_instance"
-    return "apply_cost_recovery"
-```
+The approval **amount** equals the finding’s **`estimated_monthly_savings_usd`** (quantized to cents). **claim_hash** is SHA-256 over the serialized availability/claim payload so approve cannot drift from what was packaged at promote.
 
 Idempotent re-promote of same `resource_id` returns `status: "existing"` when content unchanged.
 
@@ -293,6 +341,8 @@ def approve_opportunity(...):
     if updated.action != "stop_demo_instance":
         _transition_opportunity_state(..., new_state=OpportunityState.RECOVERED, ...)
 ```
+
+J-FULL promotions always use **`apply_cost_recovery`**, so approve typically transitions to **RECOVERED** immediately after **APPROVED**.
 
 **HITL + SNS + ledger write** inside `HITLFlow.approve()`:
 
@@ -429,7 +479,7 @@ List outcomes: `backend/src/recoup/api/routes/approvals.py` (`GET /outcomes`).
 | 11-node Strands graph (streaming) | No (on promote) | `backend/src/recoup/graph/recoup_graph.py` — used heavily in **replay** |
 | Strands/Bedrock optional re-run | Optional on detail | `POST /api/opportunities/{id}/run` |
 | SNS on approve | Yes | `approval/flow.py`, `notifications.py` |
-| Live EC2 stop | Separate J5 path | `backend/src/recoup/tools/ec2_tools.py`, `api/routes/ec2_demo.py` |
+| Live EC2 stop demo | Removed from product (Sep 2026) | Was separate J5 HTTP path; J-FULL uses cost recovery only |
 
 **Hackathon pitch alignment:** *Detect waste with real scanners → human approves with claim binding → ledger shows recovered savings → SNS emails the recovery report.*
 
@@ -457,7 +507,7 @@ npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 | Spec | Overlap |
 |------|---------|
 | `journey-operator-primary.spec.ts` (J2) | Scan → promote → approve (one finding) |
-| `decision-inbox.spec.ts` | Approve / investigate / decline (API) |
+| `journey-decision-inbox.spec.ts` | Approve / investigate / decline (API) |
 | `journey-recovery-ledger.spec.ts` (J9) | Ledger after approve |
 | `scan.spec.ts` | Demo scan + promote |
 | `journey-ui-browser.spec.ts` | `/scan`, Start Recovery, Approve click |
@@ -466,19 +516,19 @@ npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 
 - Account Scanner demo scan → opportunities table → opportunity detail HITL.  
 - **Live SNS** to `recoup-alerts` with `[Recoup] Recovery Report — …` subject (verified).  
-- Broader demo script: `HACKATHON_DEMO.md` (adds SLA replay + EC2 live stop scenes).
+- Optional depth (not J-FULL): SLA replay **pytest** + quality scorecard; optional `POST /api/opportunities/{id}/run` — see [judge-demo.md](judge-demo.md).
 
 ---
 
-## Related journeys (not J-FULL)
+## Related journeys (removed HTTP — engine retained)
 
-| Journey | Route / ID | Purpose |
-|---------|------------|---------|
-| SLA verified replay | `/replay`, J4 | $0.35 API Gateway credit; full graph + SSE |
-| EC2 idle stop | EC2 demo API, J5 | Live `StopInstances` after approve |
-| Governance | Dashboard tiles, J10–J12 | CloudTrail, tags, Cost Explorer |
+| Journey | Status (Sep 2026) | Purpose |
+|---------|-------------------|---------|
+| SLA verified replay (J4) | HTTP removed; `adapters/replay.py` + golden pytest | ~$0.35 deterministic credit math |
+| EC2 idle stop (J5) | Demo HTTP removed | Promote uses cost recovery only |
+| Governance (J10–J12) | Demo HTTP removed | Scanner + ledger cover judge story |
 
-Recoup is **hackathon-complete** when you present **J-FULL as the primary operator lifecycle** and optionally deep-link SLA or EC2 as proof of agent depth and live AWS.
+Recoup is **hackathon-complete** when you present **J-FULL as the primary operator lifecycle** and cite pytest/scorecard for agent depth if asked.
 
 ---
 
@@ -500,7 +550,6 @@ Full API docs: [api-reference.md](api-reference.md).
 
 ## Documentation & cleanup
 
-- **Docs aligned to this journey (Sep 11, 2026):** [README.md](../README.md), [judge-demo.md](judge-demo.md), [demo-playbook.md](demo-playbook.md), [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md), [architecture-overview.md](architecture-overview.md).  
-- **When to change code vs docs-only:** [code-changes-timing.md](code-changes-timing.md).  
-- **Stale or superseded markdown:** [stale-documents.md](stale-documents.md).  
-- **Plan to remove stale code** (replay UI, demo APIs, legacy tests): [stale-code-removal-plan.md](stale-code-removal-plan.md).
+- **Docs aligned to this journey (Sep 11, 2026):** [README.md](../README.md), [judge-demo.md](judge-demo.md), [demo-playbook.md](demo-playbook.md), [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md).  
+- **Agent graph (11 nodes, optional on J-FULL):** [agent-code-architecture.md](agent-code-architecture.md) · **Scanners & evidence:** [scanner-coverage.md](scanner-coverage.md) · **Replay engine (pytest/scorecard):** [archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md).  
+- **Cleanup / historical meta docs:** [archive/meta/](archive/meta/) · **Full doc index:** [README.md](README.md).

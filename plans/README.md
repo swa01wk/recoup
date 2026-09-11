@@ -104,7 +104,7 @@ Frontend (Next.js)
 
 ## Documentation
 
-**Living docs:** [docs/README.md](../docs/README.md) (canonical metrics, API, playbooks). Phase plans here are **historical**; do not treat checklist UI routes (`/approvals`, `/quality` dashboard, Viewer switch) as current without reading the as-built notes in Phases 8–9 and [docs/frontend-guide.md](../docs/frontend-guide.md).
+**Living docs:** [docs/README.md](../docs/README.md) (canonical metrics, API, playbooks). Phase plans here are **historical**; do not treat checklist UI routes (`/approvals`, `/quality` dashboard, Viewer switch) as current without reading the as-built notes in Phases 8–9 and [docs/frontend-code-architecture.md](../docs/frontend-code-architecture.md).
 
 ---
 

@@ -5,7 +5,40 @@
 **Base URL (local):** `http://localhost:8000` (Docker / Playwright default; **8010** if using native `.env.example`)  
 **Interactive docs:** `GET /docs` (Swagger UI) · `GET /redoc` (ReDoc)  
 **Run locally:** `cd backend && uvicorn recoup.api.main:app --reload --port 8000`  
-**Playwright tests:** 28 specs · 279 tests. See `USER_JOURNEY_CHECKLIST.md`.
+**Playwright tests:** J-FULL–focused suite (see `USER_JOURNEY_CHECKLIST.md`).
+
+---
+
+## J-FULL operator API (primary — use these)
+
+| Step | Method | Path |
+|------|--------|------|
+| Reset (dev/test) | POST | `/api/test/reset` · `/api/admin/reset?clear_scan_cache=true` |
+| Scan | POST | `/api/scan/demo` · `/api/scan/full` · `/api/scan/preview` |
+| Promote | POST | `/api/scan/findings/promote` |
+| List / detail | GET | `/api/opportunities` · `/api/opportunities/{id}` |
+| HITL | POST | `/api/approvals/opportunity/{id}/approve` · `…/investigate` · `…/decline` |
+| Ledger | GET | `/api/approvals/outcomes` · `/api/scan/findings/promoted` |
+| Quality | GET | `/api/quality/scorecard` |
+| Optional agent | POST | `/api/opportunities/{id}/run` · GET `…/trace` · GET `…/stream` |
+
+Canonical walkthrough: [operator-journey.md](operator-journey.md).
+
+---
+
+## Removed HTTP routes (Sep 2026 — J-FULL cleanup)
+
+These endpoints were **removed** from the public API. SLA replay math remains in `backend/src/recoup/adapters/replay.py` for **unit tests** and the quality scorecard engine only.
+
+| Former prefix | Was used for |
+|---------------|--------------|
+| `/api/replay/*` | SLA verified replay trigger |
+| `/api/ec2-demo/*` | Live EC2 stop demo |
+| `/api/cloudtrail-demo/*` | Governance S7 |
+| `/api/tagging-demo/*` | Governance S8 |
+| `/api/cost-demo/*` | Governance S9 |
+
+Sections below that document removed routes are **archived reference** only.
 
 ---
 
@@ -412,9 +445,13 @@ data: {"type": "node_completed", "node": "risk_policy_gate", "duration_ms": 12, 
 
 ---
 
-## Replay
+## Replay (archived — HTTP removed Sep 2026)
 
-### `POST /api/replay/api-gateway-sla`
+> **Not mounted.** Public `/api/replay/*` routes were removed in the J-FULL cleanup. SLA replay logic remains in `backend/src/recoup/adapters/replay.py` for **unit/e2e pytest** and the quality scorecard. Use `POST /api/opportunities/{id}/run` only when exercising the agent graph on an existing opportunity — not as a replacement for the old replay trigger.
+
+The following documents the **former** contract for historical reference.
+
+### `POST /api/replay/api-gateway-sla` _(removed)_
 
 Trigger the canonical API Gateway SLA replay. Always produces exactly **$0.35**. Writes real evidence to S3 (`recoup-evidence` bucket, KMS-encrypted) when live AWS is enabled.
 
@@ -981,8 +1018,12 @@ uvicorn recoup.api.main:app --reload --port 8000
 # Visit Swagger UI
 open http://localhost:8000/docs
 
-# Run canonical replay
-curl -X POST http://localhost:8000/api/replay/run \
-  -H "Content-Type: application/json" \
-  -d '{"scenario_id": "replay-apigateway-2026-08-sla-001"}'
+# J-FULL smoke (demo scan)
+curl -s -X POST http://localhost:8000/api/scan/demo | jq '.findings | length'
+
+# Optional: quality scorecard (includes replay P95 from pytest adapter)
+curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
+
+# Golden SLA replay (no HTTP) — from backend/
+pytest tests/e2e/test_golden_replay.py -q
 ```

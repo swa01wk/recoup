@@ -2,14 +2,14 @@
 
 **Last updated:** Sep 11, 2026  
 **Primary operator journey:** [operator-journey.md](operator-journey.md) (**J-FULL** / **S5**)  
-**Test suite:** 279 Playwright tests in 28 specs · `@smoke` + `@full`  
+**Test suite:** 118 Playwright tests in 15 specs · `@smoke` + `@full` (`npx playwright test --list`)  
 See [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) for per-step coverage.
 
 ---
 
 ## Overview
 
-Recoup’s **shipped operator story** is account-scanner cost recovery: real AWS read scanners → promote finding → claim-bound HITL → Recovery Ledger (+ SNS on approve). Optional paths (SLA replay, EC2 stop, governance APIs) remain in the repo for depth and CI but are **not** in the three-link sidebar.
+Recoup’s **shipped operator story** is account-scanner cost recovery: real AWS read scanners → promote finding → claim-bound HITL → Recovery Ledger (+ SNS on approve). SLA replay **adapter** and golden pytest remain for scorecard depth; **HTTP** demo routes for replay, EC2 stop, and governance (S1/S3/S7–S9) were **removed** Sep 2026 — not in the three-link sidebar.
 
 **Product loop (J-FULL):** Scan → Start Recovery → Approve / Investigate / Decline → Ledger
 
@@ -53,24 +53,26 @@ Use **$87.82** when describing “what the scanner detects in one demo run.”
 | Scanner coverage | S6 | Same scan as S5; 8 tagged workloads | ✅ | ✅ J2 |
 | Cross-Account Connect | S2 | Onboarding depth | ✅ | ✅ J3 |
 | Evidence Sanitizer | S4 | Quality gates / replay trace | ✅ | ✅ J8 |
-| SLA Credit Recovery | S1 | Optional — full graph, not in nav | ✅ | ✅ J4 |
-| EC2 Idle Stop | S3 | Optional — API-only trigger | ✅ | ✅ J5 |
-| CloudTrail No-Actor | S7 | Optional — governance API | ✅ | ✅ J10 |
-| Missing Tags | S8 | Optional — governance API | ✅ | ✅ J11 |
-| Cost Explorer | S9 | Optional — governance API | ✅ | ✅ J12 |
+| SLA Credit Recovery | S1 | Engine only — pytest + scorecard | ✅ | ⛔ HTTP/J4 e2e removed |
+| EC2 Idle Stop | S3 | Removed — was API-only | — | ⛔ J5 removed |
+| CloudTrail No-Actor | S7 | Removed governance HTTP | — | ⛔ J10 removed |
+| Missing Tags | S8 | Removed governance HTTP | — | ⛔ J11 removed |
+| Cost Explorer | S9 | Removed governance HTTP | — | ⛔ J12 removed |
 
 ---
 
-## S1 — SLA Credit Recovery (optional depth)
+## S1 — SLA Credit Recovery (engine only — not a demo curl)
 
-1. Open **`/replay`** or `POST /api/replay/api-gateway-sla`
-2. Graph runs through policy → `REQUIRE_APPROVAL`
-3. Open **`/opportunities/{id}`** — approve with claim-bound amount
-4. **`/recovery`** — ledger updates
+Public `/api/replay/*` and `/replay` UI were removed. SLA math is proven in CI:
 
-**API:** `POST /api/replay/run`, `GET /api/opportunities/{id}/stream` (SSE), `POST /api/approvals/opportunity/{id}/approve`
+```bash
+cd backend && pytest tests/unit/test_replay_phase2.py tests/e2e/test_golden_replay.py -q
+curl -s http://localhost:8000/api/quality/scorecard | jq '.gates[] | select(.gate_id | contains("credit"))'
+```
 
-**Verified credit:** ~$0.35 (canonical SLA math)
+Optional graph smoke (not J-FULL): `workflow-stages.spec.ts` WF-11 uses `POST /api/opportunities/{id}/run`.
+
+**Verified credit:** ~$0.35 (canonical fixture)
 
 ---
 
@@ -82,13 +84,9 @@ Use **$87.82** when describing “what the scanner detects in one demo run.”
 
 ---
 
-## S3 — EC2 Idle Stop
+## S3 — EC2 Idle Stop (removed)
 
-1. `POST /api/ec2-demo/trigger` (API or tests)
-2. **`/opportunities/{id}`** — approve `stop_demo_instance`
-3. Live: `POST /api/ec2-demo/execute/{id}` after approval
-
-Note: There is no EC2 tile on `/`; trigger via API or Playwright journeys.
+`POST /api/ec2-demo/*` and EC2-focused Playwright journeys were removed in the J-FULL cleanup. Scan findings promote with **`apply_cost_recovery`** only.
 
 ---
 
@@ -109,15 +107,9 @@ Nine scanner types: EC2 · EBS · EIP · RDS · S3 · Lambda · ELB · CloudWatc
 
 ---
 
-## S7–S9 — Governance (API-first)
+## S7–S9 — Governance (removed HTTP)
 
-| Scenario | Endpoint |
-|----------|----------|
-| S7 CloudTrail | `GET /api/cloudtrail-demo/check` |
-| S8 Tagging | `GET /api/tagging-demo/scan` |
-| S9 Cost Explorer | `GET /api/cost-demo/summary` |
-
-Surfaced in opportunity/governance UI where wired; primary proof is API + Playwright `governance.spec.ts`.
+CloudTrail / tagging / Cost Explorer **demo routes** were removed. Governance narrative for judges: scanner findings + HITL + ledger (J-FULL).
 
 ---
 

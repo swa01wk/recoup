@@ -3,7 +3,7 @@
 Next.js app for the Recoup operator UI.
 
 - **Project overview:** [../README.md](../README.md)
-- **UI guide:** [../docs/frontend-guide.md](../docs/frontend-guide.md)
+- **UI architecture:** [../docs/frontend-code-architecture.md](../docs/frontend-code-architecture.md)
 - **Local dev & E2E:** [../docs/local-dev-and-testing.md](../docs/local-dev-and-testing.md)
 
 ```bash

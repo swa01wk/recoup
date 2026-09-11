@@ -44,14 +44,9 @@ except ImportError:  # noqa: BLE001
 from ..config import settings
 from ..sqs_poller import start_poller, stop_poller
 from .routes.approvals import router as approvals_router
-from .routes.cloudtrail_demo import router as cloudtrail_demo_router
-from .routes.cost_demo import router as cost_demo_router
-from .routes.ec2_demo import router as ec2_demo_router
 from .routes.opportunities import router as opportunities_router
 from .routes.quality import router as quality_router
-from .routes.replay import router as replay_router
 from .routes.scan import router as scan_router
-from .routes.tagging_demo import router as tagging_demo_router
 
 
 def _configure_logging() -> None:
@@ -242,12 +237,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 app.include_router(opportunities_router, prefix="/api/opportunities", tags=["opportunities"])
 app.include_router(approvals_router, prefix="/api/approvals", tags=["approvals"])
-app.include_router(replay_router, prefix="/api/replay", tags=["replay"])
 app.include_router(quality_router, prefix="/api/quality", tags=["quality"])
-app.include_router(ec2_demo_router, prefix="/api/ec2-demo", tags=["ec2-demo"])
-app.include_router(cloudtrail_demo_router, prefix="/api/cloudtrail-demo", tags=["cloudtrail-demo"])
-app.include_router(tagging_demo_router, prefix="/api/tagging-demo", tags=["tagging-demo"])
-app.include_router(cost_demo_router, prefix="/api/cost-demo", tags=["cost-demo"])
 app.include_router(scan_router, prefix="/api/scan", tags=["scan"])
 
 
@@ -290,12 +280,6 @@ def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
     if clear_scan_cache:
         _last_scan_result.clear()
 
-    try:
-        from ..adapters.ec2_demo import _EC2_DEMO_OPPORTUNITIES  # noqa: PLC0415
-        _EC2_DEMO_OPPORTUNITIES.clear()
-    except Exception:  # noqa: BLE001
-        pass
-
     # Clear approvals — in-memory AND DynamoDB (recoup-approvals table)
     try:
         from ..approval.store import clear_all_approvals  # noqa: PLC0415
@@ -311,7 +295,7 @@ def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
     except Exception:  # noqa: BLE001
         pass
 
-    cleared = "graph_states,promoted_findings,scan_audit,scan_history,ec2_demo,approvals_dynamo,outcomes_dynamo"
+    cleared = "graph_states,promoted_findings,scan_audit,scan_history,approvals_dynamo,outcomes_dynamo"
     if clear_scan_cache:
         cleared += ",scan_cache"
     return {"status": "reset", "cleared": cleared}
@@ -322,7 +306,7 @@ def admin_reset(clear_scan_cache: bool = False) -> dict[str, str]:
     """
     Full in-memory state reset for demo/development use.
 
-    Clears all opportunities, promoted findings, approvals, audit log, and EC2 demo data.
+    Clears all opportunities, promoted findings, approvals, audit log, and outcome records.
     Optionally clears the scan result cache (pass ?clear_scan_cache=true) so the next
     scan fetches fresh data from AWS.
 
@@ -342,8 +326,8 @@ def test_reset() -> dict[str, str]:
     """
     Reset all in-memory state for Playwright test isolation.
 
-    Clears _graph_states, _promoted_findings, EC2 demo opportunities,
-    and the last scan result. Never touches DynamoDB.
+    Clears _graph_states, _promoted_findings, approvals (in-memory), and scan audit/history.
+    Does not clear the demo scan cache (see clear_scan_cache on admin reset).
 
     DISABLED in production (RECOUP_ENV=production).
     """
