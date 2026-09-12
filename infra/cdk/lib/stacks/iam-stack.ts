@@ -31,11 +31,20 @@ export interface RecoupIamStackProps extends cdk.StackProps {
    * it in RECOUP_EXTERNAL_ID.  Default: "recoup-demo-external-id"
    */
   externalId?: string;
+  /** When set, creates RecoupAppRunnerRole with platform permissions (Plane A). */
+  platform?: {
+    snsAlertTopicArn: string;
+    evidenceBucketName: string;
+    slaCatalogBucketName: string;
+    evalFixturesBucketName: string;
+    evidenceKmsKeyArn: string;
+  };
 }
 
 export class RecoupIamStack extends cdk.Stack {
   public readonly readOnlyRole: iam.Role;
   public readonly remediationRole: iam.Role;
+  public readonly appRunnerRole?: iam.Role;
 
   constructor(scope: Construct, id: string, props: RecoupIamStackProps) {
     super(scope, id, props);
@@ -44,12 +53,87 @@ export class RecoupIamStack extends cdk.Stack {
     const externalId = props.externalId ?? "recoup-demo-external-id";
     const runtimeRoleArn = `arn:aws:iam::${accountId}:role/RecoupRuntimeRole`;
 
-    // ── Trust policy shared by both new roles ─────────────────────────────
-    const trustPrincipal = new iam.ArnPrincipal(runtimeRoleArn);
+    if (props.platform) {
+      this.appRunnerRole = new iam.Role(this, "RecoupAppRunnerRole", {
+        roleName: "RecoupAppRunnerRole",
+        description: "Plane A App Runner API identity (DDB, SNS, S3, STS read role)",
+        assumedBy: new iam.ServicePrincipal("tasks.apprunner.amazonaws.com"),
+      });
+      cdk.Tags.of(this.appRunnerRole).add("RecoupLayer", "hosting");
+      cdk.Tags.of(this.appRunnerRole).add("RecoupDemo", "false");
 
-    const externalIdCondition: iam.Conditions = {
-      StringEquals: { "sts:ExternalId": externalId },
-    };
+      const tableNames = [
+        "recoup-opportunities",
+        "recoup-approvals",
+        "recoup-tool-audits",
+        "recoup-outcome-metadata",
+      ];
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "DynamoDBAppTables",
+          actions: [
+            "dynamodb:GetItem",
+            "dynamodb:PutItem",
+            "dynamodb:UpdateItem",
+            "dynamodb:DeleteItem",
+            "dynamodb:Query",
+            "dynamodb:Scan",
+            "dynamodb:BatchWriteItem",
+          ],
+          resources: tableNames.map(
+            (t) => `arn:aws:dynamodb:${this.region}:${accountId}:table/${t}`
+          ),
+        })
+      );
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "SNSRecoveryReports",
+          actions: ["sns:Publish"],
+          resources: [props.platform.snsAlertTopicArn],
+        })
+      );
+      const buckets = [
+        props.platform.evidenceBucketName,
+        props.platform.slaCatalogBucketName,
+        props.platform.evalFixturesBucketName,
+      ];
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "S3EvidenceAndCatalog",
+          actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+          resources: buckets.flatMap((b) => [`arn:aws:s3:::${b}`, `arn:aws:s3:::${b}/*`]),
+        })
+      );
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "KMSEvidence",
+          actions: ["kms:Encrypt", "kms:Decrypt", "kms:GenerateDataKey"],
+          resources: [props.platform.evidenceKmsKeyArn],
+        })
+      );
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "SQSRecoveryEvents",
+          actions: [
+            "sqs:ReceiveMessage",
+            "sqs:DeleteMessage",
+            "sqs:GetQueueAttributes",
+            "sqs:SendMessage",
+          ],
+          resources: [
+            `arn:aws:sqs:${this.region}:${accountId}:recoup-recovery-events`,
+            `arn:aws:sqs:${this.region}:${accountId}:recoup-recovery-events-dlq`,
+          ],
+        })
+      );
+    }
+
+    // ── Trust principals: AgentCore runtime + App Runner (Plane A) ─
+    const trustPrincipals: iam.IPrincipal[] = [new iam.ArnPrincipal(runtimeRoleArn)];
+    if (this.appRunnerRole) {
+      trustPrincipals.push(this.appRunnerRole);
+    }
+    const assumeRoleTrust = new iam.CompositePrincipal(...trustPrincipals);
 
     // ── RecoupReadOnlyRole ────────────────────────────────────────────────
     this.readOnlyRole = new iam.Role(this, "RecoupReadOnlyRole", {
@@ -57,7 +141,7 @@ export class RecoupIamStack extends cdk.Stack {
       description:
         "Phase 6e - Read-only analysis role assumed via STS AssumeRole. " +
         "No write actions on any service.",
-      assumedBy: trustPrincipal,
+      assumedBy: assumeRoleTrust,
       externalIds: [externalId],
     });
 
@@ -222,7 +306,7 @@ export class RecoupIamStack extends cdk.Stack {
       description:
         "Phase 6e - Narrow write role for approved remediation. " +
         "ec2:StopInstances on RecoupDemo=true only. TerminateInstances denied.",
-      assumedBy: trustPrincipal,
+      assumedBy: assumeRoleTrust,
       externalIds: [externalId],
     });
 
@@ -261,6 +345,16 @@ export class RecoupIamStack extends cdk.Stack {
 
     cdk.Tags.of(this.remediationRole).add("Phase", "6e");
     cdk.Tags.of(this.remediationRole).add("ManagedBy", "CDK");
+
+    if (this.appRunnerRole) {
+      this.appRunnerRole.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "AssumeReadOnlyForDemoScan",
+          actions: ["sts:AssumeRole"],
+          resources: [this.readOnlyRole.roleArn],
+        })
+      );
+    }
 
     // ── RecoupRuntimeRole — grant sts:AssumeRole on both customer roles ──
     // The runtime role (created by RecoupInfraStack) must be able to call
@@ -308,5 +402,12 @@ export class RecoupIamStack extends cdk.Stack {
       value: externalId,
       description: "External ID for STS trust condition — set as RECOUP_EXTERNAL_ID",
     });
+
+    if (this.appRunnerRole) {
+      new cdk.CfnOutput(this, "AppRunnerRoleArn", {
+        value: this.appRunnerRole.roleArn,
+        exportName: "RecoupAppRunnerRoleArn",
+      });
+    }
   }
 }

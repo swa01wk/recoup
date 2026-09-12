@@ -22,15 +22,15 @@
 
 import { test, expect } from "@playwright/test";
 import {
+  BACKEND,
   resetBackend,
   runDemoScan,
   promoteFinding,
   approveOpportunity,
   declineOpportunity,
   pollUntilState,
+  promoteActionableFinding,
 } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
 // Helper — map state name to expected pipeline stage number (1-11)
@@ -148,9 +148,7 @@ test("@smoke WF-3 AWAITING_APPROVAL opportunity has a PENDING approval record", 
 test("@smoke WF-4 approve opportunity → state advances to APPROVED (stage 6 Record)", async ({
   request,
 }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
 
   await approveOpportunity(request, opportunity_id);
 
@@ -196,9 +194,7 @@ test("@smoke WF-5 decline opportunity → state is DENIED (stays at stage 5 Appr
 test("@smoke WF-6 after approve, opportunity no longer appears in pending approvals list", async ({
   request,
 }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
 
   await approveOpportunity(request, opportunity_id);
 
@@ -214,9 +210,7 @@ test("@smoke WF-6 after approve, opportunity no longer appears in pending approv
 // ===========================================================================
 
 test("@smoke WF-7 state_version increments from promote → approve", async ({ request }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
 
   const afterPromote = await pollUntilState(request, opportunity_id, "AWAITING_APPROVAL");
   const versionAfterPromote = afterPromote.state_version;
@@ -385,24 +379,18 @@ test("@smoke WF-12 pending approvals list matches AWAITING_APPROVAL opportunitie
 test("@smoke @ui WF-13 opportunity detail pipeline strip highlights 'Approve' after promote", async ({
   page,
 }) => {
-  const scan = await page.request.post(`${BACKEND}/api/scan/demo`);
-  const scanData = (await scan.json()) as { findings: Array<Record<string, unknown>> };
-
-  const promoteRes = await page.request.post(`${BACKEND}/api/scan/findings/promote`, {
-    data: scanData.findings[0],
-  });
-  const { opportunity_id } = (await promoteRes.json()) as { opportunity_id: string };
+  const { opportunity_id } = await promoteActionableFinding(page.request);
 
   await page.goto(`/opportunities/${opportunity_id}`);
   await page.waitForLoadState("networkidle");
 
   // 11-step pipeline strip must be visible
-  await expect(page.getByText(/Step \d+ \/ 11/i).first()).toBeVisible({
+  await expect(page.getByText(/Step \d+ of 11/i).first()).toBeVisible({
     timeout: 10_000,
   });
 
-  // At AWAITING_APPROVAL → Step 8 / 11 (Approve gate)
-  await expect(page.getByText(/Step 8 \/ 11/i)).toBeVisible({ timeout: 10_000 });
+  // At AWAITING_APPROVAL → Step 8 of 11 (Approve gate)
+  await expect(page.getByText(/Step 8 of 11/i)).toBeVisible({ timeout: 10_000 });
 
   // "Approve" step label should be visible in the strip
   await expect(page.getByText(/Approve/i).first()).toBeVisible({ timeout: 5_000 });
@@ -416,14 +404,7 @@ test("@smoke @ui WF-13 opportunity detail pipeline strip highlights 'Approve' af
 test("@ui WF-14 opportunity detail pipeline strip shows 'Record' active after approve", async ({
   page,
 }) => {
-  const scan = await page.request.post(`${BACKEND}/api/scan/demo`);
-  const scanData = (await scan.json()) as { findings: Array<Record<string, unknown>> };
-
-  // Promote
-  const promoteRes = await page.request.post(`${BACKEND}/api/scan/findings/promote`, {
-    data: scanData.findings[0],
-  });
-  const { opportunity_id } = (await promoteRes.json()) as { opportunity_id: string };
+  const { opportunity_id } = await promoteActionableFinding(page.request);
 
   // Approve via API
   const approvalRes = await page.request.get(
@@ -451,7 +432,7 @@ test("@ui WF-14 opportunity detail pipeline strip shows 'Record' active after ap
   await page.waitForLoadState("networkidle");
 
   // After approval → Step 9+ (Remediate / Verify / Record) must be visible
-  await expect(page.getByText(/Step (9|10|11) \/ 11/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Step (9|10|11) of 11/i)).toBeVisible({ timeout: 10_000 });
   // "Remediate", "Verify", or "Record" label should be the active stage
   await expect(page.getByText(/Remediate|Verify|Record/i).first()).toBeVisible({ timeout: 10_000 });
 

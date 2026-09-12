@@ -135,6 +135,9 @@ class HITLFlow:
         state_version: int,
         ttl_hours: int = 24,
         resource_id: str = "",
+        risk_tier_override: str | None = None,
+        action_description_override: str | None = None,
+        rollback_context_override: str | None = None,
     ) -> ApprovalRecord:
         """
         Create a PENDING ApprovalRecord and persist it.
@@ -185,6 +188,12 @@ class HITLFlow:
         risk_tier, action_description, rollback_context = _derive_approval_context(
             action, amount
         )
+        if risk_tier_override is not None:
+            risk_tier = risk_tier_override
+        if action_description_override is not None:
+            action_description = action_description_override
+        if rollback_context_override is not None:
+            rollback_context = rollback_context_override
         record = ApprovalRecord.create(
             approval_id=str(uuid.uuid4()),
             principal=principal,

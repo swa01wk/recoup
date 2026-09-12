@@ -11,6 +11,19 @@ Built for the [AWS Agents for Humans Hackathon](https://agentsforhumans.devpost.
 
 ---
 
+## Judge demo (AWS production — J-FULL)
+
+| | URL |
+|--|-----|
+| **UI** | https://nvqjc7nnif.us-east-1.awsapprunner.com |
+| **API** | https://vxndciwupy.us-east-1.awsapprunner.com |
+
+Flow: `/scan` → **Demo Scan** → `/opportunities` → **Start Recovery** → Approve → `/recovery`.  
+Ops: [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) · [docs/judge-demo.md](docs/judge-demo.md).  
+Production: `POST /api/test/reset` returns **403**.
+
+---
+
 ## Quick Start (Local Demo)
 
 **Primary operator journey (J-FULL):** [docs/operator-journey.md](docs/operator-journey.md)
@@ -107,8 +120,8 @@ Frontend (Next.js 16)
 |--------|--------|--------|
 | Golden-path success (20 runs) | 20/20 (100%) | ✓ 100% |
 | Overall scenario success | ≥ 92% | ✓ 47/47 scenarios defined |
-| Financial math correctness | 100% | ✓ **393** backend tests collected (0 warnings) |
-| Playwright E2E tests | 118 tests | ✓ 15 specs · **J-FULL** + J2–J9 + 13 SEC |
+| Financial math correctness | 100% | ✓ **407** backend tests collected (0 warnings) |
+| Playwright E2E tests | 123 tests | ✓ 15 specs · **J-FULL** + J2–J9 + 13 SEC |
 | Unsafe external actions | 0 | ✓ quality gate |
 | Replay P95 | < 60s | ✓ ~23 ms |
 | Tampered claim rejection | 100% | ✓ 409 on hash/amount/version tamper |
@@ -159,7 +172,7 @@ cd frontend && npx playwright test
 | Suite | Count | Command |
 |-------|------:|---------|
 | Backend unit tests | 420 collected | `cd backend && pytest tests/` |
-| Playwright E2E | 118 (15 specs) | `cd frontend && npx playwright test` |
+| Playwright E2E | 123 (15 specs) | `cd frontend && npx playwright test` |
 | Primary operator journey | J-FULL | [docs/operator-journey.md](docs/operator-journey.md) |
 | Extended test map | J1–J12 + SEC + J-FULL | [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md) |
 | Quality gates | 6 | `GET /api/quality/scorecard` |

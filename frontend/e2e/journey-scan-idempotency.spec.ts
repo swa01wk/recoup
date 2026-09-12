@@ -5,9 +5,7 @@
  * opportunities and does not increase the opportunity count.
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend, runDemoScan, promoteFinding } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import { BACKEND, resetBackend, runDemoScan, promoteFinding } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetBackend(request);

@@ -24,6 +24,7 @@ from ...graph.recoup_graph import recoup_graph
 from ...graph.state_machine import InMemoryStateMachine
 from ...graph.types import GraphState, PolicyDecision
 from ...models.opportunity import OpportunityState
+from ...models.recovery import WorkflowSnapshot
 from ...models.signal import IncidentSignal
 
 router = APIRouter()
@@ -56,6 +57,12 @@ class OpportunityResponse(BaseModel):
     confidence: float | None = None
     service: str | None = None
     region: str | None = None
+    discovery_confidence: int | None = None
+    action_confidence: int | None = None
+    risk_level: str | None = None
+    evidence_sufficiency: str | None = None
+    priority_score: int | None = None
+    recommended_action: str | None = None
 
     def model_post_init(self, __context: object) -> None:
         # Populate alias fields so callers using either name get the same value
@@ -70,9 +77,41 @@ class OpportunityResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _opportunity_response(opp_id: str, gs: GraphState) -> OpportunityResponse:
+    summary: dict[str, Any] = {}
+    if gs.recovery_assessment is not None:
+        summary = gs.recovery_assessment.summary_for_api()
+    conf = gs.eligibility_assessment.confidence if gs.eligibility_assessment else None
+    if summary.get("discovery_confidence") is not None:
+        conf = summary["discovery_confidence"] / 100.0
+    return OpportunityResponse(
+        id=opp_id,
+        state=gs.current_state.value,
+        state_version=gs.state_version,
+        potential_value=(
+            str(gs.availability_result.potential_credit)
+            if gs.availability_result
+            else None
+        ),
+        confidence=conf,
+        service=gs.signal.service if gs.signal else None,
+        region=gs.signal.region if gs.signal else None,
+        discovery_confidence=summary.get("discovery_confidence"),
+        action_confidence=summary.get("action_confidence"),
+        risk_level=summary.get("risk_level"),
+        evidence_sufficiency=summary.get("evidence_sufficiency"),
+        priority_score=summary.get("priority_score"),
+        recommended_action=summary.get("recommended_action"),
+    )
+
+
 @router.get("", response_model=list[OpportunityResponse])
 def list_opportunities() -> list[OpportunityResponse]:
     """Return all tracked opportunities."""
+    # Scan-promoted and agent-run opps live in _graph_states (state + potential_value).
+    if _graph_states:
+        return [_opportunity_response(opp_id, gs) for opp_id, gs in _graph_states.items()]
+
     results = []
     for opp_id, record in _state_machine.get.__self__.__dict__.get(  # type: ignore
         "_in_memory_store", {}
@@ -84,27 +123,6 @@ def list_opportunities() -> list[OpportunityResponse]:
                 state_version=record.get("state_version", 0),
             )
         )
-    # Fallback: enumerate from graph_states
-    if not results:
-        for opp_id, gs in _graph_states.items():
-            results.append(
-                OpportunityResponse(
-                    id=opp_id,
-                    state=gs.current_state.value,
-                    state_version=gs.state_version,
-                    potential_value=(
-                        str(gs.availability_result.potential_credit)
-                        if gs.availability_result else None
-                    ),
-                    confidence=(
-                        gs.eligibility_assessment.confidence
-                        if gs.eligibility_assessment else None
-                    ),
-                    service=gs.signal.service if gs.signal else None,
-                    region=gs.signal.region if gs.signal else None,
-                )
-            )
-
     return results
 
 
@@ -114,21 +132,80 @@ def get_opportunity(opportunity_id: str) -> OpportunityResponse:
     gs = _graph_states.get(opportunity_id)
     if gs is None:
         raise HTTPException(status_code=404, detail=f"Opportunity '{opportunity_id}' not found")
-    return OpportunityResponse(
-        id=opportunity_id,
-        state=gs.current_state.value,
-        state_version=gs.state_version,
-        potential_value=(
-            str(gs.availability_result.potential_credit)
-            if gs.availability_result else None
-        ),
-        confidence=(
-            gs.eligibility_assessment.confidence
-            if gs.eligibility_assessment else None
-        ),
-        service=gs.signal.service if gs.signal else None,
-        region=gs.signal.region if gs.signal else None,
+    return _opportunity_response(opportunity_id, gs)
+
+
+def _pipeline_stage_for_state(state: OpportunityState) -> int:
+    mapping = {
+        OpportunityState.DETECTED: 1,
+        OpportunityState.INVESTIGATING: 2,
+        OpportunityState.NEEDS_EVIDENCE: 3,
+        OpportunityState.EVIDENCE_READY: 5,
+        OpportunityState.ELIGIBILITY_REVIEWED: 6,
+        OpportunityState.AWAITING_APPROVAL: 8,
+        OpportunityState.NEEDS_FOLLOWUP: 8,
+        OpportunityState.APPROVED: 9,
+        OpportunityState.SUBMITTING: 9,
+        OpportunityState.SUBMITTED: 9,
+        OpportunityState.MONITORING: 10,
+        OpportunityState.RECOVERED: 11,
+    }
+    return mapping.get(state, 1)
+
+
+def _execution_status_for_state(state: OpportunityState) -> str:
+    if state in (OpportunityState.APPROVED, OpportunityState.SUBMITTING, OpportunityState.SUBMITTED):
+        return "Executing recovery..."
+    if state == OpportunityState.MONITORING:
+        return "Verification running..."
+    if state == OpportunityState.RECOVERED:
+        return "Recovery verified"
+    return ""
+
+
+def _workflow_snapshot(gs: GraphState) -> WorkflowSnapshot:
+    st = gs.current_state
+    return WorkflowSnapshot(
+        workflow_state=st.value,
+        pipeline_stage=_pipeline_stage_for_state(st),
+        execution_status=_execution_status_for_state(st),
     )
+
+
+def _build_trace_payload(opportunity_id: str, gs: GraphState) -> dict[str, Any]:
+    nodes = [{"node": node, "duration_ms": 0} for node in _NODE_ORDER]
+    return {
+        "opportunity_id": opportunity_id,
+        "nodes": nodes,
+        "events": nodes,
+        "signal": gs.signal.model_dump(mode="json") if gs.signal else None,
+        "hypothesis_summary": gs.hypothesis.summary if gs.hypothesis else None,
+        "contract": (
+            {"service": gs.contract.service, "version": gs.contract.version}
+            if gs.contract
+            else None
+        ),
+        "availability_result": (
+            gs.availability_result.model_dump(mode="json") if gs.availability_result else None
+        ),
+        "eligibility": (
+            gs.eligibility_assessment.model_dump(mode="json")
+            if gs.eligibility_assessment
+            else None
+        ),
+        "policy_decision": gs.policy_decision.value if gs.policy_decision else None,
+        "case_id": gs.case_id,
+        "case_outcome": (
+            gs.case_outcome.model_dump(mode="json") if gs.case_outcome else None
+        ),
+        "errors": gs.errors,
+        "recovery_assessment": (
+            gs.recovery_assessment.model_dump(mode="json")
+            if gs.recovery_assessment
+            else None
+        ),
+        "workflow": _workflow_snapshot(gs).model_dump(mode="json"),
+    }
 
 
 def _finding_for_opportunity(opportunity_id: str) -> Any | None:
@@ -270,32 +347,13 @@ def get_trace(opportunity_id: str) -> dict[str, Any]:
     gs = _graph_states.get(opportunity_id)
     if gs is None:
         raise HTTPException(status_code=404, detail=f"Opportunity '{opportunity_id}' not found")
-    # Build a synthetic node list from the standard graph execution order
-    nodes = [{"node": node, "duration_ms": 0} for node in _NODE_ORDER]
-    return {
-        "opportunity_id": opportunity_id,
-        "nodes": nodes,
-        "events": nodes,  # Alias — tests may use either key
-        "signal": gs.signal.model_dump(mode="json") if gs.signal else None,
-        "hypothesis_summary": gs.hypothesis.summary if gs.hypothesis else None,
-        "contract": (
-            {"service": gs.contract.service, "version": gs.contract.version}
-            if gs.contract else None
-        ),
-        "availability_result": (
-            gs.availability_result.model_dump(mode="json") if gs.availability_result else None
-        ),
-        "eligibility": (
-            gs.eligibility_assessment.model_dump(mode="json")
-            if gs.eligibility_assessment else None
-        ),
-        "policy_decision": gs.policy_decision.value if gs.policy_decision else None,
-        "case_id": gs.case_id,
-        "case_outcome": (
-            gs.case_outcome.model_dump(mode="json") if gs.case_outcome else None
-        ),
-        "errors": gs.errors,
-    }
+    return _build_trace_payload(opportunity_id, gs)
+
+
+@router.get("/{opportunity_id}/detail")
+def get_opportunity_detail(opportunity_id: str) -> dict[str, Any]:
+    """Alias for trace payload — stable name for opportunity detail UI."""
+    return get_trace(opportunity_id)
 
 
 # ---------------------------------------------------------------------------
@@ -357,27 +415,75 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
     _POST_APPROVAL = {"claim_package_generator", "submission_adapter", "case_monitor"}
 
     async def generate() -> Any:
+        from ...config import settings  # noqa: PLC0415
+        from ...recovery.pipeline import enrich_assessment_investigation  # noqa: PLC0415
+
         investigating = _set_graph_state(opportunity_id, OpportunityState.INVESTIGATING)
         if investigating is None:
             yield _sse({"type": "error", "message": "Opportunity state lost"})
             return
 
+        prior_ra = gs.recovery_assessment
         for node in _NODE_ORDER:
             if node in _POST_APPROVAL:
                 continue
             yield _sse({"type": "node_started", "node": node})
             await asyncio.sleep(0.06)
             extra: dict[str, Any] = {}
+            if node == "evidence_collector" and investigating.recovery_assessment:
+                updates = enrich_assessment_investigation(investigating)
+                iteration = updates.pop("investigation_iteration", None)
+                investigating = investigating.model_copy(update=updates)
+                _graph_states[opportunity_id] = investigating
+                ra = investigating.recovery_assessment
+                if ra and ra.evidence_sufficiency:
+                    extra["recovery_phase"] = "UNDERSTAND"
+                    extra["assessment_snapshot"] = {
+                        "evidence_sufficiency": ra.evidence_sufficiency.level.value,
+                        "discovery_confidence": (
+                            ra.discovery_confidence.score if ra.discovery_confidence else None
+                        ),
+                        "action_confidence": ra.summary_for_api().get("action_confidence"),
+                    }
+                    if prior_ra and iteration:
+                        extra["investigation_delta"] = {
+                            "recommendation_changed": iteration.recommendation_changed,
+                            "reason_for_change": iteration.reason_for_change,
+                            "previous_assessment": {
+                                "recommended_action": (
+                                    prior_ra.recommendation.primary_action_label
+                                    if prior_ra.recommendation
+                                    else None
+                                ),
+                                "discovery_confidence": (
+                                    prior_ra.discovery_confidence.score
+                                    if prior_ra.discovery_confidence
+                                    else None
+                                ),
+                            },
+                            "new_assessment": {
+                                "recommended_action": (
+                                    ra.recommendation.primary_action_label
+                                    if ra.recommendation
+                                    else None
+                                ),
+                                "discovery_confidence": (
+                                    ra.discovery_confidence.score
+                                    if ra.discovery_confidence
+                                    else None
+                                ),
+                            },
+                        }
             if node == "availability_calculator" and investigating.availability_result:
                 extra["potential_credit"] = str(
                     investigating.availability_result.potential_credit
                 )
             yield _sse({"type": "node_completed", "node": node, "duration_ms": 60, **extra})
 
-        awaiting = _set_graph_state(opportunity_id, OpportunityState.AWAITING_APPROVAL)
-        if awaiting is None:
-            yield _sse({"type": "error", "message": "Failed to reopen approval gate"})
-            return
+        awaiting = investigating.model_copy(
+            update={"current_state": OpportunityState.AWAITING_APPROVAL}
+        )
+        _graph_states[opportunity_id] = awaiting
 
         _maybe_create_approval(awaiting)
 
@@ -422,6 +528,9 @@ def _stream_from_stored(opportunity_id: str, gs: GraphState) -> StreamingRespons
     )
 
     async def generate() -> Any:
+        if gs.current_state == OpportunityState.AWAITING_APPROVAL:
+            _maybe_create_approval(gs)
+
         for node in _NODE_ORDER:
             if node in _POST_APPROVAL and not reached_post_approval:
                 # Opportunity halted at REQUIRE_APPROVAL — skip these nodes

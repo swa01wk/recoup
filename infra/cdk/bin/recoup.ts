@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { RecoupInfraStack } from "../lib/stacks/recoup-infra-stack";
-import { RecoupDemoStack } from "../lib/stacks/recoup-demo-stack";
 import { RecoupIamStack } from "../lib/stacks/iam-stack";
 import { RecoupDemoWorkloadsStack } from "../lib/stacks/recoup-demo-workloads-stack";
-import { RecoupSLADemoStack } from "../lib/stacks/recoup-sla-demo-stack";
+import { RecoupAppStack } from "../lib/stacks/recoup-app-stack";
+import { RecoupUiStack } from "../lib/stacks/recoup-ui-stack";
 
 const app = new cdk.App();
 
@@ -13,41 +13,66 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? "us-east-1",
 };
 
+const account = process.env.CDK_DEFAULT_ACCOUNT ?? "";
+const externalId = process.env.RECOUP_EXTERNAL_ID ?? "recoup-demo-external-id";
+const frontendUrl =
+  process.env.RECOUP_FRONTEND_URL ?? "https://main.d11111111111.amplifyapp.com";
+
 const infra = new RecoupInfraStack(app, "RecoupInfraStack", {
   env,
   description: "Recoup core infrastructure — DynamoDB, S3, SQS, KMS, EventBridge",
 });
 
-new RecoupDemoStack(app, "RecoupDemoStack", {
+const iam = new RecoupIamStack(app, "RecoupIamStack", {
   env,
-  vpc: infra.vpc,
-  description: "Recoup demo EC2 instance (RecoupDemo=true tag; reversible stop only)",
-});
-
-new RecoupIamStack(app, "RecoupIamStack", {
-  env,
-  account: process.env.CDK_DEFAULT_ACCOUNT ?? "",
-  externalId: process.env.RECOUP_EXTERNAL_ID ?? "recoup-demo-external-id",
+  account,
+  externalId,
+  platform: {
+    snsAlertTopicArn: infra.alertTopic.topicArn,
+    evidenceBucketName: infra.evidenceBucket.bucketName,
+    slaCatalogBucketName: infra.slaCatalogBucket.bucketName,
+    evalFixturesBucketName: infra.evalFixturesBucket.bucketName,
+    evidenceKmsKeyArn: infra.evidenceKey.keyArn,
+  },
   description:
-    "Phase 6e — RecoupReadOnlyRole + RecoupRemediationRole with STS AssumeRole trust",
+    "RecoupReadOnlyRole + RecoupRemediationRole + RecoupAppRunnerRole (Plane A/C)",
 });
+iam.addDependency(infra);
 
-// Phase 6f — 8 controlled waste scenarios for the demo story
 new RecoupDemoWorkloadsStack(app, "RecoupDemoWorkloadsStack", {
   env,
   vpc: infra.vpc,
   description:
-    "Phase 6f — RecoupDemoWorkloadsStack: 8 demo waste scenarios " +
-    "(oversized-ec2, unattached-ebs, gp2-migration, idle-eip, idle-rds, " +
-    "s3-no-lifecycle, oversized-lambda, stale-snapshot). " +
-    "Destroy after hackathon: cdk destroy RecoupDemoWorkloadsStack",
+    "RecoupDemoWorkloadsStack: 8 demo waste scenarios for Account Scanner (Plane D)",
 });
 
-// Option C — Real API Gateway + Lambda for SLA replay evidence
-new RecoupSLADemoStack(app, "RecoupSLADemoStack", {
+if (!iam.appRunnerRole) {
+  throw new Error("RecoupIamStack must create appRunnerRole when platform is set");
+}
+
+const appHost = new RecoupAppStack(app, "RecoupAppStack", {
   env,
-  description:
-    "Option C — Real API Gateway (recoup-sla-demo) + Lambda (recoup-sla-health) " +
-    "for SLA replay evidence. Run scripts/inject_sla_traffic.py after deploy. " +
-    "Cost: ~$0.70 one-time. Destroy after hackathon: cdk destroy RecoupSLADemoStack",
+  appRunnerInstanceRoleArn: iam.appRunnerRole.roleArn,
+  frontendUrl,
+  opportunitiesTableName: "recoup-opportunities",
+  approvalsTableName: "recoup-approvals",
+  toolAuditsTableName: "recoup-tool-audits",
+  outcomeMetadataTableName: "recoup-outcome-metadata",
+  evidenceBucketName: infra.evidenceBucket.bucketName,
+  slaCatalogBucketName: infra.slaCatalogBucket.bucketName,
+  evalFixturesBucketName: infra.evalFixturesBucket.bucketName,
+  evidenceKmsKeyArn: infra.evidenceKey.keyArn,
+  recoveryEventsQueueUrl: infra.recoveryEventsQueue.queueUrl,
+  snsAlertTopicArn: infra.alertTopic.topicArn,
+  readOnlyRoleArn: iam.readOnlyRole.roleArn,
+  externalId,
+  createAppRunnerService: app.node.tryGetContext("createAppRunnerService") === "true",
+  description: "Recoup API on App Runner (Plane A hosting)",
+});
+appHost.addDependency(iam);
+
+new RecoupUiStack(app, "RecoupUiStack", {
+  env,
+  createUiService: app.node.tryGetContext("createUiService") === "true",
+  description: "Recoup Next.js UI on App Runner (Plane A; use Amplify when GitHub connected)",
 });

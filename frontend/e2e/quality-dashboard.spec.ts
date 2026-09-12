@@ -5,9 +5,7 @@
  * Backend calls: GET /api/quality/scorecard
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import { BACKEND, resetBackend } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetBackend(request);

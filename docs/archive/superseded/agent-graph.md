@@ -5,7 +5,7 @@
 **Node count:** 11 (6 Deterministic · 5 Agent)  
 **Last updated:** Sep 11, 2026  
 **Status:** Phase 6c — `incident_correlation`, `eligibility_reasoner`, and `claim_package_generator` wired with real Strands agents (`strands_fn`); `run_ec2_stop_decision_agent` remains in the tool/agent layer (not used on J-FULL promote). Deterministic stub path always available for replay/CI.  
-**J-FULL:** Promote from account scan **does not** run this graph; it synthesizes `GraphState` in [`scan.py`](../backend/src/recoup/api/routes/scan.py). Optional: `POST /api/opportunities/{id}/run` on detail.  
+**J-FULL:** Promote from account scan runs the graph **through `risk_policy_gate`** (optimization path uses `backend/src/recoup/recovery/pipeline.py` inside `incident_correlation`) — see `backend/src/recoup/api/routes/scan.py`. Optional full run: `POST /api/opportunities/{id}/run` on detail.  
 **Playwright:** `journey-opportunity-detail.spec.ts`, `workflow-stages.spec.ts` (WF-11 SLA via `/run`); golden replay in **pytest** `tests/e2e/test_golden_replay.py`.
 
 ---

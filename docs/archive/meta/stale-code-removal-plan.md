@@ -1,7 +1,7 @@
 # Stale & Obsolete Code Removal Plan
 
 **Status:** Phases **0–5 executed** Sep 11, 2026 · Phase **6 deferred**  
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 12, 2026  
 **Product source of truth:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **When to execute:** See **[code-changes-timing.md](code-changes-timing.md)** — defer phases until after Devpost unless CI forces a fix.  
 **Goal:** Remove or quarantine surfaces that are **not** part of the three-link operator UI, without breaking CI or hackathon proofs you still want to keep.
@@ -44,7 +44,7 @@
 | **HITL** | Detail + approvals API | `opportunities/[id]/page.tsx`, `routes/approvals.py` | OK | — |
 | **Scan** | 9 scanners, `POST /api/scan/demo` | `_ALL_SCANNERS` in `scan.py` (9) | OK | — |
 | **Promote** | `POST /api/scan/findings/promote` → `AWAITING_APPROVAL` | `promote_finding`; idempotent by `resource_id` | OK | — |
-| **Graph on promote** | No SSE stream; synthetic GraphState | Matches `operator-journey` + `scan.py` | OK | **Do not** wire full graph on promote in cleanup |
+| **Graph on promote** | Runs through `risk_policy_gate` + `recovery/` pipeline; no SSE | Matches `operator-journey` + `scan.py` | OK | Do not SSE-stream promote or run past gate without HITL |
 | **Graph optional** | `POST /api/opportunities/{id}/run` | `opportunities.py` | OK | Keep |
 | **Graph replay path** | J4 engine only | `adapters/replay.py`, `recoup_graph.py`; **no** `routes/replay.py` | OK (adapter) | Keep for pytest/scorecard |
 | **SNS** | Approve only | `HITLFlow.approve` → `notifications.py` | OK | — |
@@ -244,7 +244,7 @@ Answer before Phase 2+:
 | Eval scripts (`run_eval_suite.py`, `replay_run.py`, …) | Yes | **Keep** — CI / ops |
 | Detail page SSE + Re-run | Optional UX | **Keep** — documented in operator-journey |
 
-**Playwright consolidation (Sep 11):** Removed duplicate specs `decision-inbox`, `recovery-ledger`, `opportunity-detail`, `journey-full-recovery` → **118** tests in **15** files (journey-* specs retained).
+**Playwright consolidation (Sep 11):** Removed duplicate specs → **15** files; **123** tests as of Sep 12 (`journey-ui-browser` expanded).
 
 ---
 

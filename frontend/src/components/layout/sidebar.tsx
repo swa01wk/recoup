@@ -32,9 +32,23 @@ export function Sidebar() {
       setTimeout(() => setResetMsg(null), 3000);
       // Reload the page so all React state is fresh
       window.location.reload();
-    } catch {
-      setResetMsg("Error — is backend running?");
-      setTimeout(() => setResetMsg(null), 4000);
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      const detail = (() => {
+        try {
+          const json = raw.match(/\{[\s\S]*\}/)?.[0];
+          if (json) return (JSON.parse(json) as { detail?: string }).detail;
+        } catch {
+          /* ignore */
+        }
+        return null;
+      })();
+      if (raw.startsWith("403") || detail?.includes("disabled")) {
+        setResetMsg("Reset disabled — redeploy API with RECOUP_ENABLE_ADMIN_RESET");
+      } else {
+        setResetMsg("Error — is backend running?");
+      }
+      setTimeout(() => setResetMsg(null), 5000);
     } finally {
       setResetting(false);
     }

@@ -2,8 +2,8 @@
 
 **Location:** `backend/src/recoup/models/`  
 **Framework:** Pydantic v2 (zero deprecation warnings)  
-**Count:** 9 models (+ graph-internal types in `graph/types.py`)  
-**Last updated:** Sep 11, 2026  
+**Count:** 9 core models in `models/` + **`recovery.py`** (`RecoveryAssessment`, evidence graph types) (+ graph-internal types in `graph/types.py`)  
+**Last updated:** Sep 12, 2026  
 **Status:** Phase 0 + Phase 1 complete; all 9 models pass `pytest -W error::DeprecationWarning`  
 **Playwright tests:** `journey-opportunity-detail.spec.ts`, `journey-recovery-ledger.spec.ts` verify model field shapes via API.
 
@@ -35,6 +35,9 @@ ClaimPackage ──── EvidenceManifest (embedded)
     │
     ▼
 RecoveryOpportunity (state machine entity)
+    │
+    ▼
+RecoveryAssessment (optimization / scan promote — `models/recovery.py`, attached on `GraphState`)
     │
     ▼
 ToolAudit (one per tool call)

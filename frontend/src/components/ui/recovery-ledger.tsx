@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { fmt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { toCanonicalLifecycle } from "@/lib/recovery-storage";
+import type { RecoveryLedgerData } from "@/lib/recovery-ledger-math";
 
-export interface RecoveryLedgerData {
-  detected: number;      // remaining actionable (scanTotal − recovered − pending)
-  totalDetected: number; // original scan total
-  recovered: number;
-  pending: number;
-}
+export type { RecoveryLedgerData } from "@/lib/recovery-ledger-math";
+export { computeLedgerData } from "@/lib/recovery-ledger-math";
 
 interface RecoveryLedgerProps {
   data: RecoveryLedgerData;
@@ -263,55 +259,3 @@ export function ServiceLedger({ bucket, value, className }: ServiceLedgerProps) 
   );
 }
 
-/**
- * Compute ledger bucket values from server-side state.
- *
- * The three buckets form a pipeline accounting equation:
- *   detected (remaining) + pending + recovered = total scan value
- *
- * Buckets:
- * - detected  = remaining recoverable opportunity (scanTotal − recovered − pending)
- * - Pending   = sum of AWAITING_APPROVAL opportunities
- * - Recovered = sum of RECOVERED / APPROVED opportunities
- *
- * NOTE: The ledger counts ALL opportunities returned by the API (including
- * SLA-replay ones), not just cost-recovery ("recovery-" prefix) items.
- * We round all bucket sums to 2 decimal places to prevent IEEE-754 drift.
- */
-export function computeLedgerData(
-  scanTotal: number,
-  opportunities: Array<{ state: string; potential_value: string | null }>,
-  pendingApprovalAmount: number
-): RecoveryLedgerData {
-  let recovered = 0;
-  let pendingFromOpps = 0;
-
-  for (const opp of opportunities) {
-    const raw = parseFloat(opp.potential_value ?? "0");
-    if (isNaN(raw) || raw <= 0) continue;
-    const value = Math.round((raw + Number.EPSILON) * 100) / 100;
-
-    // toCanonicalLifecycle now maps APPROVED → RECOVERED, so 3 buckets only
-    const canonical = toCanonicalLifecycle(opp.state);
-
-    if (canonical === "RECOVERED") {
-      recovered += value;
-    } else if (canonical === "PENDING") {
-      pendingFromOpps += value;
-    }
-  }
-
-  recovered = Math.round((recovered + Number.EPSILON) * 100) / 100;
-  pendingFromOpps = Math.round((pendingFromOpps + Number.EPSILON) * 100) / 100;
-
-  const pending = pendingFromOpps > 0 ? pendingFromOpps : pendingApprovalAmount;
-  const total = Math.max(
-    Math.round((scanTotal + Number.EPSILON) * 100) / 100,
-    Math.round((recovered + pending + Number.EPSILON) * 100) / 100
-  );
-
-  // "detected" = remaining actionable opportunity (shrinks as items are recovered)
-  const detected = Math.max(0, Math.round((total - recovered - pending + Number.EPSILON) * 100) / 100);
-
-  return { detected, totalDetected: total, recovered, pending };
-}

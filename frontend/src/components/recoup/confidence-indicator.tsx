@@ -3,9 +3,14 @@ import { cn } from "@/lib/utils";
 interface ConfidenceIndicatorProps {
   value: number | null | undefined;
   className?: string;
+  label?: string;
 }
 
-export function ConfidenceIndicator({ value, className }: ConfidenceIndicatorProps) {
+export function ConfidenceIndicator({
+  value,
+  className,
+  label = "Confidence",
+}: ConfidenceIndicatorProps) {
   const normalized = value != null && !isNaN(value) ? (value <= 1 ? value * 100 : value) : null;
   const display = normalized != null ? `${Math.round(normalized)}%` : "—";
   const level =
@@ -14,7 +19,7 @@ export function ConfidenceIndicator({ value, className }: ConfidenceIndicatorPro
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
-        Confidence
+        {label}
       </span>
       <span
         className={cn(

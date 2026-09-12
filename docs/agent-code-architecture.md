@@ -2,7 +2,7 @@
 
 **Scope:** Agent graph, Strands/Bedrock, replay, tools, and AgentCore adapters under `backend/src/recoup/`.  
 **Operator journey reference:** [operator-journey.md](operator-journey.md) — **J-FULL does not stream the graph on promote**; this document explains what the agent layer is and when it runs.  
-**Last updated:** Sep 11, 2026
+**Last updated:** Sep 13, 2026
 
 ---
 
@@ -14,7 +14,7 @@
 | **11-step UI language** | Frontend `PIPELINE_STEPS` / `pipelineStageForOpportunity` | **Yes — narrative strip** |
 | **11-node agent graph** | `graph/recoup_graph.py` | **Optional** — `POST /api/opportunities/{id}/run`, SSE `/stream`, pytest replay |
 
-On **promote**, the backend **synthesizes** a `GraphState` (signal, hypothesis, eligibility, availability, `REQUIRE_APPROVAL`) without executing nodes. That matches operator-journey “steps 2–7 collapsed at promote.”
+On **promote**, the backend **runs the graph through `risk_policy_gate`** (not SSE-streamed). For **optimization / scan** findings, node **`incident_correlation`** calls **`recovery/pipeline.py`** (`run_recovery_pipeline`) to produce a full **`RecoveryAssessment`**; downstream nodes **short-circuit** when `_recovery_complete(state)`. SLA replay fixtures still use the classic stub path in the same node. UI narrative still collapses steps 2–7 on the strip.
 
 ---
 
@@ -80,7 +80,7 @@ After human approval, graph resumes: `claim_package_generator` → `submission_a
               submission_adapter ──► case_monitor
 ```
 
-**J-FULL shortcut:** `scan.promote_finding` writes a `GraphState` already at `AWAITING_APPROVAL` with packaged amount and claim hash — equivalent to post-gate packaging without running nodes 1–8.
+**J-FULL optimization path:** `scan.promote_finding` → `recoup_graph.run(..., stop_at="risk_policy_gate")` with `promoted_finding` on state. **`run_recovery_pipeline`** (inside `incident_correlation_stub`) replaces nodes 2–7 semantics for cost recovery: evidence graph, investigator, financial impact, recommendation/plan, policy outcome, safety checks. Resulting `GraphState` is **`AWAITING_APPROVAL`** with claim hash over `availability_result`.
 
 ---
 
@@ -106,7 +106,7 @@ Agent nodes in `recoup_graph.py` wire `stub_fn` (deterministic replay) and `stra
 
 | Entry | File | When |
 |-------|------|------|
-| **Promote (synthetic state)** | `api/routes/scan.py` | Every J-FULL “Start Recovery” — **no** `graph.run()` |
+| **Promote (graph through gate)** | `api/routes/scan.py` | Every J-FULL “Start Recovery” — **`graph.run(stop_at="risk_policy_gate")`** + recovery pipeline for optimization signals |
 | **HTTP run** | `api/routes/opportunities.py` `POST /{id}/run` | Optional investigation; body `{ signal?, use_strands? }`; may use `ReplayAdapter` |
 | **SSE stream** | `GET /{id}/stream` | Node-by-node events for UI / E2E |
 | **Pytest golden replay** | `adapters/replay.py` + `tests/e2e/test_golden_replay.py` | Deterministic SLA credit (~$0.35 canonical scenario) |
@@ -161,8 +161,9 @@ SNS recovery report on approve: `notifications.py` (J-FULL step 5a).
 
 | Source | J-FULL | Full graph |
 |--------|--------|------------|
-| Scanner `Finding.evidence` | Yes — scan path | Optional input via adapters |
-| `evidence/collector.py` | No on promote | Fetches multi-source, S3 store when live |
+| Scanner `Finding.evidence` | Yes — seeds `recovery/signals.py` | Optional input via adapters |
+| `recovery/evidence_graph.py` + `evidence_bundle.py` | Yes — at promote | — |
+| `evidence/collector.py` | No on J-FULL promote | Fetches multi-source, S3 store when live |
 | `evidence/sanitizer.py` | Indirect (quality gate) | Strips secrets before LLM/UI |
 
 ---
@@ -172,8 +173,9 @@ SNS recovery report on approve: `notifications.py` (J-FULL step 5a).
 | Concern | J-FULL | Full graph |
 |---------|--------|------------|
 | Discovery | 9 scanners | `normalize_event`, correlation, collector |
-| Dollars on finding | `estimated_monthly_savings_usd` | `availability_calculator` |
-| Policy gate | `REQUIRE_APPROVAL` at promote | `risk_policy_gate` |
+| Investigation / evidence graph | `recovery/pipeline.py` at promote | Strands nodes 2–6 |
+| Dollars on finding | `estimated_monthly_savings_usd` → `financial_impact` | `availability_calculator` |
+| Policy gate | `recovery/policy.py` + forced `REQUIRE_APPROVAL` | `risk_policy_gate` (Cedar) |
 | Human decision | `/api/approvals/opportunity/*` | Same |
 | Record / ledger | `outcome_repo` on approve | `case_monitor` semantics in 11-step language |
 
@@ -205,6 +207,8 @@ SNS recovery report on approve: `notifications.py` (J-FULL step 5a).
 | `EVIDENCE_BUCKET`, `LIVE_AWS_ENABLED` | Live evidence collector |
 | `RECOUP_ENABLE_REAL_SUPPORT_SUBMISSION` | Real Support submit vs simulation |
 | `use_strands: false` | Default in replay tests for determinism |
+| `RECOVERY_LLM_ON_PROMOTE` | Optional Bedrock in `run_recovery_pipeline` during promote (default false) |
+| `RECOVERY_LLM_ON_INVESTIGATE` | LLM merge on investigate-further enrichment (default true) |
 
 Expose to frontend: `GET /api/config` (`llm_provider`, `evidence_bucket_configured`, etc.).
 

@@ -16,9 +16,9 @@ import {
   runDemoScan,
   promoteFinding,
   approveOpportunity,
+  BACKEND,
+  promoteActionableFinding,
 } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -92,9 +92,7 @@ test("@smoke J2-3 promoted opportunity appears in Decision Inbox (pending list)"
 test("@smoke J2-4 approve changes state and approval record to APPROVED", async ({
   request,
 }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
 
   // Approve with full claim binding
   const result = await approveOpportunity(request, opportunity_id);

@@ -11,6 +11,7 @@ import {
   OPPORTUNITY_TABLE_ROW,
 } from "@/components/recoup/opportunity-table-layout";
 import { fmtSavings, severityToRisk } from "@/lib/recoup-ui-rules";
+import { riskTierFromLevel } from "@/lib/recovery-presentation";
 import { serviceFindingSummary } from "@/lib/service-presentation";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,9 @@ export interface OpportunityRowData {
   severity: string;
   state: string;
   opportunityId?: string;
+  priorityScore?: number;
+  evidenceSufficiency?: string;
+  apiRiskLevel?: string;
 }
 
 interface OpportunityRowProps {
@@ -113,7 +117,13 @@ export function OpportunityRow({ data, onStartRecovery, loading }: OpportunityRo
 
       {/* Risk */}
       <div className="hidden md:flex justify-center self-center">
-        <RiskIndicator tier={severityToRisk(data.severity)} />
+        <RiskIndicator
+          tier={
+            data.apiRiskLevel
+              ? riskTierFromLevel(data.apiRiskLevel)
+              : severityToRisk(data.severity)
+          }
+        />
       </div>
 
       {/* Status */}

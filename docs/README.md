@@ -2,7 +2,7 @@
 
 **Project:** AWS Autonomous Cloud Spend Recovery Agent  
 **Hackathon:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 13, 2026  
 **Phases complete:** 0–6f, 8, 9 · Phase 7 (video/submission) in progress
 
 **Archived docs:** [archive/](archive/) — meta, superseded, optional depth, ops, submit (moved, not deleted)
@@ -13,8 +13,8 @@
 
 | Metric | Value | Verify with |
 |--------|-------|-------------|
-| Backend unit tests | **393** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
-| Playwright E2E | **118** tests in **15** spec files | `cd frontend && npx playwright test --list` |
+| Backend unit tests | **407** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
+| Playwright E2E | **123** tests in **15** spec files | `cd frontend && npx playwright test --list` |
 | Smoke tests | run `npx playwright test --grep @smoke` | count changes over time |
 | Graph nodes | **11** (6 deterministic · 5 agent) | `backend/src/recoup/graph/recoup_graph.py` |
 | Tools in `TOOL_REGISTRY` | **13** | `backend/src/recoup/tools/registry.py` |
@@ -24,10 +24,13 @@
 | Primary UI nav | **3** links: `/opportunities`, `/scan`, `/recovery` | `frontend/src/components/layout/sidebar.tsx` |
 | App routes | `/` → `/opportunities`; `/approvals`, `/quality` redirect; `/replay` **removed** (API replay remains) | `frontend/src/app/` |
 | Local backend port | **8000** (Docker, Playwright); **8010** (native uvicorn per `.env.example`) | `docker-compose.yml`, `.env.example` |
+| **Production UI (J-FULL)** | https://nvqjc7nnif.us-east-1.awsapprunner.com | [production-hosting.md](archive/ops/production-hosting.md) · [runbook](archive/ops/app-runner-deployment-runbook.md) |
+| **Production API** | https://vxndciwupy.us-east-1.awsapprunner.com | `./scripts/smoke_production_api.sh` |
 | Golden credit value | **~$0.35** | canonical SLA replay |
 | Demo scan savings | **$87.82/mo** (full scan aggregate) | Account Scanner full run |
 | **Primary operator journey** | **J-FULL** (scan → 3 HITL paths → ledger + SNS) | **[operator-journey.md](operator-journey.md)** |
 | Extended test map | J1–J12 + 13 SEC + J-FULL | [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) |
+| Recovery on promote | `backend/src/recoup/recovery/` → `RecoveryAssessment` on trace + approve gates | [backend-code-architecture.md](backend-code-architecture.md) · [operator-journey.md](operator-journey.md) |
 
 ---
 
@@ -39,6 +42,10 @@
 | **[judge-demo.md](judge-demo.md)** | Judge-facing walkthrough |
 | **[demo-playbook.md](demo-playbook.md)** | S5/J-FULL first; optional legacy scenarios |
 | **[local-dev-and-testing.md](local-dev-and-testing.md)** | Local setup, ports, Playwright, live AWS safety |
+| **[archive/ops/production-hosting.md](archive/ops/production-hosting.md)** | AWS-all deploy (App Runner API + UI, Amplify optional, SNS, smoke) |
+| **[archive/ops/app-runner-deployment-runbook.md](archive/ops/app-runner-deployment-runbook.md)** | App Runner deploy troubleshooting, CORS/URL coupling, verification |
+| **[archive/ops/demo-vs-platform-segregation.md](archive/ops/demo-vs-platform-segregation.md)** | Platform vs demo scanner stacks, safe teardown |
+| **[archive/ops/oct-demo-ops.md](archive/ops/oct-demo-ops.md)** | Credits / $150 plan ops through Oct 31 |
 
 ---
 
@@ -70,7 +77,7 @@
 | [archive/meta/](archive/meta/) | stale-documents, code-changes-timing, stale-code-removal-plan |
 | [archive/superseded/](archive/superseded/) | architecture-overview, agent-graph, frontend-guide |
 | [archive/optional-depth/](archive/optional-depth/) | replay-system, sla-calculator, tool-registry, … |
-| [archive/ops/](archive/ops/) | deployment, IAM, runbook, cross-account onboarding |
+| [archive/ops/](archive/ops/) | **production-hosting**, segregation, oct-demo-ops, IAM, cross-account, stopped-services |
 | [archive/submit/](archive/submit/) | video-script, submission-record, DISCLOSURE, ci-guide |
 
 ---
@@ -102,3 +109,11 @@ curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 ```
 
 Native dev with `.env` on port **8010**: set `NEXT_PUBLIC_API_URL=http://localhost:8010` and `PLAYWRIGHT_BACKEND_PORT=8010` for E2E.
+
+**Production smoke (no local stack):**
+
+```bash
+./scripts/smoke_production_api.sh https://vxndciwupy.us-east-1.awsapprunner.com
+./scripts/post_change_segregation_smoke.sh
+# Browser: https://nvqjc7nnif.us-east-1.awsapprunner.com/scan → Demo Scan (J-FULL)
+```

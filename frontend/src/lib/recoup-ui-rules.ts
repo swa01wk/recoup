@@ -94,6 +94,21 @@ export const PIPELINE_STEPS = [
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
 
+/** Short contextual copy for pipeline stepper tooltips (1-based stage index). */
+export const PIPELINE_STAGE_HINTS: Record<number, string> = {
+  1: "Potential idle or wasteful AWS resource discovered.",
+  2: "CloudWatch, CloudTrail, and resource metadata inspected.",
+  3: "Independent AWS signals correlated into resource context.",
+  4: "Investigator produced structured insights from evidence.",
+  5: "Evidence sufficiency evaluated against expected coverage.",
+  6: "Safest effective recovery action selected from allow-list.",
+  7: "Recovery policy checked — human approval when required.",
+  8: "Awaiting operator approve, investigate, or decline.",
+  9: "Allow-listed remediation executing on approved action.",
+  10: "Post-action verification and dependency checks running.",
+  11: "Verified savings recorded in the recovery ledger.",
+};
+
 // ---------------------------------------------------------------------------
 // Card anatomy constants
 // ---------------------------------------------------------------------------

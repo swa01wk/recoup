@@ -1,7 +1,8 @@
 # Scanner Coverage Reference
 
 **Phase:** 6f  
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 13, 2026  
+**Production demo scan:** https://nvqjc7nnif.us-east-1.awsapprunner.com/scan → **Demo Scan** (live API: `POST /api/scan/demo` on App Runner).  
 **Module:** `backend/src/recoup/scanners/`  
 **Playwright tests:** `scan.spec.ts` (8 tests) · `journey-operator-primary.spec.ts` (9 tests)
 

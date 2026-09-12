@@ -1,8 +1,9 @@
 # Demo Workloads — RecoupDemoWorkloadsStack
 
 **Phase:** 6f  
-**Last updated:** Sep 11, 2026  
-**CDK Stack:** `RecoupDemoWorkloadsStack`  
+**Last updated:** Sep 13, 2026  
+**CDK Stack:** `RecoupDemoWorkloadsStack` (Plane D — safe to stop/destroy for cost; does not remove App Runner or Infra)  
+**Segregation:** [archive/ops/demo-vs-platform-segregation.md](archive/ops/demo-vs-platform-segregation.md)  
 **Source:** `infra/cdk/lib/stacks/recoup-demo-workloads-stack.ts`  
 **Playwright tests:** `scan.spec.ts` verifies all 8 scenario tags; see `USER_JOURNEY_CHECKLIST.md` J2, S6
 

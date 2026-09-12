@@ -2,8 +2,8 @@
 
 **Competition:** Aug 10 – Sep 14, 2026  
 **Internal deadline:** Sep 13, 2026  
-**Last updated:** Sep 11, 2026  
-**Status:** Phase 7 ~40% complete — core product done, video + devpost remaining
+**Last updated:** Sep 13, 2026  
+**Status:** Phase 7 — AWS production live; video + devpost remaining
 
 **Primary demo (J-FULL):** [operator-journey.md](operator-journey.md) — account scan → HITL → Recovery Ledger. Optional SLA/EC2/governance **HTTP** demos removed Sep 2026; engine/tests retain replay adapter internally.
 
@@ -14,8 +14,8 @@
 | Item | URL | Verified (incognito) |
 |------|-----|---------------------|
 | Public GitHub repo | https://github.com/swa01wk/recoup | ☐ |
-| Live demo (frontend) | https://recoup.vercel.app | ☐ |
-| Backend API | https://recoup-api.railway.app | ☐ |
+| Live demo (frontend) | https://nvqjc7nnif.us-east-1.awsapprunner.com | ☐ |
+| Backend API | https://vxndciwupy.us-east-1.awsapprunner.com | ☐ |
 | Demo video (≤ 5:00) | _record following docs/video-script.md_ | ☐ |
 | Devpost submission | _publish before Sep 14_ | ☐ |
 | Builder.aws Post 1 | _see docs/builder-posts.md_ | ☐ |
@@ -55,8 +55,8 @@
 - [x] Cost Explorer billing data (S9)
 
 ### Testing (all ✅)
-- [x] 393 backend unit tests collected (live skipped as configured)
-- [x] 118 Playwright tests (15 specs) — J-FULL + J2–J9 + 13 SEC adversarial
+- [x] 407 backend unit tests collected (live skipped as configured)
+- [x] 123 Playwright tests (15 specs) — J-FULL + J2–J9 + 13 SEC adversarial
 - [x] 0 DeprecationWarnings
 - [x] mypy strict + ruff clean
 - [x] CDK synth passes

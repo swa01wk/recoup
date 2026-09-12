@@ -1,9 +1,10 @@
 # Recoup — User Journey Checklist
 
-> **Last updated:** Sep 11, 2026  
+> **Last updated:** Sep 13, 2026  
+> **Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
 > **Primary operator lifecycle (product):** **[J-FULL](docs/operator-journey.md)** — scan → 3 distinct services → approve / investigate / decline → Recovery Ledger + SNS.  
 > **Authoritative E2E:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`  
-> **Test suite:** 15 Playwright specs · 118 tests (`cd frontend && npx playwright test --list`)  
+> **Test suite:** 15 Playwright specs · 123 tests (`cd frontend && npx playwright test --list`)  
 > **UI:** Sidebar = Opportunities · Account Scanner · Recovery Ledger only. HITL on `/opportunities/[id]`. `/approvals` and `/quality` redirect to `/opportunities`.  
 > **Removed Sep 2026:** `/replay` page, `/api/replay/*`, ec2/governance demo HTTP, J4/J5/J10–J12 Playwright specs. SLA replay adapter + golden **pytest** remain.  
 > **Tags:** `@smoke` · `@full` · `@e2e` (J-FULL mega journey)
@@ -24,6 +25,8 @@
 | 6 | **Recovery Ledger** |
 
 **Playwright:** `cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts`
+
+**Production Playwright (optional):** set `PLAYWRIGHT_BACKEND_URL` / `PLAYWRIGHT_FRONTEND_URL` to the URLs above; no `/api/test/reset` in prod.
 
 Overlaps: **J2** (single-finding loop), **J6** (HITL paths), **J9** (ledger). Optional SLA depth: backend pytest + WF-11 (not J-FULL).
 
@@ -158,7 +161,7 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | J7-1 | `GET /api/opportunities/{id}` returns full record | opp-detail @smoke | `@smoke` | ✅ |
 | J7-2 | `state_version ≥ 1` on opportunity | opp-detail @smoke | `@smoke` | ✅ |
 | J7-3 | `potential_value > 0` on cost recovery opp | opp-detail @smoke | `@smoke` | ✅ |
-| J7-4 | `GET /api/opportunities/{id}/trace` returns node data | journey-opp detail+SSE | `@smoke` | ✅ |
+| J7-4 | `GET /api/opportunities/{id}/trace` returns node data + `recovery_assessment` on promote | journey-opp detail+SSE | `@smoke` | ✅ |
 | J7-5 | SSE stream (`GET /api/opportunities/{id}/stream`) responds | journey-opp, workflow WF-11 | — | ✅ |
 | J7-6 | Approve via opp-level endpoint → `APPROVED` | journey-opp | `@smoke` | ✅ |
 | J7-7 | Decline via opp-level endpoint → `DECLINED` | journey-opp | `@smoke` | ✅ |
@@ -204,7 +207,8 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | J9-6 | Approved amount matches claim on cost-recovery opp | journey-recovery | `@full` | ✅ |
 | J9-7 | DECLINED opportunities NOT counted in ledger | journey-recovery | `@full` | ✅ |
 | J9-8 | APPROVED via ledger endpoint reflects correctly | journey-recovery | `@smoke` | ✅ |
-| J9-9 | UI `/recovery` page renders savings chart | `journey-ui-browser.spec.ts` UI-6 | `@ui @smoke` | ✅ |
+| J9-9 | Investigate → stream → approve: **Remaining stable**, Pending → Recovered | `journey-recovery-ledger.spec.ts` J9-9; triage `@full` ledger guard | `@smoke` / `@full` | ✅ |
+| J9-10 | UI `/recovery` four buckets (Potential / Remaining / Pending / Recovered) | `journey-ui-browser.spec.ts` UI-6 | `@ui @smoke` | ✅ |
 
 ---
 
@@ -242,8 +246,10 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | UI-2 | `/scan` — demo scan finding tiles | `scan.spec.ts`, journeys | `@ui` | ✅ |
 | UI-3 | "Start Recovery" promotes finding | journey-operator-primary | `@smoke` | ✅ |
 | UI-4 | HITL on `/opportunities/[id]` (not `/approvals` redirect) | journey-opportunity-detail | `@smoke` | ✅ |
-| UI-5 | Claim-bound approve | journey-decision-inbox | `@smoke` | ✅ |
-| UI-6 | `/recovery` ledger buckets | journey-recovery-ledger | `@smoke` | ✅ |
+| UI-5 | Approve from detail (confirm dialog) | `journey-ui-browser.spec.ts` | `@ui @smoke` | ✅ |
+| UI-5b | Decline from detail | `journey-ui-browser.spec.ts` | `@ui @smoke` | ✅ |
+| UI-5c | Investigate Further from detail | `journey-ui-browser.spec.ts` | `@ui @smoke` | ✅ |
+| UI-6 | `/recovery` four ledger buckets | `journey-ui-browser.spec.ts` | `@ui @smoke` | ✅ |
 | UI-7 | `/replay` removed (404) | `journey-ui-browser` UI-replay-removed | `@smoke` | ✅ |
 | UI-8 | Pipeline strip on opportunity detail | journey-opportunity-detail | `@ui` | ✅ |
 | UI-9 | Quality gates via API (`/api/quality/scorecard`) | journey-quality-gates | `@full` | ✅ |
@@ -254,7 +260,7 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 
 | Spec file | Tests | Journeys |
 |-----------|------:|---------|
-| `journey-full-discovery-triage-ledger.spec.ts` | 4 | **J-FULL** |
+| `journey-full-discovery-triage-ledger.spec.ts` | 5 | **J-FULL** |
 | `journey-operator-primary.spec.ts` | 9 | J2 |
 | `scan.spec.ts` | 8 | J2 |
 | `journey-cross-account-connect.spec.ts` | 8 | J3 |
@@ -263,13 +269,13 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | `journey-quality-gates.spec.ts` | 8 | J8 |
 | `quality-dashboard.spec.ts` | 4 | J8 |
 | `journey-recovery-ledger.spec.ts` | 8 | J9 |
-| `journey-dashboard-ledger-consistency.spec.ts` | 3 | J9 |
+| `journey-dashboard-ledger-consistency.spec.ts` | 4 | J9 |
 | `journey-scan-idempotency.spec.ts` | 4 | J2 |
 | `journey-security.spec.ts` | 13 | SEC |
-| `journey-ui-browser.spec.ts` | 10 | UI |
+| `journey-ui-browser.spec.ts` | 12 | UI |
 | `live-ec2-demo-removed.spec.ts` | 5 | UI / regression |
 | `workflow-stages.spec.ts` | 14 | WF / pipeline |
-| **Total** | **118** (15 files) | J-FULL + J2–J9 + SEC + UI + WF |
+| **Total** | **123** (15 files) | J-FULL + J2–J9 + SEC + UI + WF |
 
 **Removed Sep 2026 (consolidated or deleted):** `decision-inbox`, `recovery-ledger`, `opportunity-detail`, `journey-full-recovery`, plus J4/J5/J10–J12 and Strands lifecycle mega-specs.
 

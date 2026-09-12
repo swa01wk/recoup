@@ -1,10 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { PIPELINE_STEPS, pipelineStepLabel } from "@/lib/recoup-ui-rules";
+import { PIPELINE_STEPS, PIPELINE_STAGE_HINTS, pipelineStepLabel } from "@/lib/recoup-ui-rules";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface LifecycleStepperProps {
   activeStage: number;
+  stageHints?: Record<number, string>;
   failed?: boolean;
   /** When true, all pipeline stages render as completed (e.g. RECOVERED). */
   allStagesComplete?: boolean;
@@ -18,6 +20,7 @@ interface LifecycleStepperProps {
 
 export function LifecycleStepper({
   activeStage,
+  stageHints = PIPELINE_STAGE_HINTS,
   failed = false,
   allStagesComplete = false,
   executionLabel,
@@ -81,23 +84,33 @@ export function LifecycleStepper({
             const isDone = !failed && (allStagesComplete || stage < clampedStage);
             const isActive = !allStagesComplete && !failed && stage === clampedStage;
             const isFailed = failed && !allStagesComplete && stage === clampedStage;
+            const hint = stageHints[stage];
+            const pill = (
+              <div
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all whitespace-nowrap",
+                  isDone
+                    ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-300"
+                    : isFailed
+                    ? "border-red-700/60 bg-red-900/20 text-red-300"
+                    : isActive
+                    ? "border-blue-600/70 bg-blue-900/20 text-blue-300"
+                    : "border-slate-700/40 bg-slate-800/20 text-slate-500"
+                )}
+              >
+                {isDone ? "✓ " : isFailed ? "✕ " : isActive ? "● " : "○ "}
+                {label}
+              </div>
+            );
             return (
               <div key={label} className="flex items-center gap-1">
-                <div
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all whitespace-nowrap",
-                    isDone
-                      ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-300"
-                      : isFailed
-                      ? "border-red-700/60 bg-red-900/20 text-red-300"
-                      : isActive
-                      ? "border-blue-600/70 bg-blue-900/20 text-blue-300"
-                      : "border-slate-700/40 bg-slate-800/20 text-slate-500"
-                  )}
-                >
-                  {isDone ? "✓ " : isFailed ? "✕ " : isActive ? "● " : "○ "}
-                  {label}
-                </div>
+                {hint && (isDone || isActive) ? (
+                  <Tooltip content={<span className="max-w-[220px] block">{hint}</span>}>
+                    {pill}
+                  </Tooltip>
+                ) : (
+                  pill
+                )}
                 {i < PIPELINE_STEPS.length - 1 && (
                   <span className="text-slate-600 text-[10px]">→</span>
                 )}

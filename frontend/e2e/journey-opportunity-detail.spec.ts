@@ -2,9 +2,14 @@
  * J7 — Opportunity Detail (J-FULL / scan-promoted path)
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend, approveOpportunity, runDemoScan, promoteFinding } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import {
+  BACKEND,
+  resetBackend,
+  approveOpportunity,
+  runDemoScan,
+  promoteFinding,
+  promoteActionableFinding,
+} from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetBackend(request);
@@ -44,7 +49,7 @@ test("@smoke J7-2 promoted opportunity stream endpoint responds with SSE content
 test("@smoke J7-3 approve from opportunity detail — state transitions to APPROVED", async ({
   request,
 }) => {
-  const { opportunity_id } = await triggerScanOpportunity(request);
+  const { opportunity_id } = await promoteActionableFinding(request);
   await approveOpportunity(request, opportunity_id);
   const opp = await request.get(`${BACKEND}/api/opportunities/${opportunity_id}`);
   const oppBody = (await opp.json()) as { state: string };

@@ -1,6 +1,34 @@
 # Recoup — Local Dev and Testing
 
-**Last updated:** Sep 11, 2026
+**Last updated:** Sep 13, 2026
+
+---
+
+## Production (AWS)
+
+Judges can run **J-FULL** without a local stack:
+
+| | URL |
+|--|-----|
+| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
+| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+
+```bash
+./scripts/smoke_production_api.sh https://vxndciwupy.us-east-1.awsapprunner.com
+./scripts/post_change_segregation_smoke.sh
+```
+
+Deploy / CORS / SNS: [archive/ops/production-hosting.md](archive/ops/production-hosting.md).  
+`POST /api/test/reset` returns **403** when `RECOUP_ENV=production`.
+
+Optional Playwright against prod:
+
+```bash
+cd frontend
+PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \
+PLAYWRIGHT_FRONTEND_URL=https://nvqjc7nnif.us-east-1.awsapprunner.com \
+  npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
+```
 
 ---
 
@@ -52,7 +80,8 @@ Journey map: [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) · CI: [c
 
 ```bash
 cd backend && pytest tests/ -W error::DeprecationWarning
-# 420 collected; 15 skipped (live-mode)
+# ~407 collected; live-mode skips as configured
+pytest tests/unit/recovery/   # recovery pipeline unit tests
 ```
 
 ---

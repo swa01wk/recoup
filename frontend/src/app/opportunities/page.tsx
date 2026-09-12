@@ -15,6 +15,7 @@ import {
   type OpportunityRowData,
 } from "@/components/recoup/opportunity-row";
 import { fmtSavings, formatLifecycleLabel, severityToRisk } from "@/lib/recoup-ui-rules";
+import { requestRecoveryDataRefresh } from "@/lib/recovery-data-events";
 
 function fmtDateShort(iso: string): string {
   try {
@@ -31,14 +32,23 @@ type FilterState = {
   status: string;
   risk: string;
   region: string;
-  sortBy: "savings" | "service" | "status";
+  sortBy: "savings" | "service" | "status" | "priority";
 };
 
 function buildOpportunityRows(
   findings: Finding[],
   promotedMap: Map<string, string>,
   opportunityStateMap: Map<string, string>,
-  opportunityMetaMap: Map<string, { service: string | null; region: string | null }>
+  opportunityMetaMap: Map<
+    string,
+    {
+      service: string | null;
+      region: string | null;
+      priority_score?: number | null;
+      evidence_sufficiency?: string | null;
+      risk_level?: string | null;
+    }
+  >
 ): OpportunityRowData[] {
   const seen = new Set<string>();
   const rows: OpportunityRowData[] = [];
@@ -62,6 +72,9 @@ function buildOpportunityRows(
       severity: f.severity,
       state,
       opportunityId,
+      priorityScore: meta?.priority_score ?? undefined,
+      evidenceSufficiency: meta?.evidence_sufficiency ?? undefined,
+      apiRiskLevel: meta?.risk_level ?? undefined,
     });
   }
 
@@ -154,7 +167,19 @@ export default function OpportunitiesPage() {
     [mergedOpportunities]
   );
   const opportunityMetaMap = useMemo(
-    () => new Map(mergedOpportunities.map((o) => [o.id, { service: o.service, region: o.region }])),
+    () =>
+      new Map(
+        mergedOpportunities.map((o) => [
+          o.id,
+          {
+            service: o.service,
+            region: o.region,
+            priority_score: o.priority_score,
+            evidence_sufficiency: o.evidence_sufficiency,
+            risk_level: o.risk_level,
+          },
+        ])
+      ),
     [mergedOpportunities]
   );
 
@@ -181,7 +206,11 @@ export default function OpportunitiesPage() {
       return true;
     });
 
-    if (filters.sortBy === "savings") {
+    if (filters.sortBy === "priority") {
+      rows = [...rows].sort(
+        (a, b) => (b.priorityScore ?? 0) - (a.priorityScore ?? 0) || b.savings - a.savings
+      );
+    } else if (filters.sortBy === "savings") {
       rows = [...rows].sort((a, b) => b.savings - a.savings);
     } else if (filters.sortBy === "service") {
       rows = [...rows].sort((a, b) => a.service.localeCompare(b.service));
@@ -201,6 +230,7 @@ export default function OpportunitiesPage() {
     setPromoteError(null);
     try {
       const res = await api.scan.promote(finding);
+      requestRecoveryDataRefresh();
       router.push(`/opportunities/${res.opportunity_id}`);
     } catch (e) {
       setPromoteError(e instanceof Error ? e.message : "Failed to start recovery");

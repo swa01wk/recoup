@@ -2,13 +2,15 @@
 
 **Scope:** Code under `backend/src/recoup/` and `backend/tests/` references.  
 **Operator journey reference:** [operator-journey.md](operator-journey.md) (steps 1–6).  
-**Last updated:** Sep 11, 2026
+**Last updated:** Sep 13, 2026
 
 ---
 
 ## Purpose
 
-FastAPI (`recoup.api.main:app`) exposes HTTP APIs for **read-only AWS account scanning**, **finding promotion into HITL-gated opportunities**, **approval workflows**, and **outcome/ledger persistence**. The canonical product path **does not** run the full 11-node Strands graph on promote; it synthesizes `GraphState` and opens approval in `scan.py`.
+FastAPI (`recoup.api.main:app`) exposes HTTP APIs for **read-only AWS account scanning**, **finding promotion into HITL-gated opportunities**, **approval workflows**, and **outcome/ledger persistence**. On **promote**, the backend runs `recoup_graph.run(..., stop_at="risk_policy_gate")`: for scan findings (`signal.source == "optimization"`), the **`incident_correlation`** node executes the **`recovery/` pipeline** (evidence graph, sufficiency, safety checks, recommendation/plan) and later graph nodes **no-op** once `recovery_assessment` is populated. The UI does **not** SSE-stream promote; trace comes from `GET .../trace`.
+
+**Production:** App Runner `https://vxndciwupy.us-east-1.awsapprunner.com` — Docker image from repo root `Dockerfile`, `RECOUP_ENV=production`, CORS via `FRONTEND_URL` ([production-hosting.md](archive/ops/production-hosting.md)).
 
 Run locally:
 
@@ -96,10 +98,11 @@ Preview subset: `_PREVIEW_SCANNERS` = Cost Explorer + EC2.
 
 - Idempotency: account namespace + resource_id + `content_hash` on `Finding` (`scanners/finding.py`)
 - Creates `recovery-{uuid}` opportunity id
-- Builds `IncidentSignal` + synthetic hypothesis/eligibility/availability on `GraphState`
-- `policy_decision=REQUIRE_APPROVAL`, `current_state=AWAITING_APPROVAL`
-- Action: `_recovery_action_for_finding()` → always **`apply_cost_recovery`** (J-FULL; EC2 stop demo path removed)
-- `HITLFlow.create_request` with **amount** = finding savings, **claim_hash** over packaged claim JSON
+- `FindingToSignalAdapter` → `GraphState` with `promoted_finding`; optional LLM via `RECOVERY_LLM_ON_PROMOTE` (default **false**)
+- `recoup_graph.run(initial_state, stop_at="risk_policy_gate")` — optimization path fills **`RecoveryAssessment`** via `recovery/pipeline.py` inside `graph/nodes.py` (`incident_correlation_stub`)
+- Forces `policy_decision=REQUIRE_APPROVAL`, `current_state=AWAITING_APPROVAL`
+- Action: `_recovery_action_for_finding()` → always **`apply_cost_recovery`**
+- `HITLFlow.create_request` with **amount** = finding savings, **claim_hash** over `availability_result` JSON; risk/action/rollback copy from `recovery/approval_ui.py` when assessment present
 - Registers state in `opportunities._graph_states` and `_promoted_findings`
 
 **Scan metadata:** `scan_hash`, dedup/cached rescans, `_scan_audit_log`, `_scan_history`.
@@ -110,7 +113,7 @@ Preview subset: `_PREVIEW_SCANNERS` = Cost Explorer + EC2.
 |--------|------|--------|
 | GET | `/api/approvals/pending` | Pending inbox |
 | GET | `/api/approvals/opportunity/{id}` | Approval for detail UI |
-| POST | `/api/approvals/opportunity/{id}/approve` | Claim-bound approve; SNS flag on response; state → APPROVED → RECOVERED for cost recovery |
+| POST | `/api/approvals/opportunity/{id}/approve` | Claim-bound approve; **409** if evidence INSUFFICIENT, blocking safety FAIL, or projected amount ≠ pending amount; SNS flag; state → APPROVED → RECOVERED for cost recovery |
 | POST | `/api/approvals/opportunity/{id}/investigate` | Decline approval with investigate notes; **NEEDS_FOLLOWUP** |
 | POST | `/api/approvals/opportunity/{id}/decline` | **DENIED** |
 | GET | `/api/approvals/outcomes` | Ledger / SNS metadata |
@@ -132,7 +135,7 @@ Legacy by-approval-id routes: `POST /{approval_id}/approve|decline`.
 |--------|------|--------|
 | GET | `/api/opportunities` | Ledger list |
 | GET | `/api/opportunities/{id}` | Detail state |
-| GET | `/api/opportunities/{id}/trace` | Packaged trace for UI (promote or post-run) |
+| GET | `/api/opportunities/{id}/trace` | Trace for UI — includes **`recovery_assessment`**, **`workflow`** snapshot (promote or post-run) |
 | POST | `/api/opportunities/{id}/run` | **Optional** — full graph run (replay signal or body) |
 | GET | `/api/opportunities/{id}/stream` | SSE node progress (optional depth) |
 
@@ -151,12 +154,14 @@ State machine: `graph/state_machine.py` — `InMemoryStateMachine` for opportuni
 | Package | Role in J-FULL |
 |---------|----------------|
 | `scanners/base.py`, `finding.py` | Finding model, evidence, `content_hash`, severity |
+| `recovery/` | Cost recovery pipeline: signals → evidence graph → sufficiency/safety → recommendation + plan (`pipeline.py`, `engines/*`, `evidence_graph.py`) |
+| `models/recovery.py` | `RecoveryAssessment`, evidence graph types, sufficiency/safety enums |
 | `models/opportunity.py` | `OpportunityState` enum |
 | `models/approval.py` | `ApprovalRecord`, states |
-| `models/signal.py`, `eligibility.py`, `availability.py` | Promote synthesizes graph-shaped data |
-| `graph/types.py` | `GraphState`, `PolicyDecision` |
-| `safety/cedar.py` | Policy evaluation (graph path; promote sets REQUIRE_APPROVAL directly) |
-| `config.py` | Env: SNS topic, DynamoDB tables, demo role ARNs, Bedrock, AgentCore ARNs |
+| `models/signal.py`, `eligibility.py`, `availability.py` | Populated by recovery pipeline on promote |
+| `graph/types.py` | `GraphState` (+ `recovery_assessment`, `promoted_finding`) |
+| `safety/cedar.py` | Policy evaluation (SLA replay path; optimization uses `recovery/policy.py` at pipeline) |
+| `config.py` | Env: SNS, DynamoDB, demo roles, Bedrock, **`recovery_llm_on_promote`**, **`recovery_llm_on_investigate`** |
 
 ---
 
@@ -191,6 +196,7 @@ State machine: `graph/state_machine.py` — `InMemoryStateMachine` for opportuni
 | Replay adapter | `adapters/replay.py` — used by `/run`, quality scorecard, pytest |
 | Unit graph | `backend/tests/unit/test_graph.py`, `test_replay_phase2.py` |
 | Approvals / HITL | Unit tests under `backend/tests/unit/` |
+| Recovery pipeline | `backend/tests/unit/recovery/` — pipeline, safety/sufficiency, approve gates, trace API |
 
 Playwright hits running API; backend pytest proves agent/scorecard depth without the removed `/api/replay/*` HTTP surface.
 
@@ -237,7 +243,9 @@ backend/src/recoup/
   scanners/          # 9 AWS read scanners
   approval/          # HITL flow + store
   graph/             # GraphState, nodes, outcome_repository, state_machine
-  agents/            # Strands LLM wrappers
+  recovery/          # Cost recovery pipeline (promote + investigate enrichment)
+  models/recovery.py # RecoveryAssessment domain types
+  agents/            # Strands LLM wrappers (+ recovery investigator)
   adapters/          # replay, agentcore, finding_to_signal
   engines/           # SLA calculator
   evidence/          # collect + sanitize

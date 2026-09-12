@@ -13,9 +13,7 @@
  *   @full   — scan with connection, re-fetch, error paths
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import { BACKEND, resetBackend } from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Setup

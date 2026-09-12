@@ -35,12 +35,12 @@ from pydantic import BaseModel
 
 from ...config import settings
 from ...approval.flow import HITLFlow
-from ...graph.types import GraphState, IncidentHypothesis, PolicyDecision
-from ...models.availability import AvailabilityResult
+from ...adapters.finding_to_signal import FindingToSignalAdapter
+from ...graph.recoup_graph import recoup_graph
+from ...graph.types import GraphState, PolicyDecision
 from ...models.connection import CustomerConnection
-from ...models.eligibility import EligibilityAssessment
 from ...models.opportunity import OpportunityState
-from ...models.signal import IncidentSignal
+from ...recovery.approval_ui import hitl_context_from_assessment
 from ...scanners.cost_explorer_scanner import CostExplorerScanner
 from ...scanners.cwlogs_scanner import CWLogsScanner
 from ...scanners.ebs_scanner import EBSScanner
@@ -390,8 +390,8 @@ def scan_preview(req: ScanRequest) -> ScanResult:
 
 
 @router.post("/full/rate-limited")
-def scan_full_limited(request: "Request", req: ScanRequest) -> ScanResult:  # noqa: F821
-    """Rate-limited alias for full scan — 5 per hour per IP."""
+def scan_full_limited(req: ScanRequest) -> ScanResult:
+    """Alias for full scan (rate limiting reserved for slowapi wiring)."""
     return _run_scan(req, _ALL_SCANNERS)
 
 
@@ -658,72 +658,30 @@ def promote_finding(finding: Finding) -> PromoteResponse:
         )
 
     opp_id = f"recovery-{uuid.uuid4().hex[:12]}"
-    now = datetime.now(UTC)
     savings = Decimal(str(finding.estimated_monthly_savings_usd)).quantize(Decimal("0.01"))
-    confidence = _confidence_for_severity(finding.severity)
 
-    signal = IncidentSignal(
-        source="optimization",
-        event_id=f"scan-{finding.resource_id}",
-        service=finding.service,
-        region=finding.region,
-        start=now,
-        end=now,
-        affected_resource_ids=[finding.resource_id],
-        raw_ref=f"scan:finding:{finding.resource_id}",
-        replay=False,
-    )
-
-    hypothesis = IncidentHypothesis(
-        service=finding.service,
-        region=finding.region,
-        incident_date=now.date(),
-        affected_resource_ids=[finding.resource_id],
-        summary=finding.issue,
-        confidence=confidence,
-    )
-
-    availability = AvailabilityResult(
-        monthly_uptime_pct=Decimal("100"),
-        threshold_breached=False,
-        tier_pct=Decimal("0"),
-        billed_charges=(savings * Decimal("12")).quantize(Decimal("0.01")),
-        potential_credit=savings,
-        calculation_trace=[
-            f"Resource: {finding.resource_id} ({finding.resource_type})",
-            f"Issue: {finding.issue}",
-            f"Recommendation: {finding.recommendation}",
-            f"Estimated monthly savings: ${savings}/mo",
-            f"Severity: {finding.severity}",
-        ],
-    )
-
-    eligibility = EligibilityAssessment(
-        eligible_estimate=True,
-        confidence=confidence,
-        satisfied_requirements=[finding.recommendation],
-        unresolved=(
-            ["Manual review recommended: low-severity finding may have limited impact"]
-            if confidence < 0.7 else []
-        ),
-        possible_exclusions=(
-            ["Resource may be exempt if tagged as intentionally idle"]
-            if confidence < 0.7 else []
-        ),
-        evidence_refs=[finding.resource_id],
-    )
-
-    graph_state = GraphState(
+    adapter = FindingToSignalAdapter()
+    signal = adapter.adapt(finding)
+    initial_state = GraphState(
         opportunity_id=opp_id,
         signal=signal,
-        hypothesis=hypothesis,
-        availability_result=availability,
-        eligibility_assessment=eligibility,
-        policy_decision=PolicyDecision.REQUIRE_APPROVAL,
-        current_state=OpportunityState.AWAITING_APPROVAL,
+        promoted_finding=finding,
+        use_strands=settings.recovery_llm_on_promote,
         state_version=1,
     )
+    graph_state = recoup_graph.run(initial_state, stop_at="risk_policy_gate")
+    graph_state = graph_state.model_copy(
+        update={
+            "policy_decision": PolicyDecision.REQUIRE_APPROVAL,
+            "current_state": OpportunityState.AWAITING_APPROVAL,
+            "state_version": 1,
+        }
+    )
     _graph_states[opp_id] = graph_state
+
+    availability = graph_state.availability_result
+    if availability is None:
+        raise HTTPException(status_code=500, detail="Promote failed: no availability result")
 
     claim_hash = "sha256:" + hashlib.sha256(
         _json.dumps(availability.model_dump(mode="json"), default=str, sort_keys=True).encode()
@@ -731,6 +689,14 @@ def promote_finding(finding: Finding) -> PromoteResponse:
 
     action = _recovery_action_for_finding(finding)
     flow = HITLFlow(opportunity_id=opp_id)
+    hitl_overrides: dict[str, str] = {}
+    if graph_state.recovery_assessment is not None:
+        rt, ad, rb = hitl_context_from_assessment(graph_state.recovery_assessment)
+        hitl_overrides = {
+            "risk_tier_override": rt,
+            "action_description_override": ad,
+            "rollback_context_override": rb,
+        }
     flow.create_request(
         principal="recoup-agent",
         action=action,
@@ -738,9 +704,10 @@ def promote_finding(finding: Finding) -> PromoteResponse:
         claim_hash=claim_hash,
         state_version=graph_state.state_version,
         resource_id=finding.resource_id,
+        **hitl_overrides,
     )
 
-    promoted_at = now.isoformat()
+    promoted_at = datetime.now(UTC).isoformat()
     account_bucket[finding.resource_id] = {
         "opportunity_id": opp_id,
         "finding": finding.model_dump(mode="json"),

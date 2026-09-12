@@ -70,6 +70,10 @@ class OutcomeRepository:
             "recovered_at": None,
             "sns_sent": False,
             "sns_sent_at": None,
+            "projected_amount": str(credit_amount),
+            "verified_amount": None,
+            "verification_status": "EXECUTED_PENDING_VERIFICATION",
+            "savings_lifecycle": "PENDING",
         }
 
         table = self._table()
@@ -108,9 +112,15 @@ class OutcomeRepository:
                 log.warning("outcome.dynamo_update_failed", error=str(exc))
         else:
             rec = _in_memory.get(pk, {"pk": pk, "opportunity_id": opportunity_id})
-            rec.update({"outcome_state": "RECOVERED", "recovered_at": now})
+            rec.update({
+                "outcome_state": "RECOVERED",
+                "recovered_at": now,
+                "verification_status": "VERIFIED",
+                "savings_lifecycle": "VERIFIED",
+            })
             if credit_amount is not None:
                 rec["credit_amount"] = str(credit_amount)
+                rec["verified_amount"] = str(credit_amount)
             _in_memory[pk] = rec
 
         return _in_memory.get(pk, {"pk": pk, "outcome_state": "RECOVERED"})

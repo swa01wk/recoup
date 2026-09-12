@@ -186,7 +186,23 @@ def get_opportunity_approval(
 ) -> ApprovalRecord | None:
     """Return the PENDING approval record for an opportunity, or null if none pending."""
     record = get_pending_for_opportunity(opportunity_id)
-    return record
+    if record is not None:
+        return record
+
+    # AWAITING_APPROVAL without a pending row (e.g. missed on promote) — backfill HITL record.
+    try:
+        from .opportunities import _graph_states, _maybe_create_approval  # noqa: PLC0415
+
+        gs = _graph_states.get(opportunity_id)
+        if (
+            gs is not None
+            and gs.current_state == OpportunityState.AWAITING_APPROVAL
+        ):
+            _maybe_create_approval(gs)
+            return get_pending_for_opportunity(opportunity_id)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("approval.backfill_skipped", opportunity_id=opportunity_id, error=str(exc))
+    return None
 
 
 @router.post("/opportunity/{opportunity_id}/approve")
@@ -208,6 +224,36 @@ def approve_opportunity(
         raise HTTPException(
             404, f"No pending approval found for opportunity '{opportunity_id}'"
         )
+
+    from ...models.recovery import EvidenceSufficiencyLevel  # noqa: PLC0415
+    from ...recovery.engines.safety import has_blocking_failure  # noqa: PLC0415
+    from .opportunities import _graph_states  # noqa: PLC0415
+
+    gs = _graph_states.get(opportunity_id)
+    if gs and gs.recovery_assessment:
+        ra = gs.recovery_assessment
+        if (
+            ra.evidence_sufficiency
+            and ra.evidence_sufficiency.level == EvidenceSufficiencyLevel.INSUFFICIENT
+        ):
+            raise HTTPException(
+                409,
+                "Cannot approve: evidence sufficiency is INSUFFICIENT",
+            )
+        if has_blocking_failure(ra.safety_checks):
+            raise HTTPException(
+                409,
+                "Cannot approve: mandatory safety check failed",
+            )
+        if ra.financial_impact:
+            proj = ra.financial_impact.projected_monthly_recovery_usd.quantize(
+                Decimal("0.01")
+            )
+            if proj != pending.amount.quantize(Decimal("0.01")):
+                raise HTTPException(
+                    409,
+                    "Cannot approve: projected recovery amount changed since approval was created",
+                )
 
     flow = HITLFlow(opportunity_id=opportunity_id)
     try:

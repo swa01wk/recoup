@@ -8,13 +8,23 @@
  *   Multiple approvals → ledger totals are additive
  *
  * Tags:
- *   @smoke  — single approve → ledger increment
+ *   @smoke  — approve ledger increment; J9-9 investigate → stream → approve (remaining stable)
  *   @full   — multi-approve totals, ledger accuracy, outcome vs approved
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend, runDemoScan, promoteFinding, approveOpportunity } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import {
+  BACKEND,
+  resetBackend,
+  runDemoScan,
+  promoteFinding,
+  approveOpportunity,
+  promoteActionableFinding,
+  fetchLedgerBuckets,
+  investigateOpportunity,
+  runExtendedInvestigationStream,
+  assertLedgerBalanced,
+  assertRemainingUnchanged,
+} from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -90,37 +100,30 @@ test("@smoke J9-1 opportunities list is accessible (foundation for ledger)", asy
 test("@smoke J9-2 after scan-promote-approve, opportunity state is APPROVED", async ({
   request,
 }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
 
   await approveOpportunity(request, opportunity_id);
 
   const res = await request.get(`${BACKEND}/api/opportunities/${opportunity_id}`);
   expect(res.ok()).toBeTruthy();
   const opp = (await res.json()) as { state: string };
-  expect(["APPROVED", "SUBMITTING", "SUBMITTED"]).toContain(opp.state);
+  expect(["APPROVED", "RECOVERED", "SUBMITTING", "SUBMITTED"]).toContain(opp.state);
 });
 
 test("@smoke J9-3 after approval, approved opportunity is in opportunities list", async ({
   request,
 }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  const { opportunity_id } = await promoteFinding(request, findings[0]);
+  const { opportunity_id } = await promoteActionableFinding(request);
   await approveOpportunity(request, opportunity_id);
 
   const ledger = await getLedger(request);
   const found = ledger.entries.find((e) => e.opportunity_id === opportunity_id);
   expect(found).toBeTruthy();
-  expect(["APPROVED", "SUBMITTING", "SUBMITTED"]).toContain(found!.state);
+  expect(["APPROVED", "RECOVERED", "SUBMITTING", "SUBMITTED"]).toContain(found!.state);
 });
 
 test("@smoke J9-4 second promote+approve adds another approved entry", async ({ request }) => {
-  const scan = await runDemoScan(request);
-  const findings = scan.findings as Array<Record<string, unknown>>;
-  expect(findings.length).toBeGreaterThan(1);
-  const { opportunity_id } = await promoteFinding(request, findings[1]);
+  const { opportunity_id } = await promoteActionableFinding(request);
   await approveOpportunity(request, opportunity_id);
   const ledger = await getLedger(request);
   const found = ledger.entries.find((e) => e.opportunity_id === opportunity_id);
@@ -204,6 +207,28 @@ test("@full J9-7 declined opportunity does NOT appear in approved entries", asyn
   );
   const ids = approved.map((e) => e.opportunity_id);
   expect(ids).not.toContain(opportunity_id);
+});
+
+test("@smoke J9-9 investigate then approve — remaining stable, pending moves to recovered", async ({
+  request,
+}) => {
+  await runDemoScan(request);
+  const { opportunity_id } = await promoteActionableFinding(request);
+
+  await investigateOpportunity(request, opportunity_id);
+  const afterInvestigate = await fetchLedgerBuckets(request);
+  expect(afterInvestigate.pending).toBeGreaterThan(0);
+  assertLedgerBalanced(afterInvestigate);
+
+  await runExtendedInvestigationStream(request, opportunity_id);
+
+  await approveOpportunity(request, opportunity_id);
+  const afterApprove = await fetchLedgerBuckets(request);
+
+  expect(afterApprove.recovered).toBeGreaterThan(afterInvestigate.recovered);
+  expect(afterApprove.pending).toBeLessThan(0.02);
+  assertRemainingUnchanged(afterInvestigate, afterApprove);
+  assertLedgerBalanced(afterApprove);
 });
 
 test("@full J9-8 promoted approval amount is non-zero", async ({ request }) => {

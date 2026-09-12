@@ -16,6 +16,7 @@ interface DecisionCardProps {
   policyNote?: string;
   loading?: boolean;
   onApprove: () => void;
+  approveLabel?: string;
   onDecline: () => void;
   onInvestigate: () => void;
   message?: string | null;
@@ -33,6 +34,7 @@ export function DecisionCard({
   onDecline,
   onInvestigate,
   message,
+  approveLabel = "Approve Recovery",
 }: DecisionCardProps) {
   return (
     <Card className="border-amber-700/50 bg-gradient-to-br from-amber-950/20 to-slate-900/40">
@@ -90,7 +92,7 @@ export function DecisionCard({
             Decline
           </Button>
           <Button variant="success" size="md" loading={loading} onClick={onApprove}>
-            Approve Recovery
+            {approveLabel}
           </Button>
         </div>
 

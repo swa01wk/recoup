@@ -112,30 +112,43 @@ export const COST_RECOVERY_STAGES = [
 ] as const;
 
 /**
+ * Opportunity states that count toward **Pending Approval** on the Recovery Ledger.
+ * Includes in-flight pipeline work after Start Recovery / extended investigation,
+ * so dollars do not bounce to Remaining during INVESTIGATING.
+ */
+export const OPPORTUNITY_LEDGER_PENDING_STATES = [
+  "INVESTIGATING",
+  "NEEDS_EVIDENCE",
+  "EVIDENCE_READY",
+  "ELIGIBILITY_REVIEWED",
+  "AWAITING_APPROVAL",
+  "NEEDS_FOLLOWUP",
+] as const;
+
+/**
  * Maps an opportunity state to one of the 4 canonical lifecycle buckets.
  * These buckets are mutually exclusive — an opportunity belongs to exactly one.
  *
- * DETECTED  = early stages (investigation, evidence gathering)
- * PENDING   = awaiting human approval
- * APPROVED  = post-approval (remediating / submitting)
- * RECOVERED = verified savings confirmed
+ * DETECTED  = not in active HITL pipeline (incl. terminal negatives → Remaining)
+ * PENDING   = promoted / in-flight until approve or decline
+ * RECOVERED = post-approve execution (incl. APPROVED … MONITORING)
  */
 export type CanonicalLifecycle = "DETECTED" | "PENDING" | "APPROVED" | "RECOVERED";
 
 export function toCanonicalLifecycle(state: string): CanonicalLifecycle {
   const s = state.toUpperCase();
-  if (["DETECTED", "INVESTIGATING", "NEEDS_EVIDENCE", "EVIDENCE_READY", "ELIGIBILITY_REVIEWED"].includes(s)) {
-    return "DETECTED";
-  }
-  if (["AWAITING_APPROVAL", "NEEDS_FOLLOWUP"].includes(s)) {
+  if ((OPPORTUNITY_LEDGER_PENDING_STATES as readonly string[]).includes(s)) {
     return "PENDING";
+  }
+  if (s === "DETECTED") {
+    return "DETECTED";
   }
   // APPROVED, SUBMITTING, SUBMITTED, MONITORING, RECOVERED all collapse into RECOVERED
   // (Approve is the final human action — what follows is mechanical execution)
   if (["APPROVED", "SUBMITTING", "SUBMITTED", "MONITORING", "RECOVERED"].includes(s)) {
     return "RECOVERED";
   }
-  // Terminal negatives (REJECTED, FAILED, DECLINED, DENIED) → DETECTED
+  // Terminal negatives (REJECTED, FAILED, DECLINED, DENIED) → DETECTED (Remaining pool)
   return "DETECTED";
 }
 

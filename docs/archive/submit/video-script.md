@@ -1,12 +1,20 @@
 # Video Script — Recoup Demo (≤ 5:00)
 
 **Target length:** 4:40 (20s buffer)  
-**Last updated:** Sep 11, 2026  
-**Canonical flow:** [operator-journey.md](operator-journey.md) (J-FULL) · [judge-demo.md](judge-demo.md)
+**Last updated:** Sep 13, 2026  
+**Canonical flow:** [operator-journey.md](../../operator-journey.md) (J-FULL) · [judge-demo.md](../../judge-demo.md)
+
+**Production tabs (no reset):**
+
+- https://nvqjc7nnif.us-east-1.awsapprunner.com/scan  
+- https://nvqjc7nnif.us-east-1.awsapprunner.com/opportunities  
+- https://nvqjc7nnif.us-east-1.awsapprunner.com/recovery  
 
 ---
 
 ## Pre-recording setup
+
+**Local:**
 
 ```bash
 curl -X POST http://localhost:8000/api/test/reset
@@ -20,6 +28,8 @@ cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec
 #   (HITL on /opportunities/{id} as you promote)
 # Quality: curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 ```
+
+**Production:** use the HTTPS tabs above; quality: `curl -s https://vxndciwupy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'`
 
 ---
 
@@ -79,7 +89,7 @@ Remaining / Pending / Recovered aligned with the three decisions.
 
 **On screen:** terminal — quality scorecard six gates
 
-> *"118 Playwright tests including the full operator journey; 393 backend tests; Cedar default deny."*
+> *"123 Playwright tests including the full operator journey; 407 backend tests; Cedar default deny."*
 
 Diagram: [architecture-overview.md](architecture-overview.md) (ASCII); no separate SVG in repo.
 

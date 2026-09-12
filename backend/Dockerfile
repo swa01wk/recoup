@@ -13,4 +13,4 @@ RUN pip install --upgrade pip && pip install .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "recoup.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn recoup.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

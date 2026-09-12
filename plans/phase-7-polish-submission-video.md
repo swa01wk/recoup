@@ -23,7 +23,7 @@ Do **not** follow the legacy Command Center / Decision Inbox / Viewer checklist 
 7. Canonical doc: [docs/operator-journey.md](../docs/operator-journey.md) · [docs/judge-demo.md](../docs/judge-demo.md) · [docs/video-script.md](../docs/video-script.md)
 8. Optional depth: `curl /api/quality/scorecard`; pytest golden replay; `POST /api/opportunities/{id}/run` (no `/api/replay/*`)
 
-**Tests:** 393 backend collected · 118 Playwright (15 specs) — see [docs/README.md](../docs/README.md).
+**Tests:** 407 backend collected · 123 Playwright (15 specs) — see [docs/README.md](../docs/README.md).
 
 ---
 

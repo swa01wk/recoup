@@ -18,12 +18,18 @@ export class RecoupInfraStack extends cdk.Stack {
   public readonly runtimeRole: iam.Role;
   public readonly gatewayExecutionRole: iam.Role;
   public readonly readConnectorRole: iam.Role;
+  public readonly alertTopic: sns.Topic;
+  public readonly evidenceKey: kms.Key;
+  public readonly recoveryEventsQueue: sqs.Queue;
+  public readonly evidenceBucket: s3.Bucket;
+  public readonly slaCatalogBucket: s3.Bucket;
+  public readonly evalFixturesBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
     // ── KMS ─────────────────────────────────────────────────────────────────
-    const evidenceKey = new kms.Key(this, "RecoupEvidenceKey", {
+    this.evidenceKey = new kms.Key(this, "RecoupEvidenceKey", {
       alias: "alias/recoup-evidence",
       description: "Encrypts raw evidence in S3 and DynamoDB",
       enableKeyRotation: true,
@@ -31,11 +37,11 @@ export class RecoupInfraStack extends cdk.Stack {
     });
 
     // ── S3 Buckets ───────────────────────────────────────────────────────────
-    const evidenceBucket = new s3.Bucket(this, "RecoupEvidenceBucket", {
+    this.evidenceBucket = new s3.Bucket(this, "RecoupEvidenceBucket", {
       bucketName: `recoup-evidence-${this.account}-${this.region}`,
       versioned: true,
       encryption: s3.BucketEncryption.KMS,
-      encryptionKey: evidenceKey,
+      encryptionKey: this.evidenceKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,  // Sprint 2: require TLS for all S3 operations
       removalPolicy: cdk.RemovalPolicy.RETAIN,
@@ -59,7 +65,7 @@ export class RecoupInfraStack extends cdk.Stack {
       ],
     });
 
-    const slaCatalogBucket = new s3.Bucket(this, "RecoupSLACatalogBucket", {
+    this.slaCatalogBucket = new s3.Bucket(this, "RecoupSLACatalogBucket", {
       bucketName: `recoup-sla-catalog-${this.account}-${this.region}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -68,7 +74,7 @@ export class RecoupInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    const evalFixturesBucket = new s3.Bucket(this, "RecoupEvalFixturesBucket", {
+    this.evalFixturesBucket = new s3.Bucket(this, "RecoupEvalFixturesBucket", {
       bucketName: `recoup-eval-fixtures-${this.account}-${this.region}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -83,7 +89,7 @@ export class RecoupInfraStack extends cdk.Stack {
       partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: evidenceKey,
+      encryptionKey: this.evidenceKey,
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
@@ -106,9 +112,9 @@ export class RecoupInfraStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       // Sprint 2: Fix TTL attribute name — code writes "expires_at_epoch" (Unix int);
       // CDK was incorrectly using "expires_at" (ISO string) which silently broke TTL.
-      timeToLiveAttribute: "expires_at_epoch",
+      timeToLiveAttribute: "expires_at",
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: evidenceKey,  // Sprint 2: extend CMK to approvals
+      encryptionKey: this.evidenceKey,  // Sprint 2: extend CMK to approvals
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -118,7 +124,7 @@ export class RecoupInfraStack extends cdk.Stack {
       sortKey: { name: "timestamp", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: evidenceKey,  // Sprint 2: extend CMK to tool-audits
+      encryptionKey: this.evidenceKey,  // Sprint 2: extend CMK to tool-audits
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -127,7 +133,7 @@ export class RecoupInfraStack extends cdk.Stack {
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: evidenceKey,
+      encryptionKey: this.evidenceKey,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -136,15 +142,15 @@ export class RecoupInfraStack extends cdk.Stack {
     const dlq = new sqs.Queue(this, "RecoupRecoveryEventsDLQ", {
       queueName: "recoup-recovery-events-dlq",
       retentionPeriod: cdk.Duration.days(14),
-      encryptionMasterKey: evidenceKey,
+      encryptionMasterKey: this.evidenceKey,
     });
 
-    const recoveryEventsQueue = new sqs.Queue(this, "RecoupRecoveryEventsQueue", {
+    this.recoveryEventsQueue = new sqs.Queue(this, "RecoupRecoveryEventsQueue", {
       queueName: "recoup-recovery-events",
       visibilityTimeout: cdk.Duration.seconds(300),
       retentionPeriod: cdk.Duration.days(14),
       deadLetterQueue: { queue: dlq, maxReceiveCount: 3 },
-      encryptionMasterKey: evidenceKey,
+      encryptionMasterKey: this.evidenceKey,
     });
 
     // ── EventBridge — AWS Health events ─────────────────────────────────────
@@ -152,7 +158,7 @@ export class RecoupInfraStack extends cdk.Stack {
       ruleName: "RecoupHealthEventRule",
       description: "Route all aws.health events to Recoup SQS queue",
       eventPattern: { source: ["aws.health"] },
-      targets: [new targets.SqsQueue(recoveryEventsQueue)],
+      targets: [new targets.SqsQueue(this.recoveryEventsQueue)],
     });
 
     // ── VPC (minimal; for EC2 demo instance) ────────────────────────────────
@@ -165,7 +171,7 @@ export class RecoupInfraStack extends cdk.Stack {
     });
 
     // ── CloudWatch alarms ────────────────────────────────────────────────────
-    const alertTopic = new sns.Topic(this, "RecoupAlertTopic", {
+    this.alertTopic = new sns.Topic(this, "RecoupAlertTopic", {
       topicName: "recoup-alerts",
     });
 
@@ -182,7 +188,7 @@ export class RecoupInfraStack extends cdk.Stack {
       threshold: 10,
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-    }).addAlarmAction(new cloudwatchActions.SnsAction(alertTopic));
+    }).addAlarmAction(new cloudwatchActions.SnsAction(this.alertTopic));
 
     // ── CloudWatch Log Groups ────────────────────────────────────────────────
     const runtimeLogGroup = new logs.LogGroup(this, "RecoupRuntimeLogGroup", {
@@ -226,10 +232,10 @@ export class RecoupInfraStack extends cdk.Stack {
     approvalsTable.grantReadWriteData(this.runtimeRole);
     toolAuditsTable.grantReadWriteData(this.runtimeRole);
     outcomeMetadataTable.grantReadWriteData(this.runtimeRole);
-    evidenceBucket.grantReadWrite(this.runtimeRole);
-    slaCatalogBucket.grantRead(this.runtimeRole);
-    evalFixturesBucket.grantRead(this.runtimeRole);
-    evidenceKey.grantEncryptDecrypt(this.runtimeRole);
+    this.evidenceBucket.grantReadWrite(this.runtimeRole);
+    this.slaCatalogBucket.grantRead(this.runtimeRole);
+    this.evalFixturesBucket.grantRead(this.runtimeRole);
+    this.evidenceKey.grantEncryptDecrypt(this.runtimeRole);
     runtimeLogGroup.grantWrite(this.runtimeRole);
 
     // Sprint 1: grant sts:AssumeRole so the runtime can obtain short-lived
@@ -308,16 +314,32 @@ export class RecoupInfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "OpportunitiesTableName", { value: opportunitiesTable.tableName });
     new cdk.CfnOutput(this, "ApprovalsTableName", { value: approvalsTable.tableName });
     new cdk.CfnOutput(this, "ToolAuditsTableName", { value: toolAuditsTable.tableName });
-    new cdk.CfnOutput(this, "EvidenceBucketName", { value: evidenceBucket.bucketName });
-    new cdk.CfnOutput(this, "SLACatalogBucketName", { value: slaCatalogBucket.bucketName });
-    new cdk.CfnOutput(this, "EvalFixturesBucketName", { value: evalFixturesBucket.bucketName });
-    new cdk.CfnOutput(this, "EvidenceKMSKeyArn", { value: evidenceKey.keyArn });
-    new cdk.CfnOutput(this, "RecoveryEventsQueueUrl", { value: recoveryEventsQueue.queueUrl });
+    new cdk.CfnOutput(this, "EvidenceBucketName", { value: this.evidenceBucket.bucketName });
+    new cdk.CfnOutput(this, "SLACatalogBucketName", { value: this.slaCatalogBucket.bucketName });
+    new cdk.CfnOutput(this, "EvalFixturesBucketName", { value: this.evalFixturesBucket.bucketName });
+    new cdk.CfnOutput(this, "EvidenceKMSKeyArn", {
+      value: this.evidenceKey.keyArn,
+      exportName: "RecoupEvidenceKmsKeyArn",
+    });
+    new cdk.CfnOutput(this, "RecoveryEventsQueueUrl", {
+      value: this.recoveryEventsQueue.queueUrl,
+      exportName: "RecoupRecoveryEventsQueueUrl",
+    });
     new cdk.CfnOutput(this, "RuntimeRoleArn", { value: this.runtimeRole.roleArn });
     new cdk.CfnOutput(this, "GatewayExecutionRoleArn", { value: this.gatewayExecutionRole.roleArn });
     new cdk.CfnOutput(this, "ReadConnectorRoleArn", { value: this.readConnectorRole.roleArn });
     new cdk.CfnOutput(this, "RuntimeLogGroup", { value: runtimeLogGroup.logGroupName });
     new cdk.CfnOutput(this, "GatewayLogGroup", { value: gatewayLogGroup.logGroupName });
     new cdk.CfnOutput(this, "ApiLogGroup", { value: apiLogGroup.logGroupName });
+    new cdk.CfnOutput(this, "OutcomeMetadataTableName", {
+      value: outcomeMetadataTable.tableName,
+    });
+    new cdk.CfnOutput(this, "AlertTopicArn", {
+      value: this.alertTopic.topicArn,
+      exportName: "RecoupAlertTopicArn",
+    });
+
+    cdk.Tags.of(this).add("RecoupLayer", "platform");
+    cdk.Tags.of(this).add("Project", "Recoup");
   }
 }

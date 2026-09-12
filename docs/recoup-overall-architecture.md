@@ -2,7 +2,7 @@
 
 **Scope:** End-to-end system derived from repository code and [operator-journey.md](operator-journey.md).  
 **Primary product path:** **J-FULL** — reset → demo scan → promote (×3 services) → approve / investigate / decline → recovery ledger (+ SNS on approve).  
-**Last updated:** Sep 11, 2026
+**Last updated:** Sep 13, 2026
 
 **Layer-specific docs:**
 
@@ -16,7 +16,7 @@
 
 Recoup connects **read-only AWS discovery** to **human-in-the-loop approval** and **auditable outcomes**. Recoverable spend is detected by parallel account scanners; each promoted finding becomes an opportunity with a **claim-bound** approval record; approved cost-recovery actions update ledger buckets and can emit an **SNS recovery report**.
 
-An **11-node Strands recovery graph** (SLA/incident depth) remains in the codebase for optional `POST /api/opportunities/{id}/run`, SSE streaming, pytest golden replay, and the quality scorecard — it is **not** required for the shipped operator demo loop.
+An **11-node Strands recovery graph** (SLA/incident depth) remains for optional `POST /api/opportunities/{id}/run`, SSE streaming, pytest golden replay, and the quality scorecard. **J-FULL promote** runs the graph **through `risk_policy_gate`** and executes the dedicated **`recovery/` pipeline** for scan findings (evidence graph, recommendation, safety) without SSE on the wire.
 
 ---
 
@@ -62,8 +62,8 @@ An **11-node Strands recovery graph** (SLA/incident depth) remains in the codeba
   test reset  /scan/demo     table + filters     .../promote       investigate/       + summary
                                                      │               decline          on /opportunities
                                                      │                               │
-                                                     └─ synthetic GraphState         │
-                                                        AWAITING_APPROVAL            │
+                                                     └─ graph.run → recovery/       │
+                                                        pipeline + AWAITING_APPROVAL │
                                                         + HITLFlow PENDING           │
                                                                                       │
                                                         approve → RECOVERED + SNS ────┘
@@ -91,13 +91,13 @@ An **11-node Strands recovery graph** (SLA/incident depth) remains in the codeba
 
 ### 2. Promotion & opportunity state
 
-- **Promote** creates `recovery-*` id, registers `GraphState`, opens approval with `apply_cost_recovery`
+- **Promote** creates `recovery-*` id, runs graph through policy gate with **`RecoveryAssessment`**, opens approval with `apply_cost_recovery`
 - **State machine:** in-memory `InMemoryStateMachine` + `GraphState.current_state`
 - **Idempotency:** resource + content hash; status `existing` when unchanged
 
 ### 3. HITL & trust
 
-- **Binding:** claim_hash, amount, state_version — mismatches → HTTP 409
+- **Binding:** claim_hash, amount, state_version — mismatches → HTTP 409; recovery path also blocks approve on **INSUFFICIENT** evidence, **blocking safety FAIL**, or **projected amount drift**
 - **Store:** DynamoDB or memory (`approval/store.py`)
 - **Audit:** CloudWatch log group `/recoup/runtime` from `approval/flow.py`
 - **Notifications:** SNS via `notifications.py` (`RECOUP_SNS_TOPIC_ARN`, dry-run in tests)
@@ -116,9 +116,10 @@ An **11-node Strands recovery graph** (SLA/incident depth) remains in the codeba
 
 ### 6. Infrastructure (repo)
 
-- **IaC:** `infra/cdk/` — IAM, tables, queues (see stack modules under `infra/cdk/lib/stacks/`)
+- **IaC:** `infra/cdk/` — `RecoupInfraStack`, `RecoupIamStack`, `RecoupDemoWorkloadsStack`, `RecoupAppStack` (API), `RecoupUiStack` (Next.js)
+- **Production hosting (Plane A):** App Runner + ECR; UI `https://nvqjc7nnif.us-east-1.awsapprunner.com`, API `https://vxndciwupy.us-east-1.awsapprunner.com` — [archive/ops/production-hosting.md](archive/ops/production-hosting.md)
 - **Policy:** `infra/policy/recoup-policy.cedar`
-- **Scripts:** `scripts/` — demo reset, fixture generation, ship gates
+- **Scripts:** `scripts/` — `deploy_app_hosting.sh`, `deploy_ui_hosting.sh`, smoke, segregation, Plane D/E cost trims
 
 ---
 
@@ -154,7 +155,7 @@ Optional **agent re-run** on detail deepens investigation without changing the J
 | Principle | Where |
 |-----------|--------|
 | LLMs propose; contracts decide | Deterministic nodes for SLA math; Strands for narrative only |
-| Scanner-first demo | Promote synthesizes graph artifacts from findings |
+| Scanner-first demo | Promote runs recovery pipeline + graph through policy gate |
 | Default-deny destructive writes | Cedar + HITL; J-FULL action is cost recovery not EC2 stop |
 | Evidence hygiene | Sanitizer node + quality gates |
 | Idempotent promote | content_hash + promoted registry |
@@ -168,7 +169,7 @@ Optional **agent re-run** on detail deepens investigation without changing the J
 |-------|---------|---------------|
 | E2E | Playwright `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts` | Full operator loop |
 | E2E overlap | J2, J6, J7, J9, scan, UI browser specs | Partial paths |
-| Backend unit/integration | pytest ~393 tests | Graph, replay, approvals, scanners |
+| Backend unit/integration | pytest ~407 tests | Graph, recovery pipeline, replay, approvals, scanners |
 | Golden replay | `test_golden_replay.py` | SLA credit determinism |
 | Quality | `journey-quality-gates.spec.ts` | Scorecard structure |
 
@@ -217,6 +218,7 @@ recoup/
 | `APPROVALS_TABLE`, `OUTCOME_METADATA_TABLE` | DynamoDB persistence |
 | `RECOVERY_EVENTS_QUEUE_URL` | SQS poller |
 | `LLM_PROVIDER`, Bedrock/OpenAI keys | Strands agents |
+| `RECOVERY_LLM_ON_PROMOTE`, `RECOVERY_LLM_ON_INVESTIGATE` | Optional LLM in recovery pipeline |
 | `RECOUP_ENV` | CORS, reset gates |
 
 Project-root `.env` loaded by `backend/src/recoup/config.py`.

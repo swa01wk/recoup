@@ -6,7 +6,7 @@
  * Backend calls: POST /api/scan/demo, POST /api/scan/findings/promote
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend, runDemoScan } from "./helpers";
+import { BACKEND, resetBackend, runDemoScan } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetBackend(request);
@@ -23,7 +23,7 @@ test("@smoke scan demo returns 8+ findings with total savings", async ({ request
 
 test("scan/last returns the most recent scan after demo scan", async ({ request }) => {
   await runDemoScan(request);
-  const res = await request.get("http://localhost:8000/api/scan/last");
+  const res = await request.get(`${BACKEND}/api/scan/last`);
   expect(res.ok()).toBeTruthy();
   const data = (await res.json()) as { total_estimated_monthly_savings_usd: number };
   expect(data.total_estimated_monthly_savings_usd).toBeGreaterThan(0);
@@ -40,7 +40,7 @@ test("@smoke promote finding creates opportunity in AWAITING_APPROVAL state", as
   expect(findings.length).toBeGreaterThan(0);
 
   const finding = findings[0];
-  const res = await request.post("http://localhost:8000/api/scan/findings/promote", {
+  const res = await request.post(`${BACKEND}/api/scan/findings/promote`, {
     data: finding,
   });
   expect(res.ok()).toBeTruthy();
@@ -50,7 +50,7 @@ test("@smoke promote finding creates opportunity in AWAITING_APPROVAL state", as
 
   // Verify the opportunity is visible via GET /api/opportunities/{id}
   const oppRes = await request.get(
-    `http://localhost:8000/api/opportunities/${promoted.opportunity_id}`
+    `${BACKEND}/api/opportunities/${promoted.opportunity_id}`
   );
   expect(oppRes.ok()).toBeTruthy();
   const opp = (await oppRes.json()) as { state: string };
@@ -65,11 +65,11 @@ test("promote is idempotent — same resource_id returns existing opportunity", 
   const finding = findings[0];
 
   const first = (await (
-    await request.post("http://localhost:8000/api/scan/findings/promote", { data: finding })
+    await request.post(`${BACKEND}/api/scan/findings/promote`, { data: finding })
   ).json()) as { opportunity_id: string; status: string };
 
   const second = (await (
-    await request.post("http://localhost:8000/api/scan/findings/promote", { data: finding })
+    await request.post(`${BACKEND}/api/scan/findings/promote`, { data: finding })
   ).json()) as { opportunity_id: string; status: string };
 
   expect(second.opportunity_id).toBe(first.opportunity_id);
@@ -167,7 +167,7 @@ test("S6 — promote each scenario_tag finding creates separate opportunity", as
   // Promote all tagged findings and collect opportunity IDs
   const opportunityIds = new Set<string>();
   for (const finding of taggedFindings) {
-    const res = await request.post("http://localhost:8000/api/scan/findings/promote", {
+    const res = await request.post(`${BACKEND}/api/scan/findings/promote`, {
       data: finding,
     });
     if (res.ok()) {
@@ -180,7 +180,7 @@ test("S6 — promote each scenario_tag finding creates separate opportunity", as
   expect(opportunityIds.size).toBe(taggedFindings.length);
 
   // All should appear in the pending approval queue
-  const pendingRes = await request.get("http://localhost:8000/api/approvals/pending");
+  const pendingRes = await request.get(`${BACKEND}/api/approvals/pending`);
   const pending = (await pendingRes.json()) as Array<{ opportunity_id: string }>;
   const pendingIds = new Set(pending.map((r) => r.opportunity_id));
   for (const id of opportunityIds) {

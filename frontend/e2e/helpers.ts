@@ -2,6 +2,7 @@
  * Shared helpers for Recoup Playwright tests.
  */
 import { type Page, type APIRequestContext, expect } from "@playwright/test";
+import { computeLedgerData } from "../src/lib/recovery-ledger-math";
 
 /** Backend base URL — override with PLAYWRIGHT_BACKEND_URL or PLAYWRIGHT_BACKEND_PORT. */
 export const BACKEND =
@@ -34,6 +35,31 @@ export async function promoteFinding(
   return res.json();
 }
 
+/** Promote the first scan finding whose recovery assessment is not INSUFFICIENT. */
+export async function promoteActionableFinding(
+  request: APIRequestContext
+): Promise<{ opportunity_id: string; finding: Record<string, unknown> }> {
+  const scan = await runDemoScan(request);
+  const findings = scan.findings as Array<Record<string, unknown>>;
+  expect(findings.length).toBeGreaterThan(0);
+
+  for (const finding of findings) {
+    const promoted = await promoteFinding(request, finding);
+    const traceRes = await request.get(
+      `${BACKEND}/api/opportunities/${promoted.opportunity_id}/trace`
+    );
+    if (!traceRes.ok()) continue;
+    const trace = (await traceRes.json()) as {
+      recovery_assessment?: { evidence_sufficiency?: { level?: string } };
+    };
+    const level = trace.recovery_assessment?.evidence_sufficiency?.level ?? "SUFFICIENT";
+    if (level !== "INSUFFICIENT") {
+      return { opportunity_id: promoted.opportunity_id, finding };
+    }
+  }
+  throw new Error("No demo finding produced sufficient evidence for approval tests");
+}
+
 /** Approve an opportunity and return the updated record. */
 export async function approveOpportunity(
   request: APIRequestContext,
@@ -63,7 +89,10 @@ export async function approveOpportunity(
       },
     }
   );
-  expect(res.ok()).toBeTruthy();
+  if (!res.ok()) {
+    const detail = await res.text();
+    throw new Error(`approve failed (${res.status()}): ${detail}`);
+  }
   return res.json();
 }
 
@@ -194,53 +223,97 @@ export async function fetchLedgerBuckets(
   expect(oppsRes.ok()).toBeTruthy();
   expect(pendingRes.ok()).toBeTruthy();
 
-  const opportunities = (await oppsRes.json()) as Array<{
-    id: string;
+  const rawOpps = (await oppsRes.json()) as Array<{
+    id?: string;
+    opportunity_id?: string;
     state: string;
-    potential_value: string | null;
+    potential_value?: string | null;
+    estimated_savings_usd?: string | null;
   }>;
-  const pendingApprovals = (await pendingRes.json()) as Array<{ amount: string }>;
-
-  const pendingApprovalAmount = pendingApprovals.reduce((sum, r) => {
-    const v = parseFloat(r.amount);
-    return sum + (isNaN(v) ? 0 : v);
-  }, 0);
+  const opportunities = rawOpps.map((o) => ({
+    id: o.id ?? o.opportunity_id,
+    state: o.state,
+    potential_value: o.potential_value ?? o.estimated_savings_usd ?? null,
+  }));
+  const pendingApprovals = (await pendingRes.json()) as Array<{
+    opportunity_id?: string;
+    amount: string;
+  }>;
 
   const scanTotal = scan.total_estimated_monthly_savings_usd ?? 0;
-  let recovered = 0;
-  let pendingFromOpps = 0;
+  const buckets = computeLedgerData(scanTotal, opportunities, pendingApprovals);
 
-  const canonical = (state: string): "RECOVERED" | "PENDING" | "DETECTED" => {
-    const s = state.toUpperCase();
-    if (["AWAITING_APPROVAL", "NEEDS_FOLLOWUP"].includes(s)) return "PENDING";
-    if (["APPROVED", "SUBMITTING", "SUBMITTED", "MONITORING", "RECOVERED"].includes(s)) {
-      return "RECOVERED";
-    }
-    return "DETECTED";
+  return {
+    scanTotal,
+    detected: buckets.detected,
+    pending: buckets.pending,
+    recovered: buckets.recovered,
+    totalDetected: buckets.totalDetected,
   };
+}
 
-  for (const opp of opportunities) {
-    const raw = parseFloat(opp.potential_value ?? "0");
-    if (isNaN(raw) || raw <= 0) continue;
-    const value = Math.round((raw + Number.EPSILON) * 100) / 100;
-    const bucket = canonical(opp.state);
-    if (bucket === "RECOVERED") recovered += value;
-    else if (bucket === "PENDING") pendingFromOpps += value;
+export type LedgerBuckets = Awaited<ReturnType<typeof fetchLedgerBuckets>>;
+
+const LEDGER_EPS = 0.02;
+
+/** Remaining + Pending + Recovered ≈ Potential Savings (shared ledger math). */
+export function assertLedgerBalanced(ledger: LedgerBuckets, tolerance = LEDGER_EPS): void {
+  const sum =
+    Math.round((ledger.detected + ledger.pending + ledger.recovered + Number.EPSILON) * 100) /
+    100;
+  expect(sum).toBeGreaterThanOrEqual(ledger.totalDetected - tolerance);
+  expect(sum).toBeLessThanOrEqual(ledger.totalDetected + tolerance);
+}
+
+/** Approve after investigate must not deduct Remaining again (only Pending → Recovered). */
+export function assertRemainingUnchanged(
+  before: Pick<LedgerBuckets, "detected">,
+  after: Pick<LedgerBuckets, "detected">,
+  tolerance = LEDGER_EPS
+): void {
+  expect(after.detected).toBeGreaterThanOrEqual(before.detected - tolerance);
+  expect(after.detected).toBeLessThanOrEqual(before.detected + tolerance);
+}
+
+/** SSE extended investigation after NEEDS_FOLLOWUP — reopens HITL gate. */
+export async function runExtendedInvestigationStream(
+  request: APIRequestContext,
+  opportunityId: string
+): Promise<void> {
+  const streamRes = await request.get(
+    `${BACKEND}/api/opportunities/${opportunityId}/stream`,
+    { timeout: 60_000 }
+  );
+  expect(streamRes.ok()).toBeTruthy();
+  const body = await streamRes.text();
+  expect(body).toContain("opportunity_done");
+}
+
+/** Parse "$12.34/mo" style amounts from Recovery Summary cards. */
+export function parseDollarAmount(text: string | null): number {
+  if (!text) return 0;
+  const match = text.match(/\$([0-9]+(?:\.[0-9]+)?)/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+/** Read the four Recovery Summary buckets on /opportunities or /recovery. */
+export async function readRecoverySummaryBuckets(
+  page: Page
+): Promise<{ potential: number; remaining: number; pending: number; recovered: number }> {
+  async function bucket(label: string): Promise<number> {
+    const card = page.locator("div.rounded-lg.border").filter({
+      has: page.getByText(label, { exact: true }),
+    }).first();
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    const text = await card.locator("span.font-mono.font-bold").first().textContent();
+    return parseDollarAmount(text);
   }
-
-  recovered = Math.round((recovered + Number.EPSILON) * 100) / 100;
-  pendingFromOpps = Math.round((pendingFromOpps + Number.EPSILON) * 100) / 100;
-  const pending = pendingFromOpps > 0 ? pendingFromOpps : pendingApprovalAmount;
-  const totalDetected = Math.max(
-    Math.round((scanTotal + Number.EPSILON) * 100) / 100,
-    Math.round((recovered + pending + Number.EPSILON) * 100) / 100
-  );
-  const detected = Math.max(
-    0,
-    Math.round((totalDetected - recovered - pending + Number.EPSILON) * 100) / 100
-  );
-
-  return { scanTotal, detected, pending, recovered, totalDetected };
+  return {
+    potential: await bucket("Potential Savings"),
+    remaining: await bucket("Remaining"),
+    pending: await bucket("Pending Approval"),
+    recovered: await bucket("Recovered"),
+  };
 }
 
 /** Operator role for UI actions that require approve/decline. */

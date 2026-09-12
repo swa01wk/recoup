@@ -1,8 +1,18 @@
 # Recoup — Judge Demo Guide
 
 **Event:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
-**Last updated:** Sep 11, 2026 · Target video ≤5:00  
+**Last updated:** Sep 13, 2026 · Target video ≤5:00  
 **Canonical operator flow:** [operator-journey.md](operator-journey.md) (J-FULL)
+
+## Live demo (AWS production)
+
+| | URL |
+|--|-----|
+| **UI** | https://nvqjc7nnif.us-east-1.awsapprunner.com |
+| **API** | https://vxndciwupy.us-east-1.awsapprunner.com |
+
+Use the same scenes below on the public UI (`/scan` → Demo Scan → `/opportunities` → …). Ops: [archive/ops/production-hosting.md](archive/ops/production-hosting.md).  
+**Note:** Sidebar **Reset Demo Data** and `POST /api/test/reset` are **disabled in production** (403) — one continuous judge session.
 
 ---
 
@@ -33,7 +43,7 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 **Show:** `/opportunities`  
 1. Pick **three findings from different services** (e.g. EC2, EBS, RDS)  
 2. **Start Recovery** on each → detail page with **Approval Required**  
-**Say:** Promote creates `AWAITING_APPROVAL` + HITL with **claim_hash**, amount, and **state_version** — no full agent graph stream on promote (fast path for cost recovery).
+**Say:** Promote runs the recovery pipeline (evidence graph, recommendation, safety checks) and opens HITL with **claim_hash**, amount, and **state_version** — no SSE stream on promote, but detail page shows the full assessment.
 
 ---
 
@@ -62,12 +72,18 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 
 ## Scene 6 — Safety & depth (3:30–4:15)
 
-**Show:** `curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'`  
+**Show:** Quality scorecard (local or API):
+
+```bash
+curl -s https://vxndciwupy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'
+# local: curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
+```
+
 **Say:** Six gates — zero unsafe external actions, financial math, evidence sanitizer, etc.
 
 **Optional talking points (not in sidebar):**
 
-- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **393** backend pytest include golden replay; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
+- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **407** backend pytest include golden replay + `tests/unit/recovery/`; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
 - **Six quality gates** — scorecard already shown in Scene 6  
 - **Optional agent re-run** — `POST /api/opportunities/{id}/run` on detail (not required for J-FULL)
 
@@ -77,14 +93,20 @@ Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo 
 
 ## Scene 7 — Architecture (4:15–5:00)
 
-Next.js + FastAPI · promote path + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **118** Playwright tests (15 specs) · **393** backend tests collected.
+Next.js + FastAPI · recovery pipeline on promote + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **123** Playwright tests (15 specs) · **407** backend tests collected.
 
 Diagram: [architecture/architecture.svg](../architecture/architecture.svg)
 
 **Automated proof of J-FULL:**
 
 ```bash
+# Local (default)
 cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
+
+# Optional — public URLs
+PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \
+PLAYWRIGHT_FRONTEND_URL=https://nvqjc7nnif.us-east-1.awsapprunner.com \
+  npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 ```
 
 ---
@@ -95,7 +117,7 @@ cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec
 |-----------|--------|
 | AWS depth | 9 scanners, STS read role, DynamoDB approvals, SNS, KMS evidence |
 | Autonomy | Scanner detection + optional Strands investigation on detail |
-| Human oversight | Claim-bound HITL on `/opportunities/{id}`, Cedar at promote |
+| Human oversight | Claim-bound HITL on `/opportunities/{id}`, safety + sufficiency gates on approve |
 | Verification | Recovery Ledger, SNS report, quality scorecard |
 
 More Q&A: [README.md](../README.md) FAQ · Full API: [api-reference.md](api-reference.md)

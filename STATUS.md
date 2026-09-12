@@ -1,12 +1,22 @@
 # Recoup — Project Status
 
 > **Historical phase log below.** For the **current operator product (J-FULL)**, use [docs/operator-journey.md](docs/operator-journey.md).  
-> **Sep 11 cleanup:** Primary UI = scan → HITL → ledger. Removed: `/replay` page, `/api/replay/*`, ec2/governance demo HTTP routes. Metrics: [docs/README.md](docs/README.md).
+> **Sep 13:** **AWS-all production** live — App Runner API + UI (account 625962218034). Runbook: [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md).  
+> **Sep 11–12:** Primary UI = scan → HITL → ledger; recovery pipeline on promote + detail UI. Metrics: [docs/README.md](docs/README.md).
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 11, 2026 — Docs synced to codebase; demo playbooks consolidated under `docs/`  
-**Days Remaining:** 3  
+**Last Updated:** Sep 13, 2026 — App Runner URLs (`vxndciwupy` API · `nvqjc7nnif` UI) + **407** pytest · docs sync  
+**Days Remaining:** 1  
 **Feature Cutoff:** Sep 11, 2026
+
+### Production (judge demo)
+
+| | URL |
+|--|-----|
+| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
+| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+
+Plane B/C/D stacks deployed; Plane E trimmed; budgets `$100/$150/$180`; segregation smoke: `./scripts/post_change_segregation_smoke.sh`.
 
 ### Key Numbers (current)
 
@@ -14,8 +24,8 @@ Canonical metrics: [docs/README.md](docs/README.md#key-numbers-canonical--update
 
 | Metric | Value |
 |--------|-------|
-| Backend unit tests | **393** collected (live-mode skips as configured) · 0 DeprecationWarnings |
-| Playwright E2E tests | **118** (15 specs) · J-FULL + J2–J9 + 13 SEC adversarial |
+| Backend unit tests | **407** collected (live-mode skips as configured) · 0 DeprecationWarnings |
+| Playwright E2E tests | **123** (15 specs) · J-FULL + J2–J9 + 13 SEC adversarial |
 | Frontend nav | **3** sidebar links: `/opportunities`, `/scan`, `/recovery` (`/replay` removed) |
 | Scanners | **9** (EC2, EBS, EIP, RDS, S3, Lambda, ELB, CW Logs, Cost Explorer) |
 | Demo scenarios | **8/8** detected — $87.82/mo (full scan aggregate) |

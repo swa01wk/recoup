@@ -587,6 +587,59 @@ def run_claim_package_generator_agent(
 
 
 # ---------------------------------------------------------------------------
+# Recovery pipeline agents (optimization findings)
+# ---------------------------------------------------------------------------
+
+
+def run_recovery_investigator_agent(
+    state: Any,
+    finding: Any,
+    ctx: Any,
+    bundle: Any,
+) -> dict[str, Any] | None:
+    """
+    Strands investigator for cost recovery — insights only, no scores or dollars.
+    Returns None on failure so deterministic fallback is used.
+    """
+    try:
+        from strands import Agent  # noqa: PLC0415
+
+        from ..models.recovery import Insight  # noqa: PLC0415
+
+        prompt = (
+            "You are a cloud cost recovery investigator. Given resource context and "
+            "evidence bundle summaries, output JSON with keys: hypothesis_summary (string), "
+            "insights (list of {insight_id, text, signal_ids}), investigation_plan (list of strings). "
+            "Do NOT invent metrics, costs, confidence, or risk scores."
+        )
+        agent = Agent(model=_make_model(), system_prompt=prompt)
+        payload = {
+            "issue": finding.issue,
+            "claim": bundle.claim,
+            "supporting": bundle.supporting_signal_ids,
+            "counter": bundle.counter_signal_ids,
+            "missing": bundle.missing_expected,
+        }
+        raw = agent(prompt=json.dumps(payload))
+        text = str(raw)
+        parsed = _extract_json(text)
+        if parsed and parsed.get("insights"):
+            parsed["insights"] = [
+                Insight.model_validate(i) if isinstance(i, dict) else i
+                for i in parsed["insights"]
+            ]
+        return parsed
+    except Exception as exc:  # noqa: BLE001
+        log.warning("recovery_investigator_agent.failed", error=str(exc))
+        return None
+
+
+def run_recovery_planner_agent(state: Any) -> dict[str, Any] | None:
+    """Optional LLM recovery plan narrative — stub returns None."""
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

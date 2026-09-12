@@ -268,6 +268,13 @@ def health_ready() -> dict[str, object]:
     return {"status": "ready" if all_ok else "degraded", "ready": all_ok, "checks": checks}
 
 
+def _admin_reset_allowed() -> bool:
+    """Gate POST /api/admin/reset — always on in non-production; opt-in in production."""
+    if settings.recoup_env != "production":
+        return True
+    return settings.recoup_enable_admin_reset
+
+
 def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
     """Shared implementation for full in-memory state reset."""
     from .routes.opportunities import _graph_states
@@ -310,11 +317,11 @@ def admin_reset(clear_scan_cache: bool = False) -> dict[str, str]:
     Optionally clears the scan result cache (pass ?clear_scan_cache=true) so the next
     scan fetches fresh data from AWS.
 
-    Disabled in production (RECOUP_ENV=production).
+    Disabled in production unless RECOUP_ENABLE_ADMIN_RESET=true (hosted judge demo).
     """
     from fastapi import HTTPException as _HTTPException  # noqa: PLC0415
 
-    if settings.recoup_env == "production":
+    if not _admin_reset_allowed():
         raise _HTTPException(status_code=403, detail="Admin reset disabled in production.")
 
     return _do_full_reset(clear_scan_cache=clear_scan_cache)
@@ -357,4 +364,5 @@ def config_info() -> dict[str, str | bool]:
         "evidence_bucket_configured": bool(settings.evidence_bucket),
         "sns_notifications_enabled": bool(settings.recoup_sns_topic_arn),
         "sqs_events_enabled": bool(settings.recovery_events_queue_url),
+        "admin_reset_enabled": _admin_reset_allowed(),
     }

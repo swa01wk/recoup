@@ -4,9 +4,10 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8080"
     env_file:
       - .env
     volumes:
@@ -20,5 +21,6 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+    # API listens on 8080 in production Dockerfile; host maps 8000→8080
     depends_on:
       - backend

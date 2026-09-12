@@ -123,6 +123,12 @@ class Settings(BaseSettings):
 
     # Feature flags — default OFF; must be explicitly enabled
     recoup_enable_real_support_submission: bool = False
+    # Sidebar "Reset Demo Data" — allowed in production only when explicitly enabled
+    recoup_enable_admin_reset: bool = False
+
+    # Recovery pipeline — LLM on promote (default off for CI/Playwright)
+    recovery_llm_on_promote: bool = False
+    recovery_llm_on_investigate: bool = True
 
     # Cost control
     recoup_max_replay_runs_per_day: int = 100

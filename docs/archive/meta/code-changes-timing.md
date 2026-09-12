@@ -1,6 +1,6 @@
 # Code Changes — Now vs Later
 
-**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred  
+**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred · **Doc/metrics sync Sep 13** (App Runner URLs, **407** pytest)  
 **Product source of truth:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **Cleanup plan:** [stale-code-removal-plan.md](stale-code-removal-plan.md)  
 **Context:** Feature cutoff Sep 11, 2026 · Hackathon deadline Sep 14, 2026
@@ -51,7 +51,7 @@ The **product UI** matches J-FULL (sidebar: Opportunities · Account Scanner · 
 | Sidebar nav | 3 links | `sidebar.tsx` `NAV` | OK | — |
 | HITL location | `/opportunities/[id]` | Detail + approvals API; `/approvals` → redirect | OK | — |
 | Operator loop | Reset → scan → 3 services → HITL → ledger | `journey-full-discovery-triage-ledger.spec.ts` | OK | Primary demo |
-| Graph on promote | Not streamed | `scan.py` promote → synthetic state | OK | Freeze |
+| Graph on promote | Not SSE-streamed | `scan.py` → `graph.run(stop_at=risk_policy_gate)` + recovery pipeline | OK | Freeze |
 | Optional Strands re-run | `POST .../run` | `opportunities.py` | OK | WF-11 smoke |
 | `/replay` page | Not in product | Removed (404) | OK | Phase 1 |
 | Extra demo HTTP APIs | Not in J-FULL | **Removed** (replay, ec2-demo, gov demos) | OK | Phase 2/5 |

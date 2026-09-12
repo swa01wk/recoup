@@ -23,8 +23,10 @@ from ..models.claim import ClaimPackage
 from ..models.eligibility import EligibilityAssessment
 from ..models.evidence import EvidenceManifest, RedactionReport
 from ..models.opportunity import OpportunityState
+from ..models.recovery import RecoveryAssessment
 from ..models.signal import IncidentSignal
 from ..models.sla import SLAContract
+from ..scanners.finding import Finding
 
 # ---------------------------------------------------------------------------
 # Domain types produced within the graph (not in models/ as they are
@@ -111,6 +113,10 @@ class GraphState(BaseModel):
     # Replay fixture data — loaded by ReplayAdapter; consumed by AgentNode stubs
     # Keys match fixture filenames without extension: metric_series, billing_snapshot, etc.
     replay_fixtures: dict[str, Any] = Field(default_factory=dict)
+
+    # Cost recovery pipeline (optimization / promoted findings)
+    recovery_assessment: RecoveryAssessment | None = None
+    promoted_finding: Finding | None = None
 
     # Diagnostics
     errors: list[str] = Field(default_factory=list)
@@ -354,6 +360,7 @@ class Graph:
         initial_state: GraphState,
         on_node_start: Callable[[str], None] | None = None,
         on_node_complete: Callable[[str, GraphState, int], None] | None = None,
+        stop_at: str | None = None,
     ) -> GraphState:
         """
         Execute the graph sequentially in topological order.
@@ -396,6 +403,9 @@ class Graph:
 
             if on_node_complete is not None:
                 on_node_complete(node_name, state, duration_ms)
+
+            if stop_at and node_name == stop_at:
+                break
 
             # Enqueue successors
             for edge in self._edges:

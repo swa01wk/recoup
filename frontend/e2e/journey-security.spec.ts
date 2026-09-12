@@ -17,9 +17,7 @@
  *   @full   — CORS, API key, sanitization, data deletion
  */
 import { test, expect } from "@playwright/test";
-import { resetBackend } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import { BACKEND, resetBackend } from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Setup

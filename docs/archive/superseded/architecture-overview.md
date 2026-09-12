@@ -3,7 +3,7 @@
 **Version:** Phases 0–9 complete · Phase 7 (video/submission) in progress  
 **Last Updated:** Sep 11, 2026  
 **Competition:** AWS Agents for Humans Hackathon (Aug 10 – Sep 14, 2026)  
-**Test coverage:** 15 Playwright specs · 118 tests · 393 backend tests collected
+**Test coverage:** 15 Playwright specs · 123 tests · 407 backend tests collected
 
 ---
 
@@ -143,7 +143,7 @@ recoup/
 │   ├── safety/          autonomy.py · cedar.py · exceptions.py
 │   ├── approval/        store.py · flow.py (DynamoDB-backed HITL)
 │   └── scanners/        9 scanners: ec2 · ebs · eip · rds · s3 · lambda · lb · cwlogs · cost_explorer
-├── backend/tests/       393 tests collected (unit + trajectory + e2e + adversarial)
+├── backend/tests/       407 tests collected (unit + trajectory + e2e + adversarial)
 ├── frontend/src/app/    Next.js 16 · routes: / → /opportunities · /scan · /recovery
 │                          /opportunities/[id] · /approvals & /quality redirect to /opportunities
 ├── infra/cdk/           RecoupInfraStack + RecoupDemoStack + RecoupIamStack + RecoupDemoWorkloadsStack (TypeScript)

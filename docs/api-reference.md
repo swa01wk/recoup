@@ -1,9 +1,10 @@
 # Recoup — API Reference
 
 **Framework:** FastAPI 0.1.0  
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 13, 2026  
+**Base URL (production):** `https://vxndciwupy.us-east-1.awsapprunner.com`  
 **Base URL (local):** `http://localhost:8000` (Docker / Playwright default; **8010** if using native `.env.example`)  
-**Interactive docs:** `GET /docs` (Swagger UI) · `GET /redoc` (ReDoc)  
+**Interactive docs:** `GET /docs` (Swagger UI) · `GET /redoc` (ReDoc) — e.g. `https://vxndciwupy.us-east-1.awsapprunner.com/docs`  
 **Run locally:** `cd backend && uvicorn recoup.api.main:app --reload --port 8000`  
 **Playwright tests:** J-FULL–focused suite (see `USER_JOURNEY_CHECKLIST.md`).
 
@@ -145,10 +146,18 @@ List all tracked recovery opportunities.
     "potential_value": "0.35",
     "confidence": 0.92,
     "service": "apigateway",
-    "region": "us-east-1"
+    "region": "us-east-1",
+    "discovery_confidence": 82,
+    "action_confidence": 76,
+    "risk_level": "LOW",
+    "evidence_sufficiency": "SUFFICIENT",
+    "priority_score": 71,
+    "recommended_action": "Resize or stop idle instance"
   }
 ]
 ```
+
+Scan-promoted opportunities include optional **`discovery_confidence`**, **`action_confidence`**, **`risk_level`**, **`evidence_sufficiency`**, **`priority_score`**, **`recommended_action`** when `recovery_assessment` is on the graph state.
 
 ---
 
@@ -296,9 +305,25 @@ Return the complete agent trace for an opportunity.
     "credit_amount": "0.00",
     "notes": "Case submitted. Awaiting AWS Support response (stub)."
   },
-  "errors": []
+  "errors": [],
+  "recovery_assessment": {
+    "pipeline_phase": "UNDERSTAND",
+    "evidence_sufficiency": { "level": "SUFFICIENT", "summary": "…" },
+    "discovery_confidence": { "score": 82, "label": "High" },
+    "recommendation": { "primary_action_label": "…", "primary_action_id": "…" },
+    "recovery_plan": { "steps": [] },
+    "safety_checks": [],
+    "evidence_graph": { "nodes": [], "edges": [] }
+  },
+  "workflow": {
+    "workflow_state": "AWAITING_APPROVAL",
+    "pipeline_stage": 8,
+    "execution_status": ""
+  }
 }
 ```
+
+For **scan-promoted** opportunities, `recovery_assessment` is populated at promote; SLA replay fixtures may omit it. **`GET /api/opportunities/{id}/workflow`** returns the same payload as trace (alias for detail UI).
 
 **Response `404`:**
 ```json
@@ -403,7 +428,7 @@ Return the pending `ApprovalRecord` for an opportunity, or `null` if none.
 **Response `200`:** Full `ApprovalRecord` JSON plus `_aws`, `sns_notification_sent`. Opportunity state → `APPROVED` (and often `RECOVERED` for non-EC2 actions).
 
 **Response `404`:** No pending approval  
-**Response `409`:** Hash, amount, or state_version mismatch / expired
+**Response `409`:** Hash, amount, or state_version mismatch / expired; or recovery gates — evidence sufficiency **INSUFFICIENT**, blocking **safety check FAIL**, or **projected recovery amount** ≠ pending `amount`
 
 ### `POST /api/approvals/opportunity/{opportunity_id}/decline`
 

@@ -8,6 +8,12 @@ export interface Opportunity {
   confidence: number | null;
   service: string | null;
   region: string | null;
+  discovery_confidence?: number | null;
+  action_confidence?: number | null;
+  risk_level?: string | null;
+  evidence_sufficiency?: string | null;
+  priority_score?: number | null;
+  recommended_action?: string | null;
 }
 
 export interface TraceResult {
@@ -35,6 +41,8 @@ export interface TraceResult {
   case_id: string | null;
   case_outcome: Record<string, unknown> | null;
   errors: string[];
+  recovery_assessment?: import("@/lib/recovery-types").RecoveryAssessment | null;
+  workflow?: import("@/lib/recovery-types").WorkflowSnapshot | null;
 }
 
 export interface ApprovalRecord {
@@ -83,6 +91,13 @@ export interface SseEvent {
   node?: string;
   duration_ms?: number;
   potential_credit?: string;
+  recovery_phase?: string;
+  assessment_snapshot?: {
+    evidence_sufficiency?: string;
+    discovery_confidence?: number | null;
+    action_confidence?: number | null;
+  };
+  investigation_delta?: import("@/lib/recovery-types").InvestigationDelta;
   amount?: string;
   opportunity_id?: string;
   state?: string;

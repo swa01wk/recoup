@@ -9,7 +9,8 @@ import {
   type PromotedFindingRecord,
 } from "@/lib/api";
 import { loadLastScan, loadScanHistory, type LocalScanEntry } from "@/lib/recovery-storage";
-import { computeLedgerData, type RecoveryLedgerData } from "@/components/ui/recovery-ledger";
+import { RECOVERY_DATA_REFRESH_EVENT } from "@/lib/recovery-data-events";
+import { computeLedgerData, type RecoveryLedgerData } from "@/lib/recovery-ledger-math";
 
 type OutcomeRecord = {
   opportunity_id?: string;
@@ -116,6 +117,14 @@ export function useRecoveryData(pollIntervalMs = 10_000): RecoveryData {
     return () => clearInterval(id);
   }, [refresh, pollIntervalMs]);
 
+  useEffect(() => {
+    const onRefresh = () => {
+      startTransition(() => { void refresh(); });
+    };
+    window.addEventListener(RECOVERY_DATA_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(RECOVERY_DATA_REFRESH_EVENT, onRefresh);
+  }, [refresh]);
+
   // Merge outcome records into opportunities so RECOVERED state persists
   // across server restarts (outcomes stored in DynamoDB / in-memory).
   const mergedOpportunities = useMemo(() => {
@@ -154,19 +163,20 @@ export function useRecoveryData(pollIntervalMs = 10_000): RecoveryData {
     return Array.from(byId.values());
   }, [opportunities, outcomes]);
 
-  const pendingAmount = useMemo(
+  const ledgerData = useMemo(
     () =>
-      pending.reduce((sum, r) => {
-        const v = parseFloat(r.amount);
-        return sum + (isNaN(v) ? 0 : v);
-      }, 0),
-    [pending]
+      computeLedgerData(
+        scanTotal,
+        mergedOpportunities,
+        pending.map((r) => ({
+          opportunity_id: r.opportunity_id,
+          amount: r.amount,
+        }))
+      ),
+    [scanTotal, mergedOpportunities, pending]
   );
 
-  const ledgerData = useMemo(
-    () => computeLedgerData(scanTotal, mergedOpportunities, pendingAmount),
-    [scanTotal, mergedOpportunities, pendingAmount]
-  );
+  const pendingAmount = ledgerData.pending;
 
   const snsStatusMap = useMemo(() => {
     const map = new Map<string, { sent: boolean; sentAt: string | null }>();

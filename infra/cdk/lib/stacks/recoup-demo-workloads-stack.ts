@@ -32,6 +32,7 @@ const DEMO_TAGS: Record<string, string> = {
   Project: "Recoup",
   Environment: "hackathon-demo",
   RecoupDemo: "true",
+  RecoupLayer: "demo-scanner-target",
   ManagedBy: "CDK",
 };
 

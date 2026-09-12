@@ -37,12 +37,17 @@ from ..models.eligibility import EligibilityAssessment
 from ..safety.cedar import PolicyContext, build_context_from_graph_state, evaluate_policy
 from ..safety.exceptions import SanitizationError
 from ..models.opportunity import OpportunityState
+from ..recovery.pipeline import is_optimization_path, run_recovery_pipeline
 from .types import (
     CaseOutcome,
     GraphState,
     IncidentHypothesis,
     PolicyDecision,
 )
+
+
+def _recovery_complete(state: GraphState) -> bool:
+    return is_optimization_path(state) and state.recovery_assessment is not None
 
 
 def _utcnow() -> datetime:
@@ -160,6 +165,14 @@ def incident_correlation_stub(state: GraphState) -> dict[str, Any]:
     if signal is None:
         return {"errors": state.errors + ["incident_correlation: no signal in state"]}
 
+    if is_optimization_path(state) and state.promoted_finding is not None:
+        from ..config import settings  # noqa: PLC0415
+
+        return run_recovery_pipeline(
+            state,
+            use_llm=settings.recovery_llm_on_promote,
+        )
+
     metric_series = state.replay_fixtures.get("metric_series")
     billing_snapshot = state.replay_fixtures.get("billing_snapshot")
 
@@ -238,6 +251,8 @@ def sla_contract_resolver_fn(state: GraphState) -> dict[str, Any]:
     Never fetches from the internet. Raises SLAContractNotFoundError if no
     contract covers the incident date — this is a fatal error.
     """
+    if _recovery_complete(state):
+        return {}
     hypothesis = state.hypothesis
     if hypothesis is None:
         return {"errors": state.errors + ["sla_contract_resolver: no hypothesis in state"]}
@@ -263,6 +278,8 @@ def availability_calculator_fn(state: GraphState) -> dict[str, Any]:
 
     No LLM involvement. All financial math is deterministic and reproducible.
     """
+    if _recovery_complete(state):
+        return {}
     hypothesis = state.hypothesis
     contract = state.contract
 
@@ -294,6 +311,8 @@ def evidence_collector_stub(state: GraphState) -> dict[str, Any]:
     fixtures when available, or builds stubs otherwise.  Raw evidence is stored
     to S3 when an evidence bucket is configured.
     """
+    if _recovery_complete(state):
+        return {}
     contract = state.contract
     hypothesis = state.hypothesis
     signal = state.signal
@@ -329,6 +348,8 @@ def evidence_sanitizer_fn(state: GraphState) -> dict[str, Any]:
     regex patterns and a second-pass HIGH_RISK_SCANNER.  Fails closed:
     raises SanitizationError if any high-risk pattern survives all passes.
     """
+    if _recovery_complete(state):
+        return {}
     manifest = state.evidence_manifest
     if manifest is None:
         return {"errors": state.errors + ["evidence_sanitizer: no manifest in state"]}
@@ -358,6 +379,8 @@ def eligibility_reasoner_stub(state: GraphState) -> dict[str, Any]:
     Stub: produces a positive assessment when the availability result shows a
     breach and the manifest is complete.
     """
+    if _recovery_complete(state):
+        return {}
     result = state.availability_result
     manifest = state.sanitized_manifest
     contract = state.contract
@@ -401,6 +424,14 @@ def risk_policy_gate_fn(state: GraphState) -> dict[str, Any]:
       - Eligible claims with valid approval → ALLOW (Cedar grants permission)
       - All other cases → DENY
     """
+    if _recovery_complete(state):
+        ra = state.recovery_assessment
+        assert ra is not None
+        return {
+            "policy_decision": state.policy_decision or PolicyDecision.REQUIRE_APPROVAL,
+            "current_state": state.current_state,
+        }
+
     assessment = state.eligibility_assessment
     result = state.availability_result
 
@@ -438,6 +469,8 @@ def claim_package_generator_stub(state: GraphState) -> dict[str, Any]:
     The validator rejects any evidence_id in the body that is not present in
     the sanitized manifest (prevents LLM from inventing evidence references).
     """
+    if _recovery_complete(state):
+        return {}
     assessment = state.eligibility_assessment
     manifest = state.sanitized_manifest
     result = state.availability_result

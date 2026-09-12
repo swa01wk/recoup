@@ -2,13 +2,15 @@
 
 **Scope:** Code under `frontend/` only.  
 **Operator journey reference:** [operator-journey.md](operator-journey.md) (steps 1–6).  
-**Last updated:** Sep 11, 2026
+**Last updated:** Sep 13, 2026
 
 ---
 
 ## Purpose
 
 The Next.js 16 app is the operator console for the **account-scanner lifecycle**: reset demo state → scan → pick findings → promote → HITL on opportunity detail → recovery ledger. It talks to the FastAPI backend via `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
+
+**Production:** https://nvqjc7nnif.us-east-1.awsapprunner.com (image built with API URL baked in — see [archive/ops/production-hosting.md](archive/ops/production-hosting.md)).
 
 ---
 
@@ -20,7 +22,7 @@ The Next.js 16 app is the operator console for the **account-scanner lifecycle**
 | Shared UI | `frontend/src/components/ui/` | shadcn-style primitives |
 | Recoup domain UI | `frontend/src/components/recoup/` | HITL, evidence, lifecycle |
 | API client | `frontend/src/lib/api.ts` | Typed fetch wrapper |
-| Domain rules | `frontend/src/lib/recoup-ui-rules.ts`, `recovery-storage.ts`, `service-presentation.ts` | Pipeline labels, ledger buckets, copy |
+| Domain rules | `recoup-ui-rules.ts`, `recovery-storage.ts`, `service-presentation.ts`, `recovery-types.ts`, `recovery-presentation.ts`, `recovery-ledger-math.ts` | Pipeline labels, ledger buckets, assessment → UI copy |
 | Data hook | `frontend/src/hooks/useRecoveryData.ts` | Single source of truth for opportunities + ledger |
 | E2E | `frontend/e2e/` | J-FULL and related Playwright specs |
 
@@ -95,13 +97,13 @@ Selection is client-side; E2E uses `pickFindingsByDistinctServices` in `helpers.
 | Surface | Code |
 |---------|------|
 | Handler | `opportunities/page.tsx` → `handleStartRecovery` → `api.scan.promote(finding)` → `/opportunities/${id}` |
-| Detail | `frontend/src/app/opportunities/[id]/page.tsx` — trace, approval, finding from promoted + local scan |
+| Detail | `frontend/src/app/opportunities/[id]/page.tsx` — trace (`recovery_assessment`), evidence graph, recommendation/plan, safety-aware approve dialog |
 
 ### Step 5 — Human triage
 
 | Path | Code |
 |------|------|
-| Approve (+ redirect ledger) | `[id]/page.tsx` → `handleApprove` — sends `claim_hash`, `amount`, `state_version` |
+| Approve (+ redirect ledger) | `[id]/page.tsx` → confirm dialog + `SafetyChecklist` → `handleApprove` — `claim_hash`, `amount`, `state_version` |
 | Investigate | `handleInvestigate` → `api.approvals.investigate` |
 | Decline | `handleDecline` → `api.approvals.decline` |
 | HITL card | `frontend/src/components/recoup/decision-card.tsx` |
@@ -114,7 +116,7 @@ Selection is client-side; E2E uses `pickFindingsByDistinctServices` in `helpers.
 | Summary banner | `opportunities/page.tsx` — `<RecoveryLedger variant="summary" />` |
 | Full page | `frontend/src/app/recovery/page.tsx` |
 | Bucket math | `frontend/src/components/ui/recovery-ledger.tsx` — `computeLedgerData` |
-| Canonical buckets | `recovery-storage.ts` — `toCanonicalLifecycle` (NEEDS_FOLLOWUP → PENDING; terminal negatives → DETECTED for remaining) |
+| Canonical buckets | `recovery-storage.ts` — `toCanonicalLifecycle` / `OPPORTUNITY_LEDGER_PENDING_STATES` (in-flight + HITL → PENDING; post-approve → RECOVERED; terminal negatives → Remaining). `recovery-data-events.ts` refreshes ledger after HITL actions. |
 
 ---
 
@@ -129,7 +131,7 @@ Two parallel vocabularies (both in codebase):
 
 Badge colors and lifecycle labels: `LIFECYCLE_BADGE_VARIANT`, `formatLifecycleLabel` in `recoup-ui-rules.ts`.
 
-Service-specific copy and evidence presentation: `frontend/src/lib/service-presentation.ts` + components `evidence-list.tsx`, `evidence-source-chips.tsx`, `technical-details.tsx`.
+Service-specific copy: `service-presentation.ts`. **Recovery assessment UI:** `finding-narrative.tsx`, `summary-metric-cards.tsx`, `confidence-indicator.tsx`, `evidence-graph-column.tsx`, `evidence-graph-summary.tsx`, `recommendation-panel.tsx`, `recovery-plan-collapsible.tsx`, `recommendation-updated-banner.tsx`, `safety-checklist.tsx`, plus `evidence-source-chips.tsx`, `technical-details.tsx`.
 
 ---
 
@@ -157,9 +159,9 @@ J-FULL critical paths:
 | Promote | `api.scan.promote(finding)` |
 | HITL | `api.approvals.forOpportunity`, `approve`, `investigate`, `decline` |
 | Ledger | `api.opportunities.list`, `api.approvals.listOutcomes`, `api.scan.listPromoted` |
-| Detail trace | `api.opportunities.trace`, `get` |
+| Detail trace | `api.opportunities.trace`, `get` (trace includes `recovery_assessment`, `workflow`) |
 
-Types: `Finding`, `ScanResult`, `ApprovalRecord`, `Opportunity`, `PromoteResponse` — all in `api.ts`.
+Types: `Finding`, `ScanResult`, `ApprovalRecord`, `Opportunity`, `PromoteResponse`, `TraceResult` — `api.ts`; assessment shapes in `recovery-types.ts`.
 
 ---
 
@@ -231,6 +233,9 @@ frontend/src/components/
   layout/sidebar.tsx
   ui/recovery-ledger.tsx
   recoup/decision-card.tsx, opportunity-row.tsx, lifecycle-stepper.tsx
+  recoup/evidence-graph-column.tsx, recommendation-panel.tsx, safety-checklist.tsx
+frontend/src/lib/
+  recovery-types.ts, recovery-presentation.ts, recovery-data-events.ts
 ```
 
 ---

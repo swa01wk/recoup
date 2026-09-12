@@ -14,13 +14,17 @@ import {
   outcomeForOpportunity,
   getOpportunity,
   fetchLedgerBuckets,
+  assertLedgerBalanced,
   runDemoScanFromUiOrSeed,
   syncScanToBrowser,
   startRecoveryFromOpportunitiesList,
   promoteFinding,
+  promoteActionableFinding,
   approveOpportunity,
   investigateOpportunity,
   declineOpportunity,
+  runExtendedInvestigationStream,
+  assertRemainingUnchanged,
   type ScanFinding,
 } from "./helpers";
 
@@ -46,6 +50,9 @@ async function clickApproveAndCaptureSns(page: Page): Promise<boolean> {
   );
 
   await approveBtn.click();
+  const confirmBtn = page.getByRole("button", { name: /approve & execute/i });
+  await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
+  await confirmBtn.click();
   const response = await responsePromise;
   const body = (await response.json()) as { sns_notification_sent?: boolean };
   return body.sns_notification_sent === true;
@@ -118,6 +125,10 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
   );
   expect(outcomeForOpportunity(await listOutcomes(request), approveOppId)?.sns_sent).toBe(true);
 
+  const ledgerAfterApprove = await fetchLedgerBuckets(request);
+  assertLedgerBalanced(ledgerAfterApprove);
+  expect(ledgerAfterApprove.recovered).toBeGreaterThanOrEqual(approveSavings - 0.02);
+
   // —— Service 2: Start Recovery → Investigate Further (no SNS) ——
   await syncScanToBrowser(page, request);
   await startRecoveryFromOpportunitiesList(page, investigateFinding);
@@ -133,6 +144,13 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
   expect(outcomeForOpportunity(await listOutcomes(request), investigateOppId)?.sns_sent).not.toBe(
     true
   );
+
+  const ledgerAfterInvestigate = await fetchLedgerBuckets(request);
+  assertLedgerBalanced(ledgerAfterInvestigate);
+  if (investigateSavings > 0) {
+    expect(ledgerAfterInvestigate.pending).toBeGreaterThanOrEqual(investigateSavings - 0.02);
+  }
+  expect(ledgerAfterInvestigate.recovered).toBeGreaterThanOrEqual(ledgerAfterApprove.recovered - 0.02);
 
   // —— Service 3: Start Recovery → Decline (no SNS) ——
   await syncScanToBrowser(page, request);
@@ -155,6 +173,7 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
   expect(promotedIds).toEqual(expect.arrayContaining([approveOppId, investigateOppId, declineOppId]));
 
   const ledger = await fetchLedgerBuckets(request);
+  assertLedgerBalanced(ledger);
   expect(ledger.recovered).toBeGreaterThan(0);
   if (approveSavings > 0) {
     expect(ledger.recovered).toBeGreaterThanOrEqual(approveSavings - 0.02);
@@ -162,10 +181,8 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
   if (investigateSavings > 0) {
     expect(ledger.pending).toBeGreaterThanOrEqual(investigateSavings - 0.02);
   }
-  const sum =
-    Math.round((ledger.detected + ledger.pending + ledger.recovered + Number.EPSILON) * 100) /
-    100;
-  expect(sum).toBeGreaterThanOrEqual(ledger.totalDetected - 0.02);
+  expect(ledger.recovered).toBeLessThanOrEqual(ledger.totalDetected + 0.02);
+  expect(ledger.pending).toBeLessThanOrEqual(ledger.totalDetected + 0.02);
 
   await page.goto("/recovery");
   await expect(page.getByText(/recovery ledger/i).first()).toBeVisible({ timeout: 15_000 });
@@ -188,9 +205,7 @@ test.describe("Triage API guards @full @e2e", () => {
     request,
   }) => {
     await runDemoScanHelper(request);
-    const scan = await getLastScan(request);
-    const [finding] = pickFindingsByDistinctServices(scan.findings, 1);
-    const { opportunity_id } = await promoteFinding(request, finding);
+    const { opportunity_id } = await promoteActionableFinding(request);
 
     const result = await approveOpportunity(request, opportunity_id);
     expect(result["sns_notification_sent"]).toBe(true);
@@ -214,6 +229,30 @@ test.describe("Triage API guards @full @e2e", () => {
 
     const outcomes = await listOutcomes(request);
     expect(outcomeForOpportunity(outcomes, opportunity_id)?.sns_sent).not.toBe(true);
+
+    const afterInvestigate = await fetchLedgerBuckets(request);
+    assertLedgerBalanced(afterInvestigate);
+    expect(afterInvestigate.pending).toBeGreaterThan(0);
+  });
+
+  test("@full investigate → stream → approve keeps Remaining stable (no double deduct)", async ({
+    request,
+  }) => {
+    await runDemoScanHelper(request);
+    const { opportunity_id } = await promoteActionableFinding(request);
+
+    await investigateOpportunity(request, opportunity_id);
+    const afterInvestigate = await fetchLedgerBuckets(request);
+    assertLedgerBalanced(afterInvestigate);
+
+    await runExtendedInvestigationStream(request, opportunity_id);
+    await approveOpportunity(request, opportunity_id);
+
+    const afterApprove = await fetchLedgerBuckets(request);
+    assertRemainingUnchanged(afterInvestigate, afterApprove);
+    assertLedgerBalanced(afterApprove);
+    expect(afterApprove.recovered).toBeGreaterThan(0);
+    expect(afterApprove.pending).toBeLessThan(0.02);
   });
 
   test("@full decline path does not send SNS and stays out of recovered bucket", async ({
@@ -230,6 +269,7 @@ test.describe("Triage API guards @full @e2e", () => {
     expect(["DECLINED", "DENIED"]).toContain(opp.state.toUpperCase());
 
     const ledger = await fetchLedgerBuckets(request);
+    assertLedgerBalanced(ledger);
     expect(ledger.recovered).toBe(0);
   });
 });

@@ -7,9 +7,7 @@
  * Tags: @ui · @smoke
  */
 import { test, expect, type Page } from "@playwright/test";
-import { resetBackend } from "./helpers";
-
-const BACKEND = "http://localhost:8000";
+import { BACKEND, resetBackend, promoteActionableFinding } from "./helpers";
 
 test.beforeEach(async ({ request, page }) => {
   await resetBackend(request);
@@ -17,15 +15,8 @@ test.beforeEach(async ({ request, page }) => {
 });
 
 async function promoteFirstFinding(page: Page): Promise<string> {
-  const scanRes = await page.request.post(`${BACKEND}/api/scan/demo`);
-  expect(scanRes.ok()).toBeTruthy();
-  const scan = (await scanRes.json()) as { findings: Array<Record<string, unknown>> };
-  const promoteRes = await page.request.post(`${BACKEND}/api/scan/findings/promote`, {
-    data: scan.findings[0],
-  });
-  expect(promoteRes.ok()).toBeTruthy();
-  const promoted = (await promoteRes.json()) as { opportunity_id: string };
-  return promoted.opportunity_id;
+  const { opportunity_id } = await promoteActionableFinding(page.request);
+  return opportunity_id;
 }
 
 test("@smoke @ui UI-1 Opportunities hub loads", async ({ page }) => {
@@ -40,7 +31,7 @@ test("@smoke @ui UI-2 Account Scanner page loads with demo scan", async ({ page 
   await expect(page.getByRole("heading", { name: /Account Scanner/i })).toBeVisible({
     timeout: 10_000,
   });
-  const scanBtn = page.getByRole("button", { name: /run demo scan/i }).first();
+  const scanBtn = page.getByRole("button", { name: /demo scan/i }).first();
   await expect(scanBtn).toBeVisible({ timeout: 5_000 });
 });
 
@@ -48,7 +39,7 @@ test("@smoke @ui UI-3 Demo scan navigates to opportunities", async ({ page }) =>
   await page.goto("/scan");
   const consent = page.getByRole("checkbox").first();
   if (await consent.isVisible()) await consent.check();
-  await page.getByRole("button", { name: /run demo scan/i }).first().click();
+  await page.getByRole("button", { name: /demo scan/i }).first().click();
   await expect(page).toHaveURL(/\/opportunities/, { timeout: 60_000 });
   await expect(page.getByRole("heading", { name: /^Opportunities$/i })).toBeVisible({
     timeout: 15_000,
@@ -71,6 +62,10 @@ test("@smoke @ui UI-5 Approve recovery from detail page", async ({ page }) => {
 
   const approveBtn = page.getByRole("button", { name: /approve recovery/i });
   await expect(approveBtn).toBeVisible({ timeout: 15_000 });
+  await approveBtn.click();
+
+  const confirmBtn = page.getByRole("button", { name: /approve & execute/i });
+  await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
 
   const responsePromise = page.waitForResponse(
     (r) =>
@@ -79,23 +74,72 @@ test("@smoke @ui UI-5 Approve recovery from detail page", async ({ page }) => {
       r.status() === 200,
     { timeout: 30_000 }
   );
-  await approveBtn.click();
+  await confirmBtn.click();
   await responsePromise;
+});
+
+test("@smoke @ui UI-5b Decline recovery from detail page", async ({ page }) => {
+  const oppId = await promoteFirstFinding(page);
+  await page.goto(`/opportunities/${oppId}`);
+
+  const declineBtn = page.getByRole("button", { name: /^decline$/i });
+  await expect(declineBtn).toBeVisible({ timeout: 15_000 });
+
+  const responsePromise = page.waitForResponse(
+    (r) =>
+      r.url().includes(`/api/approvals/opportunity/${oppId}/decline`) &&
+      r.request().method() === "POST" &&
+      r.status() === 200,
+    { timeout: 30_000 }
+  );
+  await declineBtn.click();
+  await responsePromise;
+
+  await expect(page.getByText(/declined|denied/i).first()).toBeVisible({ timeout: 10_000 });
+});
+
+test("@smoke @ui UI-5c Investigate further from detail page", async ({ page }) => {
+  const oppId = await promoteFirstFinding(page);
+  await page.goto(`/opportunities/${oppId}`);
+
+  const investigateBtn = page.getByRole("button", { name: /investigate further/i });
+  await expect(investigateBtn).toBeVisible({ timeout: 15_000 });
+
+  const responsePromise = page.waitForResponse(
+    (r) =>
+      r.url().includes(`/api/approvals/opportunity/${oppId}/investigate`) &&
+      r.request().method() === "POST" &&
+      r.status() === 200,
+    { timeout: 30_000 }
+  );
+  await investigateBtn.click();
+  await responsePromise;
+
+  await expect(
+    page.getByText(/under investigation|run extended investigation/i).first()
+  ).toBeVisible({ timeout: 15_000 });
 });
 
 test("@smoke @ui UI-6 Recovery Ledger renders buckets", async ({ page }) => {
   await page.goto("/recovery");
   await expect(page.getByText(/recovery ledger/i).first()).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/pending/i).first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(/pending approval/i).first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(/remaining/i).first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(/recovered/i).first()).toBeVisible({ timeout: 5_000 });
 });
 
-test("@smoke @ui UI-8b cost-recovery detail shows Cost Recovery Analysis", async ({ page }) => {
+test("@smoke @ui UI-8b cost-recovery detail shows agent assessment surface", async ({ page }) => {
   const oppId = await promoteFirstFinding(page);
   await page.goto(`/opportunities/${oppId}`);
-  await expect(page.getByText(/cost recovery analysis/i).first()).toBeVisible({
+  await expect(page.getByText(/what recoup found/i).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText(/discovery confidence/i).first()).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByText(/availability result/i).first()).not.toBeVisible();
+  await expect(page.getByText(/evidence graph/i).first()).toBeVisible({
+    timeout: 10_000,
+  });
 });
 
 test("@smoke @ui UI-9 /quality redirects to opportunities", async ({ page }) => {

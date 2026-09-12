@@ -7,6 +7,12 @@ const frontendPort = Number(process.env.PLAYWRIGHT_FRONTEND_PORT ?? "3000");
 const frontendUrl =
   process.env.PLAYWRIGHT_FRONTEND_URL ?? `http://127.0.0.1:${frontendPort}`;
 
+// Ensure Playwright workers and e2e helpers target the same servers as webServer.
+process.env.PLAYWRIGHT_BACKEND_PORT = String(backendPort);
+process.env.PLAYWRIGHT_BACKEND_URL = backendUrl;
+process.env.PLAYWRIGHT_FRONTEND_PORT = String(frontendPort);
+process.env.PLAYWRIGHT_FRONTEND_URL = frontendUrl;
+
 /**
  * Recoup Hackathon — Playwright E2E Config
  *

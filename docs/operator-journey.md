@@ -1,9 +1,18 @@
 # Recoup — Primary Operator Journey (J-FULL)
 
 **Status:** This is the **main cost-recovery lifecycle Recoup ships today**, polished for the AWS Agents for Humans hackathon demo.  
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 13, 2026  
 **Checklist entry:** [USER_JOURNEY_CHECKLIST.md — J-FULL](../USER_JOURNEY_CHECKLIST.md#j-full--full-operator-journey-scan--3-hitl-paths--ledger--sns)  
 **Playwright:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`
+
+### Production (AWS-all, account 625962218034)
+
+| | URL |
+|--|-----|
+| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
+| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+
+Hosting runbook: [archive/ops/production-hosting.md](archive/ops/production-hosting.md). In production, skip step 1 reset (403); complete the journey in one browser session.
 
 ---
 
@@ -52,7 +61,7 @@ This path is **implemented end-to-end** in frontend + backend, covered by **Play
 - **UI (detail page):** 6 stages — `Detect → Investigate → Plan → Policy → Approve → Record` — see `COST_RECOVERY_STAGES` in `frontend/src/lib/recovery-storage.ts`.  
 - **UI (dashboard):** 11-step V1.1 strip — see `pipelineStageForOpportunity()` in the same file.
 
-**Agent graph (11 nodes):** **Not streamed on promote.** Promote builds a ready-to-approve `GraphState` from scanner output. Optional **Re-run agent investigation** on opportunity detail calls `POST /api/opportunities/{id}/run` with Strands/Bedrock. Node-by-node reference: [agent-code-architecture.md](agent-code-architecture.md) (detailed: [archive/superseded/agent-graph.md](archive/superseded/agent-graph.md)).
+**Agent graph (11 nodes):** **Not SSE-streamed on promote.** Promote runs `recoup_graph.run(..., stop_at="risk_policy_gate")`; scan findings execute the **`recovery/` pipeline** inside the graph (evidence graph, recommendation, safety checks) and land at **`AWAITING_APPROVAL`**. Optional **Re-run / investigate** enriches assessment via `POST /api/opportunities/{id}/run` or investigate flow. Node reference: [agent-code-architecture.md](agent-code-architecture.md).
 
 ---
 
@@ -77,7 +86,7 @@ The **6-step** strip on opportunity detail (`COST_RECOVERY_STAGES` in `recovery-
 | **Discovery** | Nine **read-only scanners** (`scan.py` `_ALL_SCANNERS`) — live AWS APIs per service | `normalize_event`, `incident_correlation`, … |
 | **Data on the finding** | `Finding.evidence` + `estimated_monthly_savings_usd` from scanner rules — [scanner-coverage.md](scanner-coverage.md) | `evidence_collector`, multi-source fetch |
 | **Cross-check / trust** | Per-scanner logic (e.g. EC2 describe + CloudWatch CPU); `scan_hash`; finding `content_hash`; regex finding sanitizer | Correlation, sanitizer node, eligibility reasoner |
-| **Package for approval** | **`promote`** synthesizes `GraphState` + HITL request from the finding (no graph stream) | Same shapes, produced by running nodes |
+| **Package for approval** | **`promote`** runs graph through policy gate + **`recovery/` pipeline** → `RecoveryAssessment` + HITL request | Same shapes, produced by running full SLA nodes |
 | **Policy gate** | `REQUIRE_APPROVAL` set at promote | `risk_policy_gate` (Cedar) in graph |
 | **Human decision** | Operator on **`/opportunities/[id]`** — approve / investigate / decline | Same HITL contract (`claim_hash`, `amount`, `state_version`) |
 | **Recoverable amount** | Scanner **`estimated_monthly_savings_usd`** → `potential_credit` / approval **`amount`** | SLA path uses calculator outputs (replay fixtures) |
@@ -90,7 +99,7 @@ After **Start Recovery**, backend state is usually **`AWAITING_APPROVAL`**, whic
 | Step | Label | J-FULL meaning |
 |------|--------|----------------|
 | 1 | Detect | Account scan — findings appear on `/opportunities` |
-| 2–7 | Investigate → Policy | **At promote:** finding → synthetic trace, eligibility text, `REQUIRE_APPROVAL`, **claim_hash** bound to packaged availability JSON |
+| 2–7 | Investigate → Policy | **At promote:** finding → **`recovery_assessment`** (evidence graph, sufficiency, recommendation/plan, safety), `REQUIRE_APPROVAL`, **claim_hash** bound to `availability_result` JSON |
 | 8 | Approve | Human HITL; wrong `amount` / `claim_hash` → **409** |
 | 9–10 | Remediate / Verify | Cost recovery: approve transitions toward **RECOVERED** (no separate live remediation in the canonical demo) |
 | 11 | Record | Ledger + outcomes (+ **SNS** on approve) |
@@ -277,7 +286,7 @@ Row action labels: `frontend/src/components/recoup/opportunity-row.tsx` (`primar
 
 ### Backend
 
-**Promote** creates `recovery-{uuid}` opportunity, synthetic graph artifacts from the finding, and HITL request:
+**Promote** creates `recovery-{uuid}` opportunity, runs the graph through **`risk_policy_gate`** (recovery pipeline for scan findings), and opens HITL:
 
 ```581:588:backend/src/recoup/api/routes/scan.py
 @router.post("/findings/promote", response_model=PromoteResponse)
@@ -291,11 +300,12 @@ def promote_finding(finding: Finding) -> PromoteResponse:
 
 Key effects (same handler):
 
-- `GraphState` with `current_state=AWAITING_APPROVAL`, `policy_decision=REQUIRE_APPROVAL`.  
-- `HITLFlow.create_request` with **claim_hash**, **amount**, **state_version**.  
-- Action: **`apply_cost_recovery`** for all promoted scan findings (`_recovery_action_for_finding()` in `scan.py`).
+- `FindingToSignalAdapter` + `recoup_graph.run(..., stop_at="risk_policy_gate")` → `GraphState` with **`recovery_assessment`**, `current_state=AWAITING_APPROVAL`, `policy_decision=REQUIRE_APPROVAL`.  
+- Optional Bedrock on promote: `RECOVERY_LLM_ON_PROMOTE` (default **false** in CI/Playwright).  
+- `HITLFlow.create_request` with **claim_hash**, **amount**, **state_version**; risk/action/rollback strings from assessment when present (`recovery/approval_ui.py`).  
+- Action: **`apply_cost_recovery`** for all promoted scan findings.
 
-The approval **amount** equals the finding’s **`estimated_monthly_savings_usd`** (quantized to cents). **claim_hash** is SHA-256 over the serialized availability/claim payload so approve cannot drift from what was packaged at promote.
+The approval **amount** equals the finding’s **`estimated_monthly_savings_usd`**. **claim_hash** is SHA-256 over serialized **`availability_result`**. Approve returns **409** if evidence is **INSUFFICIENT**, a mandatory safety check **FAIL**s, or projected recovery no longer matches the pending amount.
 
 Idempotent re-promote of same `resource_id` returns `status: "existing"` when content unchanged.
 
@@ -303,7 +313,7 @@ Idempotent re-promote of same `resource_id` returns `status: "existing"` when co
 
 ### Opportunity detail UI
 
-**`/opportunities/[id]`** — Cost Recovery Analysis, pipeline strip, **Approval Required** `DecisionCard` when approval is PENDING (`frontend/src/app/opportunities/[id]/page.tsx`, `frontend/src/components/recoup/decision-card.tsx`).
+**`/opportunities/[id]`** — Cost Recovery Analysis: **`SummaryMetricCards`**, **`FindingNarrative`**, **`EvidenceGraphColumn`**, **`RecommendationPanel`**, **`RecoveryPlanCollapsible`**, **`SafetyChecklist`** in approve dialog, pipeline strip, **Approval Required** `DecisionCard` (`frontend/src/app/opportunities/[id]/page.tsx` and `frontend/src/components/recoup/*`).
 
 ---
 
@@ -550,6 +560,6 @@ Full API docs: [api-reference.md](api-reference.md).
 
 ## Documentation & cleanup
 
-- **Docs aligned to this journey (Sep 11, 2026):** [README.md](../README.md), [judge-demo.md](judge-demo.md), [demo-playbook.md](demo-playbook.md), [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md).  
+- **Docs aligned to this journey (Sep 13, 2026):** [README.md](../README.md), [judge-demo.md](judge-demo.md), [demo-playbook.md](demo-playbook.md), [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md), AWS hosting in [archive/ops/production-hosting.md](archive/ops/production-hosting.md).  
 - **Agent graph (11 nodes, optional on J-FULL):** [agent-code-architecture.md](agent-code-architecture.md) · **Scanners & evidence:** [scanner-coverage.md](scanner-coverage.md) · **Replay engine (pytest/scorecard):** [archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md).  
 - **Cleanup / historical meta docs:** [archive/meta/](archive/meta/) · **Full doc index:** [README.md](README.md).

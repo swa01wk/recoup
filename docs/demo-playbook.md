@@ -1,8 +1,9 @@
 # Recoup — Demo Scenarios Playbook
 
-**Last updated:** Sep 11, 2026  
+**Last updated:** Sep 13, 2026  
 **Primary operator journey:** [operator-journey.md](operator-journey.md) (**J-FULL** / **S5**)  
-**Test suite:** 118 Playwright tests in 15 specs · `@smoke` + `@full` (`npx playwright test --list`)  
+**Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
+**Test suite:** 123 Playwright tests in 15 specs · `@smoke` + `@full` (`npx playwright test --list`)  
 See [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) for per-step coverage.
 
 ---
@@ -21,7 +22,9 @@ Recoup’s **shipped operator story** is account-scanner cost recovery: real AWS
 
 ## S5 — Primary operator loop (J-FULL) — start here
 
-1. Sidebar **↺ Reset Demo Data** (optional) or `POST /api/test/reset` in tests  
+**Production:** same steps on the public UI; skip reset (403 in production).
+
+1. Sidebar **↺ Reset Demo Data** (optional locally) or `POST /api/test/reset` in tests  
 2. **`/scan`** → consent → **Demo Scan** → **`/opportunities`**  
 3. Three findings, **three distinct services** (breadth demo)  
 4. **Start Recovery** on each → **`/opportunities/{id}`**  
