@@ -52,25 +52,29 @@ from ...scanners.lb_scanner import LBScanner
 from ...scanners.rds_scanner import RDSScanner
 from ...scanners.s3_scanner import S3Scanner
 
-log: structlog.BoundLogger = structlog.get_logger(__name__)
+from ...demo_session import (
+    assert_session_epoch_unchanged,
+    get_session_epoch,
+    require_session_id,
+)
+from ...demo_state import (
+    graph_states as graph_states_for_session,
+    promoted_findings as promoted_findings_for_session,
+    scan_audit_log as scan_audit_log_for_session,
+    scan_history as scan_history_for_session,
+    scan_result_cache as scan_result_cache_for_session,
+)
 
+log: structlog.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
 
-# Sprint 2: promoted findings keyed by account_id + resource_id for tenant isolation
-# Structure: {account_id: {resource_id: {...}}}
-_promoted_findings: dict[str, dict[str, dict[str, Any]]] = {}
 
-# Sprint 2: last scan result keyed by account_id for tenant isolation
-# Structure: {account_id: ScanResult}
-_last_scan_result: dict[str, ScanResult] = {}
+def _demo_session_id() -> str:
+    return require_session_id()
 
-# Scan history — per account, ordered list of lightweight scan summaries (newest first)
-# Structure: {account_id: [{scan_id, scanned_at, scan_hash, finding_count, total_savings_usd,
-#                            is_cached, region, duration_s, findings_by_service_count}]}
-_scan_history: dict[str, list[dict[str, Any]]] = {}
 
-# Sprint 2: per-account scan audit log (in-memory; written to DynamoDB when configured)
-_scan_audit_log: list[dict[str, Any]] = []
+def _graph_states() -> dict[str, GraphState]:
+    return graph_states_for_session(_demo_session_id())
 
 # ── Simple in-memory ExternalId store (per-customer, random) ─────────────────
 # Key: customer_id (generated UUID), Value: {external_id, role_arn, created_at}
@@ -155,7 +159,7 @@ def _record_scan_history(
             for svc, flist in (result.findings_by_service or {}).items()
         },
     }
-    history = _scan_history.setdefault(account_id, [])
+    history = scan_history_for_session(_demo_session_id()).setdefault(account_id, [])
     history.insert(0, entry)   # newest first
 
 
@@ -202,7 +206,7 @@ def _write_scan_audit(result: ScanResult, scanner_names: list[str]) -> None:
         "total_savings_usd": result.total_estimated_monthly_savings_usd,
         "duration_s": result.scan_duration_seconds,
     }
-    _scan_audit_log.append(entry)
+    scan_audit_log_for_session(_demo_session_id()).append(entry)
     log.info("scan_audit.written", scan_id=entry["scan_id"], account_id_masked=masked)
 
 
@@ -239,6 +243,69 @@ _PREVIEW_SCANNERS = [
     EC2Scanner(),
 ]
 
+def _offline_demo_scan_result() -> ScanResult:
+    """Deterministic demo findings for local / Playwright (no STS)."""
+    findings = [
+        Finding(
+            service="EC2",
+            resource_id="i-offline-demo-session-a",
+            resource_type="AWS::EC2::Instance",
+            finding_type="IDLE_INSTANCE",
+            issue="Offline demo — idle instance (session isolation tests)",
+            estimated_monthly_savings_usd=93.0,
+            recommendation="Stop if unused",
+            severity="high",
+            region="us-east-1",
+            evidence={"cpu_utilization_7d_avg": "1.80%", "instance_type": "m5.large"},
+            scenario_tag="offline-demo",
+            is_demo_resource=True,
+        ),
+        Finding(
+            service="EBS",
+            resource_id="vol-offline-demo-session-b",
+            resource_type="AWS::EC2::Volume",
+            finding_type="UNATTACHED_VOLUME",
+            issue="Offline demo — unattached volume",
+            estimated_monthly_savings_usd=12.0,
+            recommendation="Delete if unused",
+            severity="medium",
+            region="us-east-1",
+            evidence={"state": "available"},
+            scenario_tag="offline-demo",
+            is_demo_resource=True,
+        ),
+    ]
+    total = round(sum(f.estimated_monthly_savings_usd for f in findings), 2)
+    scan_id = str(uuid.uuid4())
+    scan_hash = _compute_scan_hash(findings)
+    return ScanResult(
+        scanned_at=datetime.now(UTC).isoformat(),
+        account_id="625962218034",
+        region="us-east-1",
+        findings=findings,
+        total_estimated_monthly_savings_usd=total,
+        errors=[],
+        scan_duration_seconds=0.01,
+        assumed_role_arn="offline:RecoupReadOnlyRole",
+        assumed_role_account_id="625962218034",
+        session_name="recoup-offline-demo-scan",
+        findings_by_service=_build_findings_by_service(findings),
+        scan_id=scan_id,
+        scan_hash=scan_hash,
+        is_cached=False,
+    )
+
+
+def _store_demo_scan_result(result: ScanResult) -> ScanResult:
+    """Cache, audit, and return sanitized demo scan result for the current session."""
+    _DEMO_CACHE_KEY = "__demo__"
+    scan_cache = scan_result_cache_for_session(_demo_session_id())
+    sanitized = _sanitize_scan_result(result)
+    scan_cache[_DEMO_CACHE_KEY] = sanitized
+    _write_scan_audit(sanitized, [s.service_name for s in _ALL_SCANNERS])
+    return sanitized
+
+
 # Phase 6f — pre-configured demo connection (uses RecoupReadOnlyRole)
 # NOTE: read lazily inside scan_demo() rather than at module-load time so that
 # the values are always current regardless of when the module was first imported.
@@ -259,6 +326,9 @@ def _run_scan(req: ScanRequest, scanners: list[Any]) -> ScanResult:
     Any STS failure (wrong ARN, missing trust policy, wrong External ID) is
     surfaced as an HTTP 400 so the frontend can display a clear error.
     """
+    demo_sid = _demo_session_id()
+    epoch_at_start = get_session_epoch(demo_sid)
+    scan_cache = scan_result_cache_for_session(demo_sid)
     t0 = time.monotonic()
 
     # Phase 6e: STS AssumeRole — no raw credentials
@@ -316,7 +386,7 @@ def _run_scan(req: ScanRequest, scanners: list[Any]) -> ScanResult:
     # created.  The scanned_at timestamp is refreshed so the UI always shows
     # "last checked" as now.
     cache_key = account_id or ""
-    previous = _last_scan_result.get(cache_key)
+    previous = scan_cache.get(cache_key)
     if previous and previous.scan_hash == new_scan_hash:
         log.info(
             "account_scan.no_change",
@@ -335,6 +405,7 @@ def _run_scan(req: ScanRequest, scanners: list[Any]) -> ScanResult:
         _write_scan_audit(cached_refreshed, [s.service_name for s in scanners])
         if account_id:
             _record_scan_history(cache_key, cached_refreshed, is_cached=True)
+        assert_session_epoch_unchanged(demo_sid, epoch_at_start)
         return _sanitize_scan_result(cached_refreshed)
 
     log.info(
@@ -372,10 +443,10 @@ def _run_scan(req: ScanRequest, scanners: list[Any]) -> ScanResult:
 
     # Sprint 2: cache raw result keyed by account_id for tenant isolation
     if account_id:
-        _last_scan_result[account_id] = raw_result
+        scan_cache[account_id] = raw_result
         _record_scan_history(cache_key, raw_result, is_cached=False)
 
-    # Sprint 2: sanitize findings before returning to caller
+    assert_session_epoch_unchanged(demo_sid, epoch_at_start)
     return _sanitize_scan_result(raw_result)
 
 
@@ -412,8 +483,9 @@ def scan_demo() -> ScanResult:
     # on every test.  The cache is never cleared by test reset; only one
     # real scan happens per uvicorn process lifetime.
     _DEMO_CACHE_KEY = "__demo__"
-    if _DEMO_CACHE_KEY in _last_scan_result:
-        cached = _last_scan_result[_DEMO_CACHE_KEY]
+    scan_cache = scan_result_cache_for_session(_demo_session_id())
+    if _DEMO_CACHE_KEY in scan_cache:
+        cached = scan_cache[_DEMO_CACHE_KEY]
         # Write an audit entry even for cache hits so tests that reset the
         # audit log still see a record after calling the demo scan endpoint.
         _write_scan_audit(cached, [s.service_name for s in _ALL_SCANNERS])
@@ -430,20 +502,30 @@ def scan_demo() -> ScanResult:
     role_arn = settings.recoup_readonly_role_arn
     external_id = settings.recoup_external_id
     if not role_arn or not external_id:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Demo scan not configured: set RECOUP_READONLY_ROLE_ARN and "
-                "RECOUP_EXTERNAL_ID environment variables."
-            ),
-        )
+        if settings.recoup_env == "production":
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Demo scan not configured: set RECOUP_READONLY_ROLE_ARN and "
+                    "RECOUP_EXTERNAL_ID environment variables."
+                ),
+            )
+        log.info("demo_scan.offline", reason="role_or_external_id_not_configured")
+        return _store_demo_scan_result(_offline_demo_scan_result())
+
     req = ScanRequest(
         role_arn=role_arn,
         external_id=external_id,
         region="us-east-1",
     )
-    result = _run_scan(req, _ALL_SCANNERS)
-    _last_scan_result[_DEMO_CACHE_KEY] = result
+    try:
+        result = _run_scan(req, _ALL_SCANNERS)
+    except HTTPException as exc:
+        if settings.recoup_env != "local" or exc.status_code != 400:
+            raise
+        log.warning("demo_scan.offline", reason="sts_assume_role_failed")
+        return _store_demo_scan_result(_offline_demo_scan_result())
+    scan_cache[_DEMO_CACHE_KEY] = result
     return result
 
 
@@ -456,7 +538,7 @@ def get_last_scan() -> ScanResult:
     without relying on localStorage.
     """
     _DEMO_CACHE_KEY = "__demo__"
-    result = _last_scan_result.get(_DEMO_CACHE_KEY)
+    result = scan_result_cache_for_session(_demo_session_id()).get(_DEMO_CACHE_KEY)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -473,7 +555,7 @@ def get_scan_audit() -> list[dict[str, Any]]:
     Each record contains masked account_id, timestamp, scanner names,
     finding count — no raw findings or credentials.
     """
-    return list(reversed(_scan_audit_log))  # newest first
+    return list(reversed(scan_audit_log_for_session(_demo_session_id())))  # newest first
 
 
 class ScanHistoryEntry(BaseModel):
@@ -498,7 +580,7 @@ def get_scan_history(account_id: str | None = None) -> list[ScanHistoryEntry]:
     or credentials are included.
     """
     key = account_id or "__demo__"
-    raw = _scan_history.get(key, [])
+    raw = scan_history_for_session(_demo_session_id()).get(key, [])
     return [ScanHistoryEntry(**entry) for entry in raw]
 
 
@@ -586,7 +668,10 @@ def promote_finding(finding: Finding) -> PromoteResponse:
     Creates an in-memory GraphState, registers it with the opportunities store,
     and opens an HITL approval request for operator review.
     """
-    from .opportunities import _graph_states  # noqa: PLC0415 — avoid circular import at module load
+    demo_sid = _demo_session_id()
+    epoch_at_start = get_session_epoch(demo_sid)
+    graphs = _graph_states()
+    promoted_root = promoted_findings_for_session(demo_sid)
 
     # Sprint 2: tenant isolation — key by account_id extracted from resource_id
     # (resource_id format: "arn:aws:...:account_id:..." or plain resource name)
@@ -606,7 +691,7 @@ def promote_finding(finding: Finding) -> PromoteResponse:
     # Compute content hash — changes only if savings/severity/issue changes
     _content_hash = finding.content_hash or finding.compute_content_hash()
 
-    account_bucket = _promoted_findings.setdefault(_account_ns, {})
+    account_bucket = promoted_root.setdefault(_account_ns, {})
     # Check by resource_id (fast path) or by idempotency_key (cross-namespace dedup)
     existing = account_bucket.get(finding.resource_id)
     if existing is None:
@@ -618,7 +703,7 @@ def promote_finding(finding: Finding) -> PromoteResponse:
 
     if existing is not None:
         opp_id_existing = existing["opportunity_id"]
-        existing_opp = _graph_states.get(opp_id_existing)
+        existing_opp = graphs.get(opp_id_existing)
 
         # Content unchanged — skip entirely (idempotent re-scan with no resource changes)
         stored_content_hash = existing.get("content_hash")
@@ -677,7 +762,7 @@ def promote_finding(finding: Finding) -> PromoteResponse:
             "state_version": 1,
         }
     )
-    _graph_states[opp_id] = graph_state
+    graphs[opp_id] = graph_state
 
     availability = graph_state.availability_result
     if availability is None:
@@ -724,6 +809,7 @@ def promote_finding(finding: Finding) -> PromoteResponse:
         savings=str(savings),
     )
 
+    assert_session_epoch_unchanged(demo_sid, epoch_at_start)
     return PromoteResponse(
         opportunity_id=opp_id,
         status="created",
@@ -735,7 +821,8 @@ def promote_finding(finding: Finding) -> PromoteResponse:
 def list_promoted_findings() -> list[PromotedFindingRecord]:
     """Return scan findings that have been promoted into the recovery pipeline."""
     records: list[PromotedFindingRecord] = []
-    for account_bucket in _promoted_findings.values():
+    promoted_root = promoted_findings_for_session(_demo_session_id())
+    for account_bucket in promoted_root.values():
         for entry in account_bucket.values():
             finding_data = entry["finding"]
             records.append(
@@ -761,23 +848,23 @@ def delete_account_data(account_id: str) -> dict[str, str]:
     DynamoDB records with the matching account_id are also purged when configured.
     Called when a judge revokes IAM trust (removes RecoupReadOnlyRole).
     """
-    # Purge in-memory scan cache
-    _last_scan_result.pop(account_id, None)
+    demo_sid = _demo_session_id()
+    scan_cache = scan_result_cache_for_session(demo_sid)
+    history = scan_history_for_session(demo_sid)
+    promoted_root = promoted_findings_for_session(demo_sid)
+    audit = scan_audit_log_for_session(demo_sid)
 
-    # Purge scan history
-    _scan_history.pop(account_id, None)
+    scan_cache.pop(account_id, None)
+    history.pop(account_id, None)
+    promoted_root.pop(account_id, None)
 
-    # Purge promoted findings
-    _promoted_findings.pop(account_id, None)
-
-    # Purge audit log entries for this account (partial mask match)
     masked_prefix = account_id[:4] if len(account_id) >= 4 else account_id
-    before = len(_scan_audit_log)
-    _scan_audit_log[:] = [
-        e for e in _scan_audit_log
+    before = len(audit)
+    audit[:] = [
+        e for e in audit
         if not e.get("account_id_masked", "").startswith(masked_prefix)
     ]
-    purged_audit = before - len(_scan_audit_log)
+    purged_audit = before - len(audit)
 
     log.info(
         "account_data.deleted",

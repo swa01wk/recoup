@@ -73,10 +73,11 @@ def _transition_opportunity_state(
     try:
         from .opportunities import _graph_states  # noqa: PLC0415
 
-        if opportunity_id in _graph_states:
-            gs = _graph_states[opportunity_id]
+        graphs = _graph_states()
+        if opportunity_id in graphs:
+            gs = graphs[opportunity_id]
             new_version = gs.state_version + 1
-            _graph_states[opportunity_id] = gs.model_copy(
+            graphs[opportunity_id] = gs.model_copy(
                 update={"current_state": new_state, "state_version": new_version}
             )
             log.info(
@@ -118,8 +119,11 @@ class ApproveRequest(BaseModel):
 
 @router.get("/pending")
 def list_pending() -> list[dict[str, Any]]:
-    """Return all non-expired PENDING approval requests (across all opportunities)."""
-    records = list_pending_approvals()
+    """Return PENDING approval requests for the current demo session."""
+    from .opportunities import _graph_states  # noqa: PLC0415
+
+    live = set(_graph_states().keys())
+    records = [r for r in list_pending_approvals() if r.opportunity_id in live]
     return [_approval_to_json(r) for r in records]
 
 
@@ -193,7 +197,7 @@ def get_opportunity_approval(
     try:
         from .opportunities import _graph_states, _maybe_create_approval  # noqa: PLC0415
 
-        gs = _graph_states.get(opportunity_id)
+        gs = _graph_states().get(opportunity_id)
         if (
             gs is not None
             and gs.current_state == OpportunityState.AWAITING_APPROVAL
@@ -229,7 +233,7 @@ def approve_opportunity(
     from ...recovery.engines.safety import has_blocking_failure  # noqa: PLC0415
     from .opportunities import _graph_states  # noqa: PLC0415
 
-    gs = _graph_states.get(opportunity_id)
+    gs = _graph_states().get(opportunity_id)
     if gs and gs.recovery_assessment:
         ra = gs.recovery_assessment
         if (
@@ -397,8 +401,10 @@ def list_outcomes() -> list[dict[str, Any]]:
     in-memory fallback) and survive across server restarts.
     """
     try:
+        from ...demo_session import require_session_id
         from ...graph.outcome_repository import outcome_repo  # noqa: PLC0415
-        return outcome_repo.list_all()
+
+        return outcome_repo.list_all(require_session_id())
     except Exception as exc:  # noqa: BLE001
         log.warning("approvals.outcomes_fetch_failed", error=str(exc))
         return []
@@ -421,7 +427,7 @@ def purge_stale() -> dict[str, Any]:
     """
     try:
         from .opportunities import _graph_states  # noqa: PLC0415
-        live_ids = set(_graph_states.keys())
+        live_ids = set(_graph_states().keys())
     except Exception:  # noqa: BLE001
         live_ids = set()
 

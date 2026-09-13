@@ -42,8 +42,20 @@ except ImportError:  # noqa: BLE001
     _sentry_sdk = None  # type: ignore[assignment]
 
 from ..config import settings
+from ..demo_control import get_global_epoch, sync_global_epoch
+from ..demo_session import (
+    DEFAULT_TEST_SESSION,
+    DemoSessionError,
+    DEMO_SESSION_HEADER,
+    bind_session,
+    ensure_test_session,
+    reset_session,
+    run_global_reset,
+    validate_session_id,
+)
 from ..sqs_poller import start_poller, stop_poller
 from .routes.approvals import router as approvals_router
+from .routes.demo import router as demo_router
 from .routes.opportunities import router as opportunities_router
 from .routes.quality import router as quality_router
 from .routes.scan import router as scan_router
@@ -152,7 +164,78 @@ _PUBLIC_PATHS: frozenset[str] = frozenset({
     "/redoc",
     "/openapi.json",
     "/api/config",
+    "/api/demo/session",
 })
+
+
+_DEMO_SESSION_EXEMPT: frozenset[str] = frozenset({
+    "/api/test/reset",
+})
+
+
+def _requires_demo_session(path: str) -> bool:
+    if path in _PUBLIC_PATHS or path in _DEMO_SESSION_EXEMPT:
+        return False
+    if path.startswith("/api/opportunities"):
+        return True
+    if path.startswith("/api/scan"):
+        return True
+    if path.startswith("/api/approvals"):
+        return True
+    if path.startswith("/api/demo/"):
+        return path != "/api/demo/session"
+    if path.startswith("/api/admin/reset"):
+        return True
+    return False
+
+
+@app.exception_handler(DemoSessionError)
+async def demo_session_error_handler(request: Request, exc: DemoSessionError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "code": exc.code},
+    )
+
+
+# ── Demo session + global epoch middleware ────────────────────────────────────
+@app.middleware("http")
+async def demo_session_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    sync_global_epoch()
+    path = request.url.path
+    if request.method == "OPTIONS" or not _requires_demo_session(path):
+        return await call_next(request)
+
+    session_id = request.headers.get(DEMO_SESSION_HEADER, "").strip()
+    if not session_id and path == "/api/test/reset":
+        session_id = ensure_test_session(DEFAULT_TEST_SESSION)
+        bind_session(session_id)
+        return await call_next(request)
+
+    if not session_id and settings.recoup_env == "local":
+        session_id = ensure_test_session(DEFAULT_TEST_SESSION)
+        bind_session(session_id)
+        return await call_next(request)
+
+    if not session_id:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "detail": f"{DEMO_SESSION_HEADER} header required.",
+                "code": "session_required",
+            },
+        )
+    try:
+        validate_session_id(session_id)
+        bind_session(session_id)
+    except DemoSessionError as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail, "code": exc.code},
+        )
+
+    response = await call_next(request)
+    response.headers["X-Demo-Epoch"] = str(get_global_epoch())
+    return response
 
 
 # ── API-key auth middleware (Sprint 4) ───────────────────────────────────────
@@ -235,6 +318,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         },
     )
 
+app.include_router(demo_router, prefix="/api/demo", tags=["demo"])
 app.include_router(opportunities_router, prefix="/api/opportunities", tags=["opportunities"])
 app.include_router(approvals_router, prefix="/api/approvals", tags=["approvals"])
 app.include_router(quality_router, prefix="/api/quality", tags=["quality"])
@@ -276,55 +360,47 @@ def _admin_reset_allowed() -> bool:
 
 
 def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
-    """Shared implementation for full in-memory state reset."""
-    from .routes.opportunities import _graph_states
-    from .routes.scan import _promoted_findings, _scan_audit_log, _last_scan_result, _scan_history
+    """Global reset — clears all sessions (dev/test / ops)."""
+    from ..demo_state import clear_all_memory
 
-    _graph_states.clear()
-    _promoted_findings.clear()
-    _scan_audit_log.clear()
-    _scan_history.clear()
-    if clear_scan_cache:
-        _last_scan_result.clear()
-
-    # Clear approvals — in-memory AND DynamoDB (recoup-approvals table)
+    clear_all_memory(clear_scan_cache=clear_scan_cache)
     try:
         from ..approval.store import clear_all_approvals  # noqa: PLC0415
+
         clear_all_approvals()
     except Exception:  # noqa: BLE001
         pass
-
-    # Clear outcome records — in-memory AND DynamoDB (recoup-outcome-metadata table)
-    # This is the source of stale "Recovered" rows that survive server restarts.
     try:
         from ..graph.outcome_repository import outcome_repo  # noqa: PLC0415
+
         outcome_repo.clear_all()
     except Exception:  # noqa: BLE001
         pass
-
-    cleared = "graph_states,promoted_findings,scan_audit,scan_history,approvals_dynamo,outcomes_dynamo"
+    cleared = "all_sessions,approvals_dynamo,outcomes_dynamo"
     if clear_scan_cache:
         cleared += ",scan_cache"
     return {"status": "reset", "cleared": cleared}
 
 
 @app.post("/api/admin/reset", tags=["admin"])
-def admin_reset(clear_scan_cache: bool = False) -> dict[str, str]:
+def admin_reset(clear_scan_cache: bool = False, scope: str = "session") -> dict[str, str]:
     """
-    Full in-memory state reset for demo/development use.
-
-    Clears all opportunities, promoted findings, approvals, audit log, and outcome records.
-    Optionally clears the scan result cache (pass ?clear_scan_cache=true) so the next
-    scan fetches fresh data from AWS.
-
-    Disabled in production unless RECOUP_ENABLE_ADMIN_RESET=true (hosted judge demo).
+    Demo reset — default ``scope=session`` clears caller session only.
+    ``scope=global`` requires RECOUP_ENABLE_GLOBAL_RESET (ops).
     """
     from fastapi import HTTPException as _HTTPException  # noqa: PLC0415
+
+    if scope == "global":
+        if not settings.recoup_enable_global_reset and settings.recoup_env == "production":
+            raise _HTTPException(status_code=403, detail="Global reset disabled.")
+        return run_global_reset(clear_scan_cache=clear_scan_cache)
 
     if not _admin_reset_allowed():
         raise _HTTPException(status_code=403, detail="Admin reset disabled in production.")
 
-    return _do_full_reset(clear_scan_cache=clear_scan_cache)
+    from ..demo_session import require_session_id
+
+    return reset_session(require_session_id(), clear_scan_cache=clear_scan_cache)
 
 
 @app.get("/api/test/reset", tags=["meta"])
@@ -343,10 +419,9 @@ def test_reset() -> dict[str, str]:
     if settings.recoup_env == "production":
         raise _HTTPException(status_code=403, detail="Test reset disabled in production.")
 
-    # NOTE: _last_scan_result is intentionally NOT cleared here for test isolation.
-    # The demo scan hits real AWS APIs (~22 s each call); keeping the cached result
-    # across test resets means only the first test pays the round-trip cost.
-    return _do_full_reset(clear_scan_cache=False)
+    ensure_test_session(DEFAULT_TEST_SESSION)
+    bind_session(DEFAULT_TEST_SESSION)
+    return reset_session(DEFAULT_TEST_SESSION, clear_scan_cache=False)
 
 
 @app.get("/api/config", tags=["meta"])
@@ -365,4 +440,6 @@ def config_info() -> dict[str, str | bool]:
         "sns_notifications_enabled": bool(settings.recoup_sns_topic_arn),
         "sqs_events_enabled": bool(settings.recovery_events_queue_url),
         "admin_reset_enabled": _admin_reset_allowed(),
+        "global_reset_enabled": settings.recoup_enable_global_reset,
+        "demo_epoch": get_global_epoch(),
     }

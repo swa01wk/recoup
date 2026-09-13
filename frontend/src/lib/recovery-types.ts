@@ -16,6 +16,7 @@ export interface ConfidenceScore {
   score: number;
   label?: string;
   factors?: ConfidenceFactorBreakdown | Record<string, number | string>;
+  evidence_signal_ids?: string[];
 }
 
 export type SignalDirection = "supports" | "contradicts" | "neutral";
@@ -130,6 +131,7 @@ export interface RecoveryPlan {
   execution_steps?: string[];
   rollback_strategy?: string;
   verification_steps?: string[];
+  policy_requirements?: string[];
   structured_steps?: RecoveryPlanStep[];
 }
 

@@ -1,5 +1,47 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export const DEMO_SESSION_HEADER = "X-Demo-Session";
+const DEMO_SESSION_STORAGE_KEY = "recoup_demo_session_id";
+
+let _sessionPromise: Promise<string> | null = null;
+
+export async function ensureDemoSession(): Promise<string> {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(DEMO_SESSION_STORAGE_KEY);
+    if (stored) return stored;
+  }
+  if (!_sessionPromise) {
+    _sessionPromise = (async () => {
+      const res = await fetch(`${BASE}/api/demo/session`, { method: "POST" });
+      if (!res.ok) {
+        throw new Error(`Failed to create demo session: ${res.status}`);
+      }
+      const body = (await res.json()) as { session_id: string };
+      if (typeof window !== "undefined") {
+        localStorage.setItem(DEMO_SESSION_STORAGE_KEY, body.session_id);
+      }
+      return body.session_id;
+    })();
+  }
+  return _sessionPromise;
+}
+
+export function parseApiErrorMessage(status: number, text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { detail?: string; code?: string };
+    if (parsed.code === "session_reset") {
+      return "Demo was reset — refresh the page and try again.";
+    }
+    if (parsed.code === "reset_in_progress") {
+      return "Reset already in progress — try again in a few seconds.";
+    }
+    if (parsed.detail) return parsed.detail;
+  } catch {
+    /* ignore */
+  }
+  return `${status} ${text}`;
+}
+
 export interface Opportunity {
   id: string;
   state: string;
@@ -107,13 +149,18 @@ export interface SseEvent {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const sessionId = await ensureDemoSession();
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: {
+      "Content-Type": "application/json",
+      [DEMO_SESSION_HEADER]: sessionId,
+      ...(init?.headers ?? {}),
+    },
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status} ${text}`);
+    throw new Error(parseApiErrorMessage(res.status, text));
   }
   return res.json() as Promise<T>;
 }
@@ -300,7 +347,7 @@ export const api = {
      */
     adminReset: (clearScanCache = false) =>
       request<{ status: string; cleared: string }>(
-        `/api/admin/reset${clearScanCache ? "?clear_scan_cache=true" : ""}`,
+        `/api/demo/session/reset${clearScanCache ? "?clear_scan_cache=true" : ""}`,
         { method: "POST" }
       ),
     // Sprint 1: per-customer ExternalId generation

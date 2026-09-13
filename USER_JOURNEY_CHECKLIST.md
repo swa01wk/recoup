@@ -4,7 +4,7 @@
 > **Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
 > **Primary operator lifecycle (product):** **[J-FULL](docs/operator-journey.md)** — scan → 3 distinct services → approve / investigate / decline → Recovery Ledger + SNS.  
 > **Authoritative E2E:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`  
-> **Test suite:** 15 Playwright specs · 123 tests (`cd frontend && npx playwright test --list`)  
+> **Test suite:** 16 Playwright specs · 125 tests (`cd frontend && npx playwright test --list`)  
 > **UI:** Sidebar = Opportunities · Account Scanner · Recovery Ledger only. HITL on `/opportunities/[id]`. `/approvals` and `/quality` redirect to `/opportunities`.  
 > **Removed Sep 2026:** `/replay` page, `/api/replay/*`, ec2/governance demo HTTP, J4/J5/J10–J12 Playwright specs. SLA replay adapter + golden **pytest** remain.  
 > **Tags:** `@smoke` · `@full` · `@e2e` (J-FULL mega journey)
@@ -59,9 +59,28 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | J1-1 | Backend health (`GET /health`) | `journey-security.spec.ts` SEC-7 | `@full` | ✅ |
 | J1-2 | Readiness check (`GET /health/ready`) | `journey-security.spec.ts` SEC-8 | `@full` | ✅ |
 | J1-3 | Config endpoint exposes no secrets | `journey-security.spec.ts` SEC-13 | `@full` | ✅ |
-| J1-4 | State reset (`POST /api/test/reset`) | `helpers.ts resetBackend()` | — | ✅ |
+| J1-4 | Session reset (`POST /api/demo/session/reset`) | `helpers.ts resetBackend()` | — | ✅ |
+| J1-4b | Legacy test reset (`POST /api/test/reset`) | local fallback in helpers | — | ✅ |
+| J1-7 | Guest session token + `X-Demo-Session` header | `journey-demo-session-concurrency.spec.ts` | `@smoke` | ✅ |
 | J1-5 | Frontend loads at `/` | `journey-ui-browser.spec.ts` UI-1 | `@ui @smoke` | ✅ |
 | J1-6 | Sidebar shows **3** nav links (no SLA Replay) | `live-ec2-demo-removed.spec.ts` | `@smoke` | ✅ |
+
+---
+
+## PSC — Parallel guest demo sessions
+
+> **File:** `journey-demo-session-concurrency.spec.ts` · **Requires:** current API (session routes) · **Local:** offline demo scan when STS fails (`RECOUP_ENV=local`)
+
+| # | Step | Test ID | Tag | Status |
+|---|------|---------|-----|--------|
+| PSC-1 | Two sessions each run demo scan (isolated caches) | PSC-1 | `@smoke` | ✅ |
+| PSC-2 | Session A vs B opportunity lists do not share ids | (planned) | `@smoke` | — |
+| PSC-3 | Reset session A — session B opportunities unchanged | PSC-3 | `@smoke` | ✅ |
+| PSC-4 | Two browser contexts — full UI loop independent | (planned) | `@full` | — |
+
+```bash
+cd frontend && npx playwright test e2e/journey-demo-session-concurrency.spec.ts
+```
 
 ---
 
@@ -275,7 +294,7 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | `journey-ui-browser.spec.ts` | 12 | UI |
 | `live-ec2-demo-removed.spec.ts` | 5 | UI / regression |
 | `workflow-stages.spec.ts` | 14 | WF / pipeline |
-| **Total** | **123** (15 files) | J-FULL + J2–J9 + SEC + UI + WF |
+| **Total** | **125** (16 files) | J-FULL + PSC + J2–J9 + SEC + UI + WF |
 
 **Removed Sep 2026 (consolidated or deleted):** `decision-inbox`, `recovery-ledger`, `opportunity-detail`, `journey-full-recovery`, plus J4/J5/J10–J12 and Strands lifecycle mega-specs.
 

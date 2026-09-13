@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { RecoveryPlan } from "@/lib/recovery-types";
 import { cn } from "@/lib/utils";
 
+const PHASE_ORDER = ["precheck", "execution", "verification"] as const;
 const PHASE_LABEL: Record<string, string> = {
   precheck: "Pre-checks",
   execution: "Execution",
@@ -11,76 +12,110 @@ const PHASE_LABEL: Record<string, string> = {
   rollback: "Rollback",
 };
 
-export function RecoveryPlanCollapsible({ plan }: { plan: RecoveryPlan | null | undefined }) {
-  const [open, setOpen] = useState(false);
+interface RecoveryPlanCardProps {
+  plan: RecoveryPlan | null | undefined;
+  /** When true, show as always-visible card (right column). When false, legacy collapsible. */
+  variant?: "card" | "collapsible";
+}
+
+export function RecoveryPlanCollapsible({
+  plan,
+  variant = "collapsible",
+}: RecoveryPlanCardProps) {
+  const [legacyOpen, setLegacyOpen] = useState(false);
+  const [expandedStep, setExpandedStep] = useState<string | null>(null);
+
   if (!plan) return null;
 
   const structured = plan.structured_steps ?? [];
-  const byPhase = structured.length
-    ? structured.reduce<Record<string, typeof structured>>((acc, step) => {
-        const p = step.phase;
-        if (!acc[p]) acc[p] = [];
-        acc[p].push(step);
-        return acc;
-      }, {})
-    : null;
+  const orderedSteps = structured.length
+    ? [
+        ...PHASE_ORDER.flatMap((phase) =>
+          structured.filter((s) => s.phase === phase)
+        ),
+        ...structured.filter(
+          (s) => !PHASE_ORDER.includes(s.phase as (typeof PHASE_ORDER)[number])
+        ),
+      ]
+    : [];
+
+  const listItems =
+    orderedSteps.length > 0
+      ? orderedSteps
+      : [
+          ...(plan.execution_steps ?? []).map((title, i) => ({
+            step_id: `exec-${i}`,
+            title,
+            description: "",
+            phase: "execution" as const,
+          })),
+          ...(plan.verification_steps ?? []).map((title, i) => ({
+            step_id: `ver-${i}`,
+            title,
+            description: "",
+            phase: "verification" as const,
+          })),
+        ];
+
+  const body = (
+    <div className="space-y-3">
+      <ol className="space-y-2">
+        {listItems.map((step, idx) => {
+          const open = expandedStep === step.step_id;
+          return (
+            <li key={step.step_id} className="text-sm text-slate-300">
+              <button
+                type="button"
+                className="text-left w-full flex gap-2 hover:text-slate-100"
+                onClick={() =>
+                  setExpandedStep(open ? null : step.step_id)
+                }
+              >
+                <span className="text-slate-500 shrink-0">{idx + 1}.</span>
+                <span className="font-medium">{step.title}</span>
+              </button>
+              {open && step.description && (
+                <p className="pl-6 text-xs text-slate-500 mt-1">{step.description}</p>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {plan.rollback_strategy && (
+        <div className="pt-2 border-t border-slate-700/40">
+          <span className="text-[10px] uppercase tracking-widest text-slate-500">Rollback</span>
+          <p className="text-sm text-slate-400 mt-1">{plan.rollback_strategy}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  if (variant === "card") {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          Recovery Plan
+        </h3>
+        {body}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-slate-700/40 bg-slate-800/20">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setLegacyOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800/40"
       >
         View Recovery Plan
-        <span className={cn("text-slate-500 transition-transform", open && "rotate-180")}>▼</span>
+        <span className={cn("text-slate-500 transition-transform", legacyOpen && "rotate-180")}>
+          ▼
+        </span>
       </button>
-      {open && (
-        <div className="px-4 pb-4 space-y-4 border-t border-slate-700/40 pt-3">
-          {byPhase ? (
-            Object.entries(byPhase).map(([phase, steps]) => (
-              <div key={phase}>
-                <h4 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">
-                  {PHASE_LABEL[phase] ?? phase}
-                </h4>
-                <ol className="list-decimal pl-4 text-sm text-slate-400 space-y-1">
-                  {steps.map((s) => (
-                    <li key={s.step_id}>{s.title}</li>
-                  ))}
-                </ol>
-              </div>
-            ))
-          ) : (
-            <>
-              {plan.pre_action_checks?.length ? (
-                <Section title="Pre-checks" items={plan.pre_action_checks} />
-              ) : null}
-              {plan.execution_steps?.length ? (
-                <Section title="Execution" items={plan.execution_steps} />
-              ) : null}
-              {plan.verification_steps?.length ? (
-                <Section title="Verification" items={plan.verification_steps} />
-              ) : null}
-              {plan.rollback_strategy ? (
-                <Section title="Rollback" items={[plan.rollback_strategy]} />
-              ) : null}
-            </>
-          )}
-        </div>
+      {legacyOpen && (
+        <div className="px-4 pb-4 border-t border-slate-700/40 pt-3">{body}</div>
       )}
-    </div>
-  );
-}
-
-function Section({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div>
-      <h4 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">{title}</h4>
-      <ol className="list-decimal pl-4 text-sm text-slate-400 space-y-1">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ol>
     </div>
   );
 }

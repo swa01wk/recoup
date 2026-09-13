@@ -67,6 +67,7 @@ export class RecoupIamStack extends cdk.Stack {
         "recoup-approvals",
         "recoup-tool-audits",
         "recoup-outcome-metadata",
+        "recoup-demo-control",
       ];
       this.appRunnerRole.addToPolicy(
         new iam.PolicyStatement({

@@ -41,13 +41,15 @@ def _clear_in_memory() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _to_dynamo_item(record: ApprovalRecord) -> dict[str, Any]:
+def _to_dynamo_item(record: ApprovalRecord, demo_session_id: str = "") -> dict[str, Any]:
     """Serialise an ApprovalRecord to a DynamoDB-compatible dict."""
     item = record.model_dump(mode="json")
     # DynamoDB TTL attribute (must be a Unix epoch integer)
     item["expires_at_epoch"] = int(record.expires_at.timestamp())
     # Decimal fields must be Decimal for boto3
     item["amount"] = str(record.amount)
+    if demo_session_id:
+        item["demo_session_id"] = demo_session_id
     return item
 
 
@@ -80,13 +82,19 @@ def save_approval(record: ApprovalRecord) -> None:
     - In production: raises on DynamoDB failure (no silent data loss).
     - Otherwise: falls back to in-memory dict.
     """
+    from ..demo_session import current_demo_session_id  # noqa: PLC0415
+
+    demo_session_id = current_demo_session_id.get() or ""
     if not _dynamo_available():
         if _is_production():
             raise RuntimeError(
                 "approval_store: boto3 not available in production — "
                 "cannot persist approval record"
             )
-        _IN_MEMORY[record.approval_id] = record.model_dump(mode="json")
+        payload = record.model_dump(mode="json")
+        if demo_session_id:
+            payload["demo_session_id"] = demo_session_id
+        _IN_MEMORY[record.approval_id] = payload
         log.debug("approval_store.saved_inmemory", approval_id=record.approval_id)
         return
 
@@ -95,7 +103,7 @@ def save_approval(record: ApprovalRecord) -> None:
 
         ddb = _ddb_resource()
         table = ddb.Table(settings.approvals_table)
-        table.put_item(Item=_to_dynamo_item(record))
+        table.put_item(Item=_to_dynamo_item(record, demo_session_id))
         log.info("approval_store.saved_dynamo", approval_id=record.approval_id)
     except Exception as exc:  # noqa: BLE001
         log.warning("approval_store.dynamo_write_failed", error=str(exc))
@@ -105,7 +113,10 @@ def save_approval(record: ApprovalRecord) -> None:
                 f"approval_store: DynamoDB write failed in production: {exc}"
             ) from exc
         # Non-production: fall back to in-memory to not block the run
-        _IN_MEMORY[record.approval_id] = record.model_dump(mode="json")
+        payload = record.model_dump(mode="json")
+        if demo_session_id:
+            payload["demo_session_id"] = demo_session_id
+        _IN_MEMORY[record.approval_id] = payload
 
 
 def get_approval(approval_id: str) -> ApprovalRecord | None:
@@ -467,4 +478,41 @@ def clear_all_approvals() -> int:
         except Exception as exc:  # noqa: BLE001
             _log.warning("approvals.clear_all_failed", error=str(exc))
 
+    return deleted
+
+
+def clear_approvals_for_session(demo_session_id: str) -> int:
+    """Delete approval records belonging to a guest demo session."""
+    import structlog as _structlog  # noqa: PLC0415
+
+    _log = _structlog.get_logger(__name__)
+    deleted = 0
+    to_delete = [
+        aid
+        for aid, raw in list(_IN_MEMORY.items())
+        if raw.get("demo_session_id") == demo_session_id
+    ]
+    for aid in to_delete:
+        _IN_MEMORY.pop(aid, None)
+        deleted += 1
+
+    if _dynamo_available():
+        try:
+            from ..config import settings as _settings  # noqa: PLC0415
+
+            ddb = _ddb_resource()
+            table = ddb.Table(_settings.approvals_table)
+            resp = table.scan()
+            items = resp.get("Items", [])
+            while "LastEvaluatedKey" in resp:
+                resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+                items.extend(resp.get("Items", []))
+            with table.batch_writer() as batch:
+                for item in items:
+                    if item.get("demo_session_id") == demo_session_id:
+                        batch.delete_item(Key={"approval_id": item["approval_id"]})
+                        deleted += 1
+            _log.info("approvals.clear_session", session=demo_session_id, deleted=deleted)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("approvals.clear_session_failed", error=str(exc))
     return deleted

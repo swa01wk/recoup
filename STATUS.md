@@ -5,7 +5,7 @@
 > **Sep 11–12:** Primary UI = scan → HITL → ledger; recovery pipeline on promote + detail UI. Metrics: [docs/README.md](docs/README.md).
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 13, 2026 — App Runner URLs (`vxndciwupy` API · `nvqjc7nnif` UI) + **407** pytest · docs sync  
+**Last Updated:** Sep 13, 2026 — Guest demo sessions (PSC) · **416** pytest · **125** Playwright · [release_notes.md](release_notes.md)  
 **Days Remaining:** 1  
 **Feature Cutoff:** Sep 11, 2026
 
@@ -24,8 +24,8 @@ Canonical metrics: [docs/README.md](docs/README.md#key-numbers-canonical--update
 
 | Metric | Value |
 |--------|-------|
-| Backend unit tests | **407** collected (live-mode skips as configured) · 0 DeprecationWarnings |
-| Playwright E2E tests | **123** (15 specs) · J-FULL + J2–J9 + 13 SEC adversarial |
+| Backend unit tests | **416** collected (live-mode skips as configured) · 0 DeprecationWarnings |
+| Playwright E2E tests | **125** (16 specs) · J-FULL + PSC + J2–J9 + 13 SEC adversarial |
 | Frontend nav | **3** sidebar links: `/opportunities`, `/scan`, `/recovery` (`/replay` removed) |
 | Scanners | **9** (EC2, EBS, EIP, RDS, S3, Lambda, ELB, CW Logs, Cost Explorer) |
 | Demo scenarios | **8/8** detected — $87.82/mo (full scan aggregate) |

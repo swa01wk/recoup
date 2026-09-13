@@ -10,13 +10,15 @@ const icon: Record<string, string> = {
   UNKNOWN: "?",
 };
 
-export function SafetyChecklist({ checks }: { checks: SafetyCheck[] }) {
+export function SafetyChecklist({ checks, bare = false }: { checks: SafetyCheck[]; bare?: boolean }) {
   if (!checks.length) return null;
   return (
-    <div className="space-y-2 pt-2 border-t border-slate-700/40">
+    <div className={bare ? "space-y-2" : "space-y-2 pt-2 border-t border-slate-700/40"}>
+      {!bare && (
       <span className="text-[10px] uppercase tracking-widest text-slate-500">
         Safety checks
       </span>
+      )}
       <ul className="space-y-1.5">
         {checks.map((c) => (
           <li

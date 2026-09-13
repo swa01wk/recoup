@@ -23,8 +23,14 @@ def client() -> TestClient:
 
 
 def _seed_promoted_opportunity(finding: Finding) -> str:
-    opp_routes._graph_states.clear()
-    scan_routes._promoted_findings.clear()
+    from recoup.demo_session import DEFAULT_TEST_SESSION, bind_session, ensure_test_session
+    from recoup.demo_state import graph_states, promoted_findings
+
+    ensure_test_session(DEFAULT_TEST_SESSION)
+    bind_session(DEFAULT_TEST_SESSION)
+    sid = DEFAULT_TEST_SESSION
+    graph_states(sid).clear()
+    promoted_findings(sid).clear()
     adapter = FindingToSignalAdapter()
     opp_id = "recovery-api-test-001"
     state = GraphState(
@@ -36,9 +42,9 @@ def _seed_promoted_opportunity(finding: Finding) -> str:
     final = recoup_graph.run(state, stop_at="risk_policy_gate")
     if final.state_version == 0:
         final = final.model_copy(update={"state_version": 1})
-    opp_routes._graph_states[opp_id] = final
+    graph_states(sid)[opp_id] = final
     opp_routes._maybe_create_approval(final)
-    scan_routes._promoted_findings.setdefault("demo", {})[finding.resource_id] = {
+    promoted_findings(sid).setdefault("demo", {})[finding.resource_id] = {
         "opportunity_id": opp_id,
         "finding": finding.model_dump(mode="json"),
     }

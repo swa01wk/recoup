@@ -9,16 +9,63 @@ export const BACKEND =
   process.env.PLAYWRIGHT_BACKEND_URL ??
   `http://127.0.0.1:${process.env.PLAYWRIGHT_BACKEND_PORT ?? "8000"}`;
 
-/** Reset all in-memory backend state between tests. */
-export async function resetBackend(request: APIRequestContext): Promise<void> {
-  await request.post(`${BACKEND}/api/test/reset`);
+/** Primary approve CTA on opportunity detail (supports dynamic monthly amount). */
+export function detailApproveButton(page: Page) {
+  return page.getByRole("button", {
+    name: /approve(\s+\$[\d.]+\/mo)?\s+recovery/i,
+  });
+}
+
+export function detailApproveConfirmButton(page: Page) {
+  return page.getByRole("button", { name: /approve & execute/i });
+}
+
+export const DEMO_SESSION_HEADER = "X-Demo-Session";
+const DEMO_SESSION_STORAGE_KEY = "recoup_demo_session_id";
+
+/** Match Playwright API session with browser localStorage before navigation. */
+export async function bindDemoSessionToPage(page: Page, sessionId: string) {
+  await page.addInitScript(
+    ({ key, id }: { key: string; id: string }) => {
+      localStorage.setItem(key, id);
+    },
+    { key: DEMO_SESSION_STORAGE_KEY, id: sessionId }
+  );
+}
+
+/** Obtain or create an isolated demo session for API calls. */
+export async function ensureDemoSession(request: APIRequestContext): Promise<string> {
+  const res = await request.post(`${BACKEND}/api/demo/session`);
+  expect(res.ok()).toBeTruthy();
+  const body = (await res.json()) as { session_id: string };
+  return body.session_id;
+}
+
+function sessionHeaders(sessionId: string): Record<string, string> {
+  return { [DEMO_SESSION_HEADER]: sessionId };
+}
+
+/** Reset backend state for one demo session (Playwright isolation). */
+export async function resetBackend(
+  request: APIRequestContext,
+  sessionId?: string
+): Promise<string> {
+  const sid = sessionId ?? (await ensureDemoSession(request));
+  await request.post(`${BACKEND}/api/demo/session/reset`, {
+    headers: sessionHeaders(sid),
+  });
+  return sid;
 }
 
 /** Call POST /api/scan/demo and return the scan result. */
 export async function runDemoScan(
-  request: APIRequestContext
+  request: APIRequestContext,
+  sessionId?: string
 ): Promise<{ total_estimated_monthly_savings_usd: number; findings: unknown[] }> {
-  const res = await request.post(`${BACKEND}/api/scan/demo`);
+  const sid = sessionId ?? (await ensureDemoSession(request));
+  const res = await request.post(`${BACKEND}/api/scan/demo`, {
+    headers: sessionHeaders(sid),
+  });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -26,9 +73,12 @@ export async function runDemoScan(
 /** Promote a finding by resource_id from the last scan. */
 export async function promoteFinding(
   request: APIRequestContext,
-  finding: Record<string, unknown>
+  finding: Record<string, unknown>,
+  sessionId?: string
 ): Promise<{ opportunity_id: string }> {
+  const sid = sessionId ?? (await ensureDemoSession(request));
   const res = await request.post(`${BACKEND}/api/scan/findings/promote`, {
+    headers: sessionHeaders(sid),
     data: finding,
   });
   expect(res.ok()).toBeTruthy();
@@ -37,16 +87,19 @@ export async function promoteFinding(
 
 /** Promote the first scan finding whose recovery assessment is not INSUFFICIENT. */
 export async function promoteActionableFinding(
-  request: APIRequestContext
+  request: APIRequestContext,
+  sessionId?: string
 ): Promise<{ opportunity_id: string; finding: Record<string, unknown> }> {
-  const scan = await runDemoScan(request);
+  const sid = sessionId ?? (await ensureDemoSession(request));
+  const scan = await runDemoScan(request, sid);
   const findings = scan.findings as Array<Record<string, unknown>>;
   expect(findings.length).toBeGreaterThan(0);
 
   for (const finding of findings) {
-    const promoted = await promoteFinding(request, finding);
+    const promoted = await promoteFinding(request, finding, sid);
     const traceRes = await request.get(
-      `${BACKEND}/api/opportunities/${promoted.opportunity_id}/trace`
+      `${BACKEND}/api/opportunities/${promoted.opportunity_id}/trace`,
+      { headers: sessionHeaders(sid) }
     );
     if (!traceRes.ok()) continue;
     const trace = (await traceRes.json()) as {
@@ -63,11 +116,13 @@ export async function promoteActionableFinding(
 /** Approve an opportunity and return the updated record. */
 export async function approveOpportunity(
   request: APIRequestContext,
-  opportunityId: string
+  opportunityId: string,
+  sessionId?: string
 ): Promise<Record<string, unknown>> {
-  // Fetch the pending approval first
+  const sid = sessionId ?? (await ensureDemoSession(request));
   const pendingRes = await request.get(
-    `${BACKEND}/api/approvals/opportunity/${opportunityId}`
+    `${BACKEND}/api/approvals/opportunity/${opportunityId}`,
+    { headers: sessionHeaders(sid) }
   );
   expect(pendingRes.ok()).toBeTruthy();
   const pending = (await pendingRes.json()) as {
@@ -80,6 +135,7 @@ export async function approveOpportunity(
   const res = await request.post(
     `${BACKEND}/api/approvals/opportunity/${opportunityId}/approve`,
     {
+      headers: sessionHeaders(sid),
       data: {
         principal: "playwright-test",
         claim_hash: pending.claim_hash,

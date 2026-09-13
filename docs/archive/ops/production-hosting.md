@@ -53,7 +53,11 @@ Then set `RECOUP_FRONTEND_URL` to the **UiAppRunnerServiceUrl** output and redep
 ## Production gates
 
 - `RECOUP_ENV=production` on App Runner (set in CDK).
-- `POST /api/test/reset` returns **403** unless `RECOUP_ENABLE_ADMIN_RESET=true` on API.
+- `POST /api/test/reset` returns **403** in production (Playwright uses session reset locally).
+- **Guest demo sessions** — each browser gets `POST /api/demo/session` → `X-Demo-Session` on API calls (UI handles this). Deploy **API + UI** together when releasing session work.
+- Sidebar **Reset Demo Data** → `POST /api/demo/session/reset?clear_scan_cache=true` (clears **that visitor only**). Requires `RECOUP_ENABLE_ADMIN_RESET=true` in production.
+- Ops global wipe: `POST /api/admin/reset?scope=global` only when `RECOUP_ENABLE_GLOBAL_RESET=true` (not for normal judges).
+- DynamoDB `recoup-demo-control` via env `DEMO_CONTROL_TABLE` (session epoch + global epoch; empty locally → in-memory fallback).
 
 ## Smoke (J-FULL)
 
@@ -64,9 +68,17 @@ Then set `RECOUP_FRONTEND_URL` to the **UiAppRunnerServiceUrl** output and redep
 
 ```bash
 ./scripts/smoke_production_api.sh 'https://vxndciwupy.us-east-1.awsapprunner.com'
+curl -sf -X POST 'https://vxndciwupy.us-east-1.awsapprunner.com/api/demo/session' | jq .
 ```
 
-Optional E2E:
+Optional E2E (after session API is deployed):
+
+```bash
+PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \
+  npx playwright test e2e/journey-demo-session-concurrency.spec.ts --grep @smoke
+```
+
+Optional J-FULL E2E:
 
 ```bash
 PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \

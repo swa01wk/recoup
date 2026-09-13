@@ -169,7 +169,7 @@ Optional **agent re-run** on detail deepens investigation without changing the J
 |-------|---------|---------------|
 | E2E | Playwright `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts` | Full operator loop |
 | E2E overlap | J2, J6, J7, J9, scan, UI browser specs | Partial paths |
-| Backend unit/integration | pytest ~407 tests | Graph, recovery pipeline, replay, approvals, scanners |
+| Backend unit/integration | pytest ~416 tests | Graph, recovery pipeline, replay, approvals, scanners, demo sessions |
 | Golden replay | `test_golden_replay.py` | SLA credit determinism |
 | Quality | `journey-quality-gates.spec.ts` | Scorecard structure |
 

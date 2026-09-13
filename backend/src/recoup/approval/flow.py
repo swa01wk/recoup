@@ -339,9 +339,11 @@ class HITLFlow:
 
         try:
             # Try to get rich metadata from graph state
-            from ..api.routes.opportunities import _graph_states  # noqa: PLC0415
+            from ..demo_session import current_demo_session_id, DEFAULT_TEST_SESSION  # noqa: PLC0415
+            from ..demo_state import graph_states  # noqa: PLC0415
 
-            gs = _graph_states.get(self._opportunity_id)
+            sid = current_demo_session_id.get() or DEFAULT_TEST_SESSION
+            gs = graph_states(sid).get(self._opportunity_id)
             if gs and gs.signal:
                 sig = gs.signal
                 resource_id = (

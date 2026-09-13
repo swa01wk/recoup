@@ -122,56 +122,31 @@ Optional **agent re-run** on detail deepens investigation; **golden replay pytes
 
 ### Operator intent
 
-Start from a clean slate: no stale opportunities, approvals, promoted findings, or ledger outcomes bleeding between demos or tests.
+Start from a clean slate for **this browser** — no stale opportunities, approvals, promoted findings, or ledger outcomes. Other visitors on the public demo are unaffected.
 
 ### Frontend
 
-- Sidebar **↺ Reset Demo Data** (calls admin reset when configured).  
-- Playwright uses API reset only (`helpers.resetBackend`).
+- On load, UI calls `POST /api/demo/session` and stores `session_id` in `localStorage`; all API calls send **`X-Demo-Session`**.
+- Sidebar **↺ Reset Demo Data** → `POST /api/demo/session/reset?clear_scan_cache=true` (confirm: *your demo only*).
 
 ### Backend
 
 | Endpoint | Role |
 |----------|------|
-| `POST /api/test/reset` | Playwright / dev — clears in-memory state; **does not** clear demo scan cache (performance) |
-| `POST /api/admin/reset?clear_scan_cache=true` | Stronger demo reset — optional scan cache clear |
+| `POST /api/demo/session` | Issue guest session token (public) |
+| `POST /api/demo/session/reset` | Clear **caller session** partition + tagged approvals/outcomes |
+| `POST /api/admin/reset?scope=session` | Same as session reset when admin gate allows |
+| `POST /api/admin/reset?scope=global` | Ops — all sessions; `RECOUP_ENABLE_GLOBAL_RESET` |
+| `POST /api/test/reset` | Legacy Playwright default-session reset (local only) |
 
-Shared implementation clears graph states, promoted findings, scan audit/history, EC2 demo cache, approvals (DynamoDB + memory), and outcome records:
-
-```281:317:backend/src/recoup/api/main.py
-def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
-    """Shared implementation for full in-memory state reset."""
-    from .routes.opportunities import _graph_states
-    from .routes.scan import _promoted_findings, _scan_audit_log, _last_scan_result, _scan_history
-
-    _graph_states.clear()
-    _promoted_findings.clear()
-    _scan_audit_log.clear()
-    _scan_history.clear()
-    if clear_scan_cache:
-        _last_scan_result.clear()
-    # ... ec2_demo, clear_all_approvals, outcome_repo.clear_all()
-```
-
-Test entry point:
-
-```339:358:backend/src/recoup/api/main.py
-@app.post("/api/test/reset", tags=["meta"])
-def test_reset() -> dict[str, str]:
-    """
-    Reset all in-memory state for Playwright test isolation.
-    ...
-    """
-    return _do_full_reset(clear_scan_cache=False)
-```
+Implementation: `backend/src/recoup/demo_session.py` (`reset_session`), `demo_control.py` (global epoch), partitioned caches in `demo_state.py`.
 
 ### Playwright
 
-```9:11:frontend/e2e/helpers.ts
-export async function resetBackend(request: APIRequestContext): Promise<void> {
-  await request.post(`${BACKEND}/api/test/reset`);
-}
-```
+`helpers.ensureDemoSession()` → `POST /api/demo/session`.  
+`helpers.resetBackend(request, sessionId?)` → session reset with `X-Demo-Session`.
+
+See `e2e/journey-demo-session-concurrency.spec.ts` (PSC).
 
 ---
 
@@ -313,7 +288,7 @@ Idempotent re-promote of same `resource_id` returns `status: "existing"` when co
 
 ### Opportunity detail UI
 
-**`/opportunities/[id]`** — Cost Recovery Analysis: **`SummaryMetricCards`**, **`FindingNarrative`**, **`EvidenceGraphColumn`**, **`RecommendationPanel`**, **`RecoveryPlanCollapsible`**, **`SafetyChecklist`** in approve dialog, pipeline strip, **Approval Required** `DecisionCard` (`frontend/src/app/opportunities/[id]/page.tsx` and `frontend/src/components/recoup/*`).
+**`/opportunities/[id]`** — Cost Recovery Analysis: **`OpportunityHeader`**, six-card **`SummaryMetricCards`**, clickable **`LifecycleStepper`**, left column (**`WhatRecoupFound`**, **`WhyRecoupBelieves`**, **`EvidenceGraphColumn`**) and right column (**`RecommendationPanel`**, **`SafetyChecksCard`**, **`RecoveryPlanCollapsible`**), full-width **`DecisionCard`** (HITL), then **`ConfidenceDetails`**, **`PolicyGovernance`**, **`RawEvidenceAccordion`** (`frontend/src/app/opportunities/[id]/page.tsx` and `frontend/src/components/recoup/*`).
 
 ---
 
@@ -546,7 +521,8 @@ Recoup is **hackathon-complete** when you present **J-FULL as the primary operat
 
 | Step | HTTP |
 |------|------|
-| Reset | `POST /api/test/reset` |
+| Session | `POST /api/demo/session` |
+| Reset | `POST /api/demo/session/reset` (+ `X-Demo-Session`) |
 | Scan | `POST /api/scan/demo` |
 | Promote | `POST /api/scan/findings/promote` |
 | Approve | `POST /api/approvals/opportunity/{id}/approve` |

@@ -27,14 +27,18 @@ from ...models.opportunity import OpportunityState
 from ...models.recovery import WorkflowSnapshot
 from ...models.signal import IncidentSignal
 
+from ...demo_session import require_session_id
+from ...demo_state import graph_states as graph_states_for_session
+
 router = APIRouter()
 
 # In-memory store for Phase 1 (replaced by DynamoDB in Phase 2)
 _state_machine = InMemoryStateMachine()
 
-# Shared across routers — replay.py imports and writes to this dict so that
-# Shared in-memory graph states for scan-promoted and agent-run opportunities
-_graph_states: dict[str, GraphState] = {}
+
+def _graph_states() -> dict[str, GraphState]:
+    """Session-scoped in-memory graph states."""
+    return graph_states_for_session(require_session_id())
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +113,8 @@ def _opportunity_response(opp_id: str, gs: GraphState) -> OpportunityResponse:
 def list_opportunities() -> list[OpportunityResponse]:
     """Return all tracked opportunities."""
     # Scan-promoted and agent-run opps live in _graph_states (state + potential_value).
-    if _graph_states:
-        return [_opportunity_response(opp_id, gs) for opp_id, gs in _graph_states.items()]
+    if _graph_states():
+        return [_opportunity_response(opp_id, gs) for opp_id, gs in _graph_states().items()]
 
     results = []
     for opp_id, record in _state_machine.get.__self__.__dict__.get(  # type: ignore
@@ -129,7 +133,7 @@ def list_opportunities() -> list[OpportunityResponse]:
 @router.get("/{opportunity_id}", response_model=OpportunityResponse)
 def get_opportunity(opportunity_id: str) -> OpportunityResponse:
     """Return a single opportunity by ID."""
-    gs = _graph_states.get(opportunity_id)
+    gs = _graph_states().get(opportunity_id)
     if gs is None:
         raise HTTPException(status_code=404, detail=f"Opportunity '{opportunity_id}' not found")
     return _opportunity_response(opportunity_id, gs)
@@ -212,9 +216,10 @@ def _finding_for_opportunity(opportunity_id: str) -> Any | None:
     """Return the promoted scan Finding for a recovery opportunity, if any."""
     try:
         from ..scanners.finding import Finding  # noqa: PLC0415
-        from .scan import _promoted_findings  # noqa: PLC0415
+        from ...demo_state import promoted_findings as promoted_for_session
+        from ...demo_session import require_session_id
 
-        for account_bucket in _promoted_findings.values():
+        for account_bucket in promoted_for_session(require_session_id()).values():
             for entry in account_bucket.values():
                 if entry.get("opportunity_id") == opportunity_id:
                     return Finding(**entry["finding"])
@@ -234,7 +239,7 @@ def _recovery_action_for_opportunity(opportunity_id: str) -> str:
 
 def _set_graph_state(opportunity_id: str, new_state: OpportunityState) -> GraphState | None:
     """Update in-memory graph state and bump state_version."""
-    gs = _graph_states.get(opportunity_id)
+    gs = _graph_states().get(opportunity_id)
     if gs is None:
         return None
     updated = gs.model_copy(
@@ -243,7 +248,7 @@ def _set_graph_state(opportunity_id: str, new_state: OpportunityState) -> GraphS
             "state_version": gs.state_version + 1,
         }
     )
-    _graph_states[opportunity_id] = updated
+    _graph_states()[opportunity_id] = updated
     return updated
 
 
@@ -292,7 +297,7 @@ def run_opportunity(opportunity_id: str, req: RunRequest) -> dict[str, Any]:
     round-trip. The ``use_strands`` value in the response still reflects the
     request so callers can confirm the flag was honoured.
     """
-    existing = _graph_states.get(opportunity_id)
+    existing = _graph_states().get(opportunity_id)
     if existing is not None and existing.availability_result is not None:
         # Already analysed — return cached result without re-running Strands.
         _maybe_create_approval(existing)
@@ -325,7 +330,7 @@ def run_opportunity(opportunity_id: str, req: RunRequest) -> dict[str, Any]:
     # meaningful and tests can detect version increments.
     if final_state.state_version == 0:
         final_state = final_state.model_copy(update={"state_version": 1})
-    _graph_states[opportunity_id] = final_state
+    _graph_states()[opportunity_id] = final_state
     _maybe_create_approval(final_state)
 
     return {
@@ -344,7 +349,7 @@ def run_opportunity(opportunity_id: str, req: RunRequest) -> dict[str, Any]:
 @router.get("/{opportunity_id}/trace")
 def get_trace(opportunity_id: str) -> dict[str, Any]:
     """Return the agent trace for an opportunity (availability result + calc trace)."""
-    gs = _graph_states.get(opportunity_id)
+    gs = _graph_states().get(opportunity_id)
     if gs is None:
         raise HTTPException(status_code=404, detail=f"Opportunity '{opportunity_id}' not found")
     return _build_trace_payload(opportunity_id, gs)
@@ -393,7 +398,7 @@ async def stream_opportunity_progress(opportunity_id: str) -> StreamingResponse:
       - ``approval_required``— { amount, claim_hash? }
       - ``opportunity_done`` — { state, errors }
     """
-    existing = _graph_states.get(opportunity_id)
+    existing = _graph_states().get(opportunity_id)
 
     if existing is not None:
         if existing.current_state == OpportunityState.NEEDS_FOLLOWUP:
@@ -434,7 +439,7 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
                 updates = enrich_assessment_investigation(investigating)
                 iteration = updates.pop("investigation_iteration", None)
                 investigating = investigating.model_copy(update=updates)
-                _graph_states[opportunity_id] = investigating
+                _graph_states()[opportunity_id] = investigating
                 ra = investigating.recovery_assessment
                 if ra and ra.evidence_sufficiency:
                     extra["recovery_phase"] = "UNDERSTAND"
@@ -483,7 +488,7 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
         awaiting = investigating.model_copy(
             update={"current_state": OpportunityState.AWAITING_APPROVAL}
         )
-        _graph_states[opportunity_id] = awaiting
+        _graph_states()[opportunity_id] = awaiting
 
         _maybe_create_approval(awaiting)
 
@@ -602,7 +607,7 @@ async def _stream_live(opportunity_id: str) -> StreamingResponse:
             final = await asyncio.to_thread(
                 recoup_graph.run, initial_state, on_node_start, on_node_complete
             )
-            _graph_states[opportunity_id] = final
+            _graph_states()[opportunity_id] = final
             _maybe_create_approval(final)
             loop.call_soon_threadsafe(
                 queue.put_nowait,

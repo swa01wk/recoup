@@ -125,7 +125,9 @@ python scripts/create_stale_snapshot.py
 
 ## Resetting Between Demo Sessions
 
-Stop the two most expensive resources to reduce hourly spend by ~70%:
+**Application state (opportunities / ledger):** Sidebar **Reset Demo Data** or `POST /api/demo/session/reset` clears **one guest session** only — see [production-hosting.md](archive/ops/production-hosting.md) and [release_notes.md](../release_notes.md).
+
+**AWS demo workloads (cost control):** Stop the two most expensive resources to reduce hourly spend by ~70%:
 
 ```bash
 # Get instance IDs from CDK outputs or AWS CLI

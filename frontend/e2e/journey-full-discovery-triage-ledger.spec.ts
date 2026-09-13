@@ -25,6 +25,8 @@ import {
   declineOpportunity,
   runExtendedInvestigationStream,
   assertRemainingUnchanged,
+  detailApproveButton,
+  detailApproveConfirmButton,
   type ScanFinding,
 } from "./helpers";
 
@@ -37,8 +39,9 @@ function opportunityIdFromUrl(page: Page): string {
 }
 
 async function clickApproveAndCaptureSns(page: Page): Promise<boolean> {
-  const approveBtn = page.getByRole("button", { name: /approve recovery/i });
+  const approveBtn = detailApproveButton(page);
   await expect(approveBtn).toBeVisible({ timeout: 15_000 });
+  await approveBtn.scrollIntoViewIfNeeded();
 
   const responsePromise = page.waitForResponse(
     (r) =>
@@ -50,7 +53,7 @@ async function clickApproveAndCaptureSns(page: Page): Promise<boolean> {
   );
 
   await approveBtn.click();
-  const confirmBtn = page.getByRole("button", { name: /approve & execute/i });
+  const confirmBtn = detailApproveConfirmButton(page);
   await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
   await confirmBtn.click();
   const response = await responsePromise;

@@ -13,8 +13,8 @@
 
 | Metric | Value | Verify with |
 |--------|-------|-------------|
-| Backend unit tests | **407** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
-| Playwright E2E | **123** tests in **15** spec files | `cd frontend && npx playwright test --list` |
+| Backend unit tests | **416** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
+| Playwright E2E | **125** tests in **16** spec files | `cd frontend && npx playwright test --list` |
 | Smoke tests | run `npx playwright test --grep @smoke` | count changes over time |
 | Graph nodes | **11** (6 deterministic · 5 agent) | `backend/src/recoup/graph/recoup_graph.py` |
 | Tools in `TOOL_REGISTRY` | **13** | `backend/src/recoup/tools/registry.py` |
@@ -86,6 +86,7 @@
 
 | File | Role |
 |------|------|
+| [../release_notes.md](../release_notes.md) | **Shipped changes & ops flags** (maintain on each release) |
 | [../USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) | Test ↔ journey map |
 | [../README.md](../README.md) | Project overview |
 | [../STATUS.md](../STATUS.md) | Internal phase tracker |

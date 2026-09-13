@@ -336,4 +336,6 @@ aws apprunner start-deployment --service-arn "<recoup-ui-arn>" --region us-east-
 - [ ] CORS curl (section 6.2)  
 - [ ] Browser hard refresh; verify sidebar API host  
 - [ ] Demo scan on `{UI}/scan`  
+- [ ] `curl -sf -X POST {API}/api/demo/session` returns 200 + `session_id` (guest sessions)  
+- [ ] `DEMO_CONTROL_TABLE=recoup-demo-control` on API if infra stack deployed  
 - [ ] Update this doc’s table in section 3 (and [production-hosting.md](./production-hosting.md))  

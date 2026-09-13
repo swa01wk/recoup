@@ -30,6 +30,7 @@ import {
   declineOpportunity,
   pollUntilState,
   promoteActionableFinding,
+  bindDemoSessionToPage,
 } from "./helpers";
 
 // ---------------------------------------------------------------------------
@@ -379,7 +380,11 @@ test("@smoke WF-12 pending approvals list matches AWAITING_APPROVAL opportunitie
 test("@smoke @ui WF-13 opportunity detail pipeline strip highlights 'Approve' after promote", async ({
   page,
 }) => {
-  const { opportunity_id } = await promoteActionableFinding(page.request);
+  const sid = await resetBackend(page.request);
+  await bindDemoSessionToPage(page, sid);
+  await page.goto("/");
+
+  const { opportunity_id } = await promoteActionableFinding(page.request, sid);
 
   await page.goto(`/opportunities/${opportunity_id}`);
   await page.waitForLoadState("networkidle");

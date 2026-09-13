@@ -114,6 +114,7 @@ export class RecoupAppStack extends cdk.Stack {
               { name: "APPROVALS_TABLE", value: props.approvalsTableName },
               { name: "TOOL_AUDITS_TABLE", value: props.toolAuditsTableName },
               { name: "OUTCOME_METADATA_TABLE", value: props.outcomeMetadataTableName },
+              { name: "DEMO_CONTROL_TABLE", value: "recoup-demo-control" },
               { name: "EVIDENCE_BUCKET", value: props.evidenceBucketName },
               { name: "SLA_CATALOG_BUCKET", value: props.slaCatalogBucketName },
               { name: "EVAL_FIXTURES_BUCKET", value: props.evalFixturesBucketName },

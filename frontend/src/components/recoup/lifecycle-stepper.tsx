@@ -1,21 +1,22 @@
 "use client";
 
+import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { PIPELINE_STEPS, PIPELINE_STAGE_HINTS, pipelineStepLabel } from "@/lib/recoup-ui-rules";
-import { Tooltip } from "@/components/ui/tooltip";
+import type { RecoveryAssessment } from "@/lib/recovery-types";
+import { pipelineStageExplanation } from "@/lib/recovery-presentation";
 
 interface LifecycleStepperProps {
   activeStage: number;
   stageHints?: Record<number, string>;
   failed?: boolean;
-  /** When true, all pipeline stages render as completed (e.g. RECOVERED). */
   allStagesComplete?: boolean;
-  /** Current pipeline execution stage (e.g. "Remediating") */
   executionLabel?: string;
-  /** Lifecycle authorization state (e.g. "Approved") — shown when distinct from execution */
   lifecycleLabel?: string;
   compact?: boolean;
   className?: string;
+  assessment?: RecoveryAssessment | null;
+  pendingApproval?: boolean;
 }
 
 export function LifecycleStepper({
@@ -27,13 +28,22 @@ export function LifecycleStepper({
   lifecycleLabel,
   compact = false,
   className,
+  assessment = null,
+  pendingApproval = false,
 }: LifecycleStepperProps) {
+  const detailId = useId();
+  const [expandedStage, setExpandedStage] = useState<number | null>(null);
   const clampedStage = Math.max(1, Math.min(activeStage, PIPELINE_STEPS.length));
   const stageName = executionLabel ?? pipelineStepLabel(clampedStage);
   const displayStage = allStagesComplete ? PIPELINE_STEPS.length : clampedStage;
   const showLifecycle =
     lifecycleLabel &&
     lifecycleLabel.toLowerCase() !== stageName.toLowerCase();
+
+  const toggleStage = (stage: number, isDone: boolean, isActive: boolean) => {
+    if (!isDone && !isActive) return;
+    setExpandedStage((prev) => (prev === stage ? null : stage));
+  };
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -84,32 +94,40 @@ export function LifecycleStepper({
             const isDone = !failed && (allStagesComplete || stage < clampedStage);
             const isActive = !allStagesComplete && !failed && stage === clampedStage;
             const isFailed = failed && !allStagesComplete && stage === clampedStage;
-            const hint = stageHints[stage];
-            const pill = (
-              <div
-                className={cn(
-                  "px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all whitespace-nowrap",
-                  isDone
-                    ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-300"
-                    : isFailed
-                    ? "border-red-700/60 bg-red-900/20 text-red-300"
-                    : isActive
-                    ? "border-blue-600/70 bg-blue-900/20 text-blue-300"
-                    : "border-slate-700/40 bg-slate-800/20 text-slate-500"
-                )}
-              >
+            const isExpanded = expandedStage === stage;
+            const canExpand = isDone || isActive;
+            const pillClass = cn(
+              "px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all whitespace-nowrap",
+              isDone
+                ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-300"
+                : isFailed
+                ? "border-red-700/60 bg-red-900/20 text-red-300"
+                : isActive
+                ? "border-blue-600/70 bg-blue-900/20 text-blue-300"
+                : "border-slate-700/40 bg-slate-800/20 text-slate-500",
+              canExpand && "cursor-pointer hover:brightness-110",
+              isExpanded && "ring-1 ring-slate-500/50"
+            );
+            const content = (
+              <>
                 {isDone ? "✓ " : isFailed ? "✕ " : isActive ? "● " : "○ "}
                 {label}
-              </div>
+              </>
             );
             return (
               <div key={label} className="flex items-center gap-1">
-                {hint && (isDone || isActive) ? (
-                  <Tooltip content={<span className="max-w-[220px] block">{hint}</span>}>
-                    {pill}
-                  </Tooltip>
+                {canExpand ? (
+                  <button
+                    type="button"
+                    className={pillClass}
+                    aria-expanded={isExpanded}
+                    aria-controls={isExpanded ? detailId : undefined}
+                    onClick={() => toggleStage(stage, isDone, isActive)}
+                  >
+                    {content}
+                  </button>
                 ) : (
-                  pill
+                  <div className={pillClass}>{content}</div>
                 )}
                 {i < PIPELINE_STEPS.length - 1 && (
                   <span className="text-slate-600 text-[10px]">→</span>
@@ -119,11 +137,28 @@ export function LifecycleStepper({
           })}
         </div>
       )}
+
+      {expandedStage != null && (
+        <div
+          id={detailId}
+          className="rounded-md border border-slate-700/50 bg-slate-900/40 px-3 py-2 text-xs text-slate-300 space-y-1"
+        >
+          <p className="font-semibold uppercase tracking-wide text-slate-400">
+            {PIPELINE_STEPS[expandedStage - 1]}
+          </p>
+          {pipelineStageExplanation(expandedStage, assessment, pendingApproval).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+          {stageHints[expandedStage] &&
+            !pipelineStageExplanation(expandedStage, assessment, pendingApproval).includes(
+              stageHints[expandedStage]
+            ) && <p className="text-slate-500">{stageHints[expandedStage]}</p>}
+        </div>
+      )}
     </div>
   );
 }
 
-/** Business milestones only — use when a simplified progress view is needed. */
 export const BUSINESS_MILESTONES = [
   "Detected",
   "Evidence Ready",
@@ -164,7 +199,6 @@ export function BusinessMilestoneStrip({ activeIndex, className }: BusinessMiles
   );
 }
 
-/** Map opportunity state to business milestone index (0–4). */
 export function stateToMilestoneIndex(state: string): number {
   const s = state.toUpperCase();
   if (["RECOVERED", "MONITORING"].includes(s)) return 4;

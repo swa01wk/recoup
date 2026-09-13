@@ -7,7 +7,13 @@
  * Tags: @ui · @smoke
  */
 import { test, expect, type Page } from "@playwright/test";
-import { BACKEND, resetBackend, promoteActionableFinding } from "./helpers";
+import {
+  BACKEND,
+  resetBackend,
+  promoteActionableFinding,
+  detailApproveButton,
+  detailApproveConfirmButton,
+} from "./helpers";
 
 test.beforeEach(async ({ request, page }) => {
   await resetBackend(request);
@@ -49,7 +55,7 @@ test("@smoke @ui UI-3 Demo scan navigates to opportunities", async ({ page }) =>
 test("@smoke @ui UI-4 HITL buttons on opportunity detail", async ({ page }) => {
   const oppId = await promoteFirstFinding(page);
   await page.goto(`/opportunities/${oppId}`);
-  await expect(page.getByRole("button", { name: /approve recovery/i })).toBeVisible({
+  await expect(detailApproveButton(page)).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.getByRole("button", { name: /decline/i }).first()).toBeVisible();
@@ -60,11 +66,12 @@ test("@smoke @ui UI-5 Approve recovery from detail page", async ({ page }) => {
   const oppId = await promoteFirstFinding(page);
   await page.goto(`/opportunities/${oppId}`);
 
-  const approveBtn = page.getByRole("button", { name: /approve recovery/i });
+  const approveBtn = detailApproveButton(page);
   await expect(approveBtn).toBeVisible({ timeout: 15_000 });
+  await approveBtn.scrollIntoViewIfNeeded();
   await approveBtn.click();
 
-  const confirmBtn = page.getByRole("button", { name: /approve & execute/i });
+  const confirmBtn = detailApproveConfirmButton(page);
   await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
 
   const responsePromise = page.waitForResponse(

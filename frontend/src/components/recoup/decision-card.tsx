@@ -1,11 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { fmtSavings, formatRiskTier } from "@/lib/recoup-ui-rules";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MetricCard } from "@/components/recoup/metric-card";
-import { RiskIndicator } from "@/components/recoup/risk-indicator";
-import { fmtSavings, fmtYearlySavings } from "@/lib/recoup-ui-rules";
 
 interface DecisionCardProps {
   action: string;
@@ -28,55 +25,55 @@ export function DecisionCard({
   impactMonthly,
   riskTier,
   rollback,
-  policyNote = "Cedar requires human approval",
+  policyNote = "Human approval required for cost recovery actions.",
   loading = false,
   onApprove,
   onDecline,
   onInvestigate,
   message,
-  approveLabel = "Approve Recovery",
+  approveLabel,
 }: DecisionCardProps) {
-  return (
-    <Card className="border-amber-700/50 bg-gradient-to-br from-amber-950/20 to-slate-900/40">
-      <CardContent className="py-6 space-y-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="text-lg font-bold text-amber-200">Approval Required</h2>
-          <Badge variant="pending">Awaiting Approval</Badge>
-        </div>
+  const cta =
+    approveLabel ?? `Approve ${fmtSavings(impactMonthly)} Recovery`;
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  return (
+    <Card className="border-amber-700/40 bg-slate-900/40" data-testid="approval-required-card">
+      <CardContent className="py-6 space-y-5">
+        <h2 className="text-lg font-bold text-amber-200">Approval Required</h2>
+        <p className="text-sm text-slate-400">
+          Recoup is ready to execute the proposed recovery plan.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div className="space-y-1">
             <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
               Action
             </span>
-            <p className="text-sm font-semibold text-slate-100">{action}</p>
+            <p className="font-semibold text-slate-100">{action}</p>
           </div>
           <div className="space-y-1">
             <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
               Why
             </span>
-            <p className="text-sm text-slate-300">{why}</p>
+            <p className="text-slate-300">{why}</p>
           </div>
-          <MetricCard
-            label="Impact"
-            value={fmtSavings(impactMonthly)}
-            sub={fmtYearlySavings(impactMonthly)}
-            accent="green"
-            dominant
-          />
+          <div className="space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
+              Impact
+            </span>
+            <p className="text-emerald-400 font-medium">{fmtSavings(impactMonthly)}</p>
+          </div>
           <div className="space-y-1">
             <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
               Risk
             </span>
-            <div className="pt-0.5">
-              <RiskIndicator tier={riskTier} />
-            </div>
+            <p className="text-slate-200">{formatRiskTier(riskTier)}</p>
           </div>
           <div className="space-y-1 sm:col-span-2">
             <span className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
               Rollback
             </span>
-            <p className="text-sm text-slate-400">{rollback}</p>
+            <p className="text-slate-400">{rollback}</p>
           </div>
         </div>
 
@@ -88,11 +85,17 @@ export function DecisionCard({
           <Button variant="secondary" size="sm" loading={loading} onClick={onInvestigate}>
             Investigate Further
           </Button>
-          <Button variant="ghost" size="sm" loading={loading} onClick={onDecline} className="text-red-400 hover:text-red-300 border border-red-900/40">
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={loading}
+            onClick={onDecline}
+            className="text-red-400 hover:text-red-300 border border-red-900/40"
+          >
             Decline
           </Button>
           <Button variant="success" size="md" loading={loading} onClick={onApprove}>
-            {approveLabel}
+            {cta}
           </Button>
         </div>
 

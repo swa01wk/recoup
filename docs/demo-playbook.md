@@ -3,7 +3,7 @@
 **Last updated:** Sep 13, 2026  
 **Primary operator journey:** [operator-journey.md](operator-journey.md) (**J-FULL** / **S5**)  
 **Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
-**Test suite:** 123 Playwright tests in 15 specs · `@smoke` + `@full` (`npx playwright test --list`)  
+**Test suite:** 125 Playwright tests in 16 specs · `@smoke` + `@full` (`npx playwright test --list`)  
 See [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) for per-step coverage.
 
 ---
@@ -24,7 +24,7 @@ Recoup’s **shipped operator story** is account-scanner cost recovery: real AWS
 
 **Production:** same steps on the public UI; skip reset (403 in production).
 
-1. Sidebar **↺ Reset Demo Data** (optional locally) or `POST /api/test/reset` in tests  
+1. Sidebar **↺ Reset Demo Data** (clears **your** session only) or Playwright `POST /api/demo/session/reset`  
 2. **`/scan`** → consent → **Demo Scan** → **`/opportunities`**  
 3. Three findings, **three distinct services** (breadth demo)  
 4. **Start Recovery** on each → **`/opportunities/{id}`**  
@@ -53,6 +53,7 @@ Use **$87.82** when describing “what the scanner detects in one demo run.”
 | Scenario | ID | Role in demo | Live AWS | Playwright |
 |----------|----|--------------|----------|------------|
 | **Operator loop (J-FULL)** | **S5** | **Primary judge UI path** | ✅ | ✅ `journey-full-discovery-triage-ledger` |
+| Parallel guest sessions | PSC | Concurrent judges / isolation | ✅ (App Runner role) | ✅ `journey-demo-session-concurrency` @smoke |
 | Scanner coverage | S6 | Same scan as S5; 8 tagged workloads | ✅ | ✅ J2 |
 | Cross-Account Connect | S2 | Onboarding depth | ✅ | ✅ J3 |
 | Evidence Sanitizer | S4 | Quality gates / replay trace | ✅ | ✅ J8 |

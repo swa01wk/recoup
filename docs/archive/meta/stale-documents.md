@@ -16,7 +16,7 @@
 | `demo-playbook.md` S5 primary; S1/S3/S7–S9 marked removed | ✅ |
 | `replay-system.md`, `judge-demo.md`, `USER_JOURNEY_CHECKLIST.md` | ✅ Post-cleanup counts & removed journeys |
 | `code-changes-timing.md` execution + matrix | ✅ Phases 0–5 done |
-| `STATUS.md`, `submission-record.md`, test count lines in README | ✅ Use **123** Playwright (15 specs) · **407** pytest (Sep 13) |
+| `STATUS.md`, `submission-record.md`, test count lines in README | ✅ Use **125** Playwright (16 specs) · **416** pytest · [release_notes.md](../../../release_notes.md) |
 | Production App Runner URLs (API `vxndciwupy…`, UI `nvqjc7nnif…`) | ✅ Synced across root README, judge/operator guides, scripts, [production-hosting.md](../ops/production-hosting.md) (Sep 13) |
 | Recovery pipeline + detail UI docs | ✅ `backend-code-architecture`, `frontend-code-architecture`, `agent-code-architecture`, `operator-journey` (Sep 11–13) |
 | `plans/SUPERSEDED.md` pointer | ✅ |

@@ -57,8 +57,13 @@ class OutcomeRepository:
         opportunity_id: str,
         credit_amount: Decimal,
         action_taken: str,
+        demo_session_id: str = "",
     ) -> dict[str, Any]:
         """Create a new outcome record in PENDING state."""
+        from ..demo_session import current_demo_session_id  # noqa: PLC0415
+
+        if not demo_session_id:
+            demo_session_id = current_demo_session_id.get() or ""
         pk = f"outcome#{opportunity_id}"
         record: dict[str, Any] = {
             "pk": pk,
@@ -75,6 +80,8 @@ class OutcomeRepository:
             "verification_status": "EXECUTED_PENDING_VERIFICATION",
             "savings_lifecycle": "PENDING",
         }
+        if demo_session_id:
+            record["demo_session_id"] = demo_session_id
 
         table = self._table()
         if table is not None:
@@ -177,21 +184,32 @@ class OutcomeRepository:
             record = {**record, "opportunity_id": pk[len("outcome#") :]}
         return record
 
-    def list_all(self) -> list[dict[str, Any]]:
-        """Return all outcome records (in-memory or DynamoDB scan)."""
+    def list_all(self, demo_session_id: str | None = None) -> list[dict[str, Any]]:
+        """Return outcome records, optionally filtered by guest demo session."""
         table = self._table()
+        items: list[dict[str, Any]] = []
         if table is not None:
             try:
                 resp = table.scan()
-                return [self._normalize_record(item) for item in resp.get("Items", [])]
+                items = list(resp.get("Items", []))
+                while "LastEvaluatedKey" in resp:
+                    resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+                    items.extend(resp.get("Items", []))
             except Exception as exc:  # noqa: BLE001
                 log.warning("outcome.dynamo_scan_failed", error=str(exc))
-        return [self._normalize_record(item) for item in _in_memory.values()]
+        else:
+            items = list(_in_memory.values())
+        normalized = [self._normalize_record(item) for item in items]
+        if demo_session_id:
+            normalized = [
+                r for r in normalized if r.get("demo_session_id") == demo_session_id
+            ]
+        return normalized
 
-    def total_recovered_usd(self) -> Decimal:
+    def total_recovered_usd(self, demo_session_id: str | None = None) -> Decimal:
         """Sum all credit_amount values where outcome_state=RECOVERED."""
         total = Decimal("0")
-        for record in self.list_all():
+        for record in self.list_all(demo_session_id):
             if record.get("outcome_state") == "RECOVERED":
                 try:
                     total += Decimal(str(record.get("credit_amount", "0")))
@@ -239,6 +257,31 @@ class OutcomeRepository:
             except Exception as exc:  # noqa: BLE001
                 log.warning("outcome.clear_all_failed", error=str(exc))
 
+        return deleted
+
+    def clear_for_session(self, demo_session_id: str) -> int:
+        """Delete outcome records for one guest demo session."""
+        deleted = 0
+        for pk, rec in list(_in_memory.items()):
+            if rec.get("demo_session_id") == demo_session_id:
+                _in_memory.pop(pk, None)
+                deleted += 1
+        table = self._table()
+        if table is not None:
+            try:
+                resp = table.scan()
+                items = list(resp.get("Items", []))
+                while "LastEvaluatedKey" in resp:
+                    resp = table.scan(ExclusiveStartKey=resp["LastEvaluatedKey"])
+                    items.extend(resp.get("Items", []))
+                with table.batch_writer() as batch:
+                    for item in items:
+                        if item.get("demo_session_id") == demo_session_id:
+                            batch.delete_item(Key={"pk": item["pk"]})
+                            deleted += 1
+                log.info("outcome.clear_session", session=demo_session_id, deleted=deleted)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("outcome.clear_session_failed", error=str(exc))
         return deleted
 
 

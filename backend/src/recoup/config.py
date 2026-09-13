@@ -125,6 +125,10 @@ class Settings(BaseSettings):
     recoup_enable_real_support_submission: bool = False
     # Sidebar "Reset Demo Data" — allowed in production only when explicitly enabled
     recoup_enable_admin_reset: bool = False
+    # Ops-only wipe of all guest sessions (POST /api/admin/reset?scope=global)
+    recoup_enable_global_reset: bool = False
+    # DynamoDB table for demo session + global epoch (empty → in-memory fallback)
+    demo_control_table: str = ""
 
     # Recovery pipeline — LLM on promote (default off for CI/Playwright)
     recovery_llm_on_promote: bool = False

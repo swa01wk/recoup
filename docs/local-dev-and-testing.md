@@ -19,9 +19,10 @@ Judges can run **J-FULL** without a local stack:
 ```
 
 Deploy / CORS / SNS: [archive/ops/production-hosting.md](archive/ops/production-hosting.md).  
-`POST /api/test/reset` returns **403** when `RECOUP_ENV=production`.
+`POST /api/test/reset` returns **403** when `RECOUP_ENV=production`.  
+Guest sessions: `POST /api/demo/session` + header **`X-Demo-Session`** on demo routes (UI sets this automatically).
 
-Optional Playwright against prod:
+Optional Playwright against prod (session API must be deployed):
 
 ```bash
 cd frontend
@@ -38,7 +39,9 @@ PLAYWRIGHT_FRONTEND_URL=https://nvqjc7nnif.us-east-1.awsapprunner.com \
 |-------|---------|----------------|
 | **Docker Compose** | 8000 | `NEXT_PUBLIC_API_URL=http://localhost:8000` (default) |
 | **Native + `.env.example`** | 8010 (`RECOUP_API_PORT`) | `NEXT_PUBLIC_API_URL=http://localhost:8010` |
-| **Playwright** | Defaults to 8000; set `PLAYWRIGHT_BACKEND_PORT=8010` if needed | — |
+| **Playwright** | Defaults to 8000; set `PLAYWRIGHT_BACKEND_PORT=8012` (or any free port) if 8000 is stale | — |
+
+**Playwright note:** `PLAYWRIGHT_REUSE_SERVERS=1` reuses whatever is already listening. If that process is an **old** API build, `/api/demo/session` or offline scan fallback may be missing — prefer letting Playwright start a fresh backend, or restart uvicorn from current `main`.
 
 ---
 
@@ -68,7 +71,10 @@ curl -s http://localhost:8000/health/ready | jq .
 |---------|---------|
 | `cd frontend && npx playwright test` | Full suite |
 | `npx playwright test --grep @smoke` | Smoke subset |
+| `npx playwright test e2e/journey-demo-session-concurrency.spec.ts` | **PSC** — two isolated demo sessions (`@smoke`) |
 | `npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts` | **Full operator user journey** (below) |
+
+**Demo scan without AWS (local only):** When `RECOUP_ENV=local`, `POST /api/scan/demo` returns deterministic offline findings if STS AssumeRole fails or role env is unset — enough for PSC and most E2E without `recoup-admin` → `RecoupReadOnlyRole` trust.
 
 **Primary operator journey (full doc):** [operator-journey.md](operator-journey.md)
 
@@ -80,7 +86,8 @@ Journey map: [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) · CI: [c
 
 ```bash
 cd backend && pytest tests/ -W error::DeprecationWarning
-# ~407 collected; live-mode skips as configured
+# ~416 collected; live-mode skips as configured
+pytest tests/unit/test_demo_session.py tests/unit/test_demo_control.py
 pytest tests/unit/recovery/   # recovery pipeline unit tests
 ```
 
@@ -98,9 +105,20 @@ Scenarios and curls: [demo-playbook.md](demo-playbook.md)
 
 ## Reset demo state
 
+**Per-session (matches sidebar / Playwright helpers):**
+
 ```bash
-curl -s -X POST "http://localhost:8000/api/test/reset"
-curl -s -X POST "http://localhost:8000/api/admin/reset?clear_scan_cache=true"
+SID=$(curl -s -X POST "http://localhost:8000/api/demo/session" | jq -r .session_id)
+curl -s -X POST "http://localhost:8000/api/demo/session/reset?clear_scan_cache=true" \
+  -H "X-Demo-Session: $SID"
 ```
 
-Both return **403** when `RECOUP_ENV=production`.
+**Legacy full default-session reset (Playwright fallback):**
+
+```bash
+curl -s -X POST "http://localhost:8000/api/test/reset"
+curl -s -X POST "http://localhost:8000/api/admin/reset?clear_scan_cache=true" \
+  -H "X-Demo-Session: $SID"
+```
+
+Session and test reset return **403** in production unless `RECOUP_ENABLE_ADMIN_RESET` is set for session reset.

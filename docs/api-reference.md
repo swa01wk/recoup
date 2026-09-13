@@ -14,8 +14,10 @@
 
 | Step | Method | Path |
 |------|--------|------|
-| Reset (dev/test) | POST | `/api/test/reset` · `/api/admin/reset?clear_scan_cache=true` |
-| Scan | POST | `/api/scan/demo` · `/api/scan/full` · `/api/scan/preview` |
+| Session | POST | `/api/demo/session` (issue token — no session header) |
+| Reset (guest) | POST | `/api/demo/session/reset?clear_scan_cache=true` + **`X-Demo-Session`** |
+| Reset (dev/test) | POST | `/api/test/reset` · `/api/admin/reset?scope=session` |
+| Scan | POST | `/api/scan/demo` · `/api/scan/full` · `/api/scan/preview` (+ **`X-Demo-Session`** in production) |
 | Promote | POST | `/api/scan/findings/promote` |
 | List / detail | GET | `/api/opportunities` · `/api/opportunities/{id}` |
 | HITL | POST | `/api/approvals/opportunity/{id}/approve` · `…/investigate` · `…/decline` |
@@ -571,15 +573,63 @@ List all available replay scenarios.
 
 ---
 
+## Guest demo sessions
+
+Concurrent public demo: each browser holds a **`session_id`** and sends **`X-Demo-Session: <uuid>`** on protected routes. Opportunities, scan cache, and promoted findings are partitioned by session; cross-session GET by id returns **404**.
+
+### `POST /api/demo/session`
+
+**Auth:** Public (exempt from session header).
+
+**Response:**
+
+```json
+{
+  "session_id": "587f2e88-6d20-400b-8102-59fcdcc6e777",
+  "expires_at": "2026-09-19T23:08:07.388739+00:00"
+}
+```
+
+### `POST /api/demo/session/reset`
+
+Query: `clear_scan_cache=true|false` (default `true`).
+
+**Headers:** `X-Demo-Session: <session_id>`
+
+Clears graph state, promoted findings, scan cache/history for **that session only**; deletes approvals/outcomes tagged with `demo_session_id`. **403** in production unless `RECOUP_ENABLE_ADMIN_RESET=true`.
+
+**Concurrent reset:** **409** `{ "code": "reset_in_progress" }` while lock held.
+
+### Session header gate
+
+| Environment | Missing `X-Demo-Session` on `/api/scan/demo` |
+|-------------|-----------------------------------------------|
+| `production` | **401** `{ "code": "session_required" }` |
+| `local` | Default test session (backward compatible) |
+
+Long mutations check **session epoch** at end — **409** `{ "code": "session_reset" }` if reset occurred mid-flight.
+
+### Local offline demo scan
+
+When `RECOUP_ENV=local`, `POST /api/scan/demo` may return deterministic fixture findings if STS AssumeRole fails or role env is unset. Production always requires successful AssumeRole.
+
+---
+
 ## Admin / test reset
 
 ### `POST /api/admin/reset`
 
-Query: `clear_scan_cache=true|false`. Full reset of in-memory demo state (and DynamoDB approvals/outcomes when configured). **403** in production.
+Query:
+
+- `clear_scan_cache=true|false`
+- `scope=session` (default) — caller’s session via `X-Demo-Session`
+- `scope=global` — ops wipe all sessions; requires `RECOUP_ENABLE_GLOBAL_RESET` (and not allowed in production when flag off)
+
+**403** in production when admin/session reset disabled.
 
 ### `GET` / `POST /api/test/reset`
 
-Playwright isolation reset. **403** in production.
+Playwright isolation — resets default test session. **403** in production.
 
 ---
 

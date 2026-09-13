@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, startTransition } from "react";
 import { use } from "react";
-import Link from "next/link";
 import {
   api,
   type TraceResult,
@@ -18,35 +17,35 @@ import { fallbackApprovalContext } from "@/lib/competitive-ui";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { pipelineStageForOpportunity } from "@/lib/recovery-storage";
-import {
-  fmtSavings,
-  fmtYearlySavings,
-  formatLifecycleLabel,
-} from "@/lib/recoup-ui-rules";
+import { fmtSavings, formatLifecycleLabel } from "@/lib/recoup-ui-rules";
 import {
   serviceFindingSummary,
   serviceRecommendation,
   serviceRollback,
   deriveConciseEvidence,
-  deriveEvidenceSources,
   executedRecoveryActionLabel,
   approvalWhyText,
   executionStageLabel,
   canRerunInvestigation,
 } from "@/lib/service-presentation";
-import { EvidenceSourceChips } from "@/components/recoup/evidence-source-chips";
-import { StatusBadge } from "@/components/recoup/status-badge";
 import { LifecycleStepper } from "@/components/recoup/lifecycle-stepper";
 import { DecisionCard } from "@/components/recoup/decision-card";
 import { RecoveryVerifiedHero } from "@/components/recoup/recovery-verified-hero";
-import { TechnicalDetails } from "@/components/recoup/technical-details";
-import { serviceIcon, truncateResourceId } from "@/components/recoup/service-icons";
 import { SummaryMetricCards } from "@/components/recoup/summary-metric-cards";
-import { FindingNarrative } from "@/components/recoup/finding-narrative";
 import { EvidenceGraphColumn } from "@/components/recoup/evidence-graph-column";
 import { RecommendationPanel } from "@/components/recoup/recommendation-panel";
 import { RecoveryPlanCollapsible } from "@/components/recoup/recovery-plan-collapsible";
 import { RecommendationUpdatedBanner } from "@/components/recoup/recommendation-updated-banner";
+import { OpportunityHeader } from "@/components/recoup/opportunity-header";
+import { WhatRecoupFound } from "@/components/recoup/what-recoup-found";
+import { WhyRecoupBelieves } from "@/components/recoup/why-recoup-believes";
+import { SafetyChecksCard } from "@/components/recoup/safety-checks-card";
+import { ConfidenceDetails } from "@/components/recoup/confidence-details";
+import { PolicyGovernance } from "@/components/recoup/policy-governance";
+import {
+  RawEvidenceAccordion,
+  type RawEvidenceAccordionHandle,
+} from "@/components/recoup/raw-evidence-accordion";
 import {
   Dialog,
   DialogContent,
@@ -55,12 +54,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RiskIndicator } from "@/components/recoup/risk-indicator";
+import Link from "next/link";
 import type { InvestigationDelta, RecoveryAssessment } from "@/lib/recovery-types";
 import {
   actionConfidenceForPrimary,
   evidenceBulletsFromAssessment,
   insightSummary,
   monthlySavingsFromAssessment,
+  policyLabelFromAssessment,
   riskTierFromLevel,
   topInsight,
 } from "@/lib/recovery-presentation";
@@ -86,18 +87,17 @@ export default function OpportunityPage({
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [approval, setApproval] = useState<ApprovalRecord | null>(null);
   const [streaming, setStreaming] = useState(false);
-  const [streamDone, setStreamDone] = useState(false);
   const [livePipelineStage, setLivePipelineStage] = useState<number | null>(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [approvalMsg, setApprovalMsg] = useState<string | null>(null);
   const [finding, setFinding] = useState<Finding | null>(null);
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
   const [outcomeRecovered, setOutcomeRecovered] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [investigationDelta, setInvestigationDelta] = useState<InvestigationDelta | null>(null);
   const [approveOpen, setApproveOpen] = useState(false);
   const [investigateLines, setInvestigateLines] = useState<string[]>([]);
   const esRef = useRef<EventSource | null>(null);
+  const rawEvidenceRef = useRef<RawEvidenceAccordionHandle>(null);
 
   function outcomeOpportunityId(outcome: {
     opportunity_id?: string;
@@ -165,7 +165,6 @@ export default function OpportunityPage({
 
   const startStream = useCallback(() => {
     esRef.current?.close();
-    setStreamDone(false);
     setStreaming(true);
     setApprovalMsg(null);
     setInvestigateLines([
@@ -195,7 +194,6 @@ export default function OpportunityPage({
         void syncRecoveryLedger();
       }
       if (event.type === "opportunity_done") {
-        setStreamDone(true);
         setStreaming(false);
         setLivePipelineStage(null);
         setInvestigateLines([]);
@@ -280,15 +278,14 @@ export default function OpportunityPage({
     (oppState ? pipelineStageForOpportunity(oppState) : approval?.state === "PENDING" ? 8 : 1);
 
   const service = String(trace?.signal?.service ?? opportunity?.service ?? "AWS");
-  const region = String(trace?.signal?.region ?? opportunity?.region ?? "");
+  const region = String(trace?.signal?.region ?? opportunity?.region ?? finding?.region ?? "");
   const resourceId =
     trace?.signal?.resource_id != null
       ? String(trace.signal.resource_id)
       : finding?.resource_id ?? null;
-  const issueText = trace?.hypothesis_summary ?? "";
+  const issueText = trace?.hypothesis_summary ?? finding?.issue ?? "";
   const savingsRaw = opportunity?.potential_value ? parseFloat(opportunity.potential_value) : 0;
-  const assessment: RecoveryAssessment | null =
-    trace?.recovery_assessment ?? null;
+  const assessment: RecoveryAssessment | null = trace?.recovery_assessment ?? null;
   const savings = monthlySavingsFromAssessment(assessment, savingsRaw);
   const executionStatus =
     trace?.workflow?.execution_status ||
@@ -302,7 +299,6 @@ export default function OpportunityPage({
         : null);
   const actionConf =
     actionConfidenceForPrimary(assessment) ?? opportunity?.action_confidence ?? null;
-  const confidence = discoveryConf;
 
   const fallbackCtx = approval
     ? fallbackApprovalContext(approval.action, approval.amount)
@@ -339,12 +335,6 @@ export default function OpportunityPage({
       ? assessmentEvidence.supporting
       : deriveConciseEvidence(trace, service, issueText);
   const counterEvidence = assessmentEvidence.counter;
-  const evidenceSources = deriveEvidenceSources(
-    service,
-    finding?.finding_type,
-    finding?.evidence,
-    trace
-  );
   const whyText = approvalWhyText(issueText);
   const execLabel = executionStageLabel(oppState);
   const lifecycleLabel = formatLifecycleLabel(oppState);
@@ -358,178 +348,93 @@ export default function OpportunityPage({
   const extendedInvestigationLabel =
     oppState === "NEEDS_FOLLOWUP" ? "Run Extended Investigation" : "Re-run Investigation";
 
+  const policyLabel = policyLabelFromAssessment(assessment);
+  const headerNarrative =
+    topInsight(assessment) ??
+    "Recoup found no meaningful operational activity and identified a reversible recovery action.";
+  const resourceLabel =
+    service === "RDS" ? "DB instance" : service === "EC2" ? "Instance" : "Resource";
+  const foundBody = resourceId
+    ? `${resourceLabel} ${resourceId} continues to incur recurring cost despite showing no meaningful operational activity.`
+    : (insightSummary(assessment) ?? issueText) ||
+      "This resource shows patterns consistent with recoverable waste while continuing to incur cost.";
+
+  const impactMonthly = approval ? parseFloat(approval.amount) || savings : savings;
+  const approveCtaLabel = `Approve ${fmtSavings(impactMonthly)} Recovery`;
+
+  const openRawEvidence = () => {
+    rawEvidenceRef.current?.open();
+    document.getElementById("raw-evidence")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="flex flex-col min-h-screen p-6 space-y-5 max-w-5xl">
-      <Link href="/opportunities" className="text-slate-500 hover:text-slate-300 text-sm">
-        ← Opportunities
-      </Link>
-
-      {isRecovered && savings > 0 && (
-        <RecoveryVerifiedHero
-          amountMonthly={savings}
-          service={service}
-          resourceId={resourceId}
-          region={region || undefined}
-          executedAction={executedAction}
-          verifiedAt={verifiedAt}
-        />
-      )}
-
-      {/* 1. HERO SUMMARY */}
-      {!isRecovered && (
-        <header className="space-y-3">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="space-y-2 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-2xl">{serviceIcon(service)}</span>
-                <h1 className="text-2xl font-bold text-slate-100">{service} Opportunity</h1>
-                <StatusBadge state={oppState} />
-              </div>
-              {savings > 0 && (
-                <div>
-                  <p className="text-3xl font-mono font-bold text-emerald-400 tabular-nums">
-                    {fmtSavings(savings)} recoverable
-                  </p>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    {fmtYearlySavings(savings)} projected recovery
-                  </p>
-                </div>
-              )}
-            </div>
-            {showInvestigate && (
-              <Button variant="secondary" size="sm" loading={streaming} onClick={startStream}>
-                {streaming ? "Investigating…" : extendedInvestigationLabel}
-              </Button>
-            )}
-          </div>
-          <div>
-            <p className="text-base font-medium text-slate-200">{findingHeadline}</p>
-            <p className="text-sm text-slate-400 mt-0.5">
-              {topInsight(assessment) ??
-                "No meaningful activity detected in the evaluation window."}
-            </p>
-          </div>
-        </header>
-      )}
-
-      {/* 2. 11-STEP PIPELINE — hidden once recovery is verified */}
-      {!isRecovered && (
-        <Card className="border-slate-700/40">
-          <CardContent className="py-3">
-            <LifecycleStepper
-              activeStage={pipelineActiveStage}
-              failed={isFailed}
-              executionLabel={execLabel}
-              lifecycleLabel={lifecycleLabel}
-            />
-            {streaming && (
-              <div className="text-xs text-blue-400 mt-2 space-y-1">
-                <p className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-                  Investigating…
-                </p>
-                <ul className="pl-4 text-slate-500 space-y-0.5">
-                  {investigateLines.map((line) => (
-                    <li key={line}>• {line}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {!streaming && executionStatus && (
-              <p className="text-xs text-blue-300/90 mt-2">{executionStatus}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {!isRecovered && pendingApproval && (
+    <div className="flex flex-col min-h-screen p-6 space-y-5 max-w-7xl mx-auto">
+      {isRecovered && (
         <>
-          <DecisionCard
-            action={recommendation.action}
-            why={topInsight(assessment) ?? whyText}
-            impactMonthly={parseFloat(approval.amount) || savings}
-            riskTier={riskTier}
-            rollback={assessment?.recovery_plan?.rollback_strategy ?? rollback}
-            policyNote={assessment?.policy_note}
-            loading={approvalLoading}
-            onApprove={() => setApproveOpen(true)}
-            onDecline={() => void handleDecline()}
-            onInvestigate={() => void handleInvestigate()}
-            message={approvalMsg}
-          />
-          <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Approve Recovery</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 text-sm">
-                <p>
-                  <span className="text-slate-500">Action:</span>{" "}
-                  <span className="text-slate-100 font-medium">{recommendation.action}</span>
-                </p>
-                <p>
-                  <span className="text-slate-500">Projected recovery:</span>{" "}
-                  {fmtSavings(parseFloat(approval.amount) || savings)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500">Risk:</span>
-                  <RiskIndicator tier={riskTier} />
-                </div>
-                {actionConf != null && (
-                  <p>
-                    <span className="text-slate-500">Action confidence:</span>{" "}
-                    {Math.round(actionConf)}%
-                  </p>
-                )}
-                <p>
-                  <span className="text-slate-500">Rollback:</span>{" "}
-                  {assessment?.recovery_plan?.rollback_strategy ?? rollback}
-                </p>
-              </div>
-              <DialogFooter>
-                <Button variant="secondary" size="sm" onClick={() => setApproveOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="success"
-                  size="md"
-                  loading={approvalLoading}
-                  onClick={() => void handleApprove()}
-                >
-                  Approve &amp; Execute
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Link href="/opportunities" className="text-slate-500 hover:text-slate-300 text-sm">
+            ← Opportunities
+          </Link>
+          {savings > 0 && (
+            <RecoveryVerifiedHero
+              amountMonthly={savings}
+              service={service}
+              resourceId={resourceId}
+              region={region || undefined}
+              executedAction={executedAction}
+              verifiedAt={verifiedAt}
+            />
+          )}
         </>
       )}
 
-      {oppState === "NEEDS_FOLLOWUP" && !approval && (
-        <div className="rounded-lg border border-amber-700/50 bg-amber-900/10 px-4 py-3 text-sm text-amber-200 space-y-3">
-          <p>
-            Under investigation — run extended investigation when you are ready to approve or
-            decline again.
-          </p>
-          <Button variant="secondary" size="sm" loading={streaming} onClick={startStream}>
-            {streaming ? "Investigating…" : "Run Extended Investigation"}
-          </Button>
-        </div>
-      )}
-
-      {approvalMsg && !approval && oppState !== "NEEDS_FOLLOWUP" && (
-        <div
-          className={`rounded-lg px-4 py-3 text-sm ${
-            oppState === "DENIED"
-              ? "border border-red-800/50 bg-red-900/10 text-red-300"
-              : "border border-blue-700/50 bg-blue-900/10 text-blue-300"
-          }`}
-        >
-          {approvalMsg}
-        </div>
-      )}
-
       {!isRecovered && (
         <>
+          <OpportunityHeader
+            service={service}
+            oppState={oppState}
+            savings={savings}
+            findingHeadline={findingHeadline}
+            narrative={headerNarrative}
+            resourceId={resourceId}
+            region={region}
+            findingLabel={findingHeadline}
+            policyLabel={policyLabel}
+            riskTier={riskTier}
+            showInvestigate={showInvestigate}
+            streaming={streaming}
+            investigateLabel={extendedInvestigationLabel}
+            onInvestigate={startStream}
+          />
+
+          <Card className="border-slate-700/40">
+            <CardContent className="py-3">
+              <LifecycleStepper
+                activeStage={pipelineActiveStage}
+                failed={isFailed}
+                executionLabel={execLabel}
+                lifecycleLabel={lifecycleLabel}
+                assessment={assessment}
+                pendingApproval={pendingApproval}
+              />
+              {streaming && (
+                <div className="text-xs text-blue-400 mt-2 space-y-1">
+                  <p className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    Investigating…
+                  </p>
+                  <ul className="pl-4 text-slate-500 space-y-0.5">
+                    {investigateLines.map((line) => (
+                      <li key={line}>• {line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {!streaming && executionStatus && (
+                <p className="text-xs text-blue-300/90 mt-2">{executionStatus}</p>
+              )}
+            </CardContent>
+          </Card>
+
           <RecommendationUpdatedBanner delta={investigationDelta} />
 
           <SummaryMetricCards
@@ -539,79 +444,157 @@ export default function OpportunityPage({
             discoveryConf={discoveryConf}
             actionConf={actionConf}
             evidenceFallbackCount={evidence.length}
+            rollbackFallback={assessment?.recovery_plan?.rollback_strategy ?? rollback}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="py-4 space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  What Recoup Found
-                </h3>
-                <FindingNarrative
-                  insight={insightSummary(assessment) ?? topInsight(assessment)}
-                  whyBullets={evidence}
-                  counterBullets={counterEvidence}
-                  resourceId={resourceId}
-                  resourceLabel={
-                    service === "RDS" ? "DB instance" : service === "EC2" ? "Instance" : "Resource"
-                  }
-                  truncateResourceId={truncateResourceId}
-                />
-                <EvidenceGraphColumn
-                  graph={assessment?.evidence_graph}
-                  signals={assessment?.signals ?? []}
-                  selectedSource={selectedSource}
-                  claimFallback={issueText}
-                  recommendationFallback={recommendation.action}
-                />
-                <EvidenceSourceChips
-                  sources={evidenceSources}
-                  selectedSource={selectedSource}
-                  onSelectSource={setSelectedSource}
-                />
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-4">
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="py-4 space-y-6">
+                  <WhatRecoupFound
+                    headline={findingHeadline}
+                    body={foundBody}
+                    savings={savings}
+                  />
+                  <WhyRecoupBelieves
+                    whyBullets={evidence}
+                    counterBullets={counterEvidence}
+                    onViewRawEvidence={openRawEvidence}
+                  />
+                  <EvidenceGraphColumn
+                    graph={assessment?.evidence_graph}
+                    signals={assessment?.signals ?? []}
+                    claimFallback={issueText}
+                    recommendationFallback={recommendation.action}
+                    savingsMonthly={savings}
+                  />
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardContent className="py-4">
-                <RecommendationPanel
-                  action={recommendation.action}
-                  detail={recommendation.detail}
-                  assessment={assessment}
-                  savings={savings}
-                  rollback={assessment?.recovery_plan?.rollback_strategy ?? rollback}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="py-4 space-y-6">
+                  <RecommendationPanel
+                    action={recommendation.action}
+                    detail={recommendation.detail}
+                    assessment={assessment}
+                    savings={savings}
+                  />
+                  <SafetyChecksCard checks={assessment?.safety_checks ?? []} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="py-4">
+                  <RecoveryPlanCollapsible plan={assessment?.recovery_plan} variant="card" />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          <RecoveryPlanCollapsible plan={assessment?.recovery_plan} />
+          {pendingApproval && approval && (
+            <>
+              <DecisionCard
+                action={recommendation.action}
+                why={topInsight(assessment) ?? whyText}
+                impactMonthly={impactMonthly}
+                riskTier={riskTier}
+                rollback={assessment?.recovery_plan?.rollback_strategy ?? rollback}
+                policyNote={assessment?.policy_note ?? policyLabel}
+                loading={approvalLoading}
+                approveLabel={approveCtaLabel}
+                onApprove={() => setApproveOpen(true)}
+                onDecline={() => void handleDecline()}
+                onInvestigate={() => void handleInvestigate()}
+                message={approvalMsg}
+              />
+              <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Approve Recovery</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 text-sm">
+                    <p>
+                      <span className="text-slate-500">Action:</span>{" "}
+                      <span className="text-slate-100 font-medium">{recommendation.action}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Projected recovery:</span>{" "}
+                      {fmtSavings(impactMonthly)}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">Risk:</span>
+                      <RiskIndicator tier={riskTier} />
+                    </div>
+                    {actionConf != null && (
+                      <p>
+                        <span className="text-slate-500">Action confidence:</span>{" "}
+                        {Math.round(actionConf)}%
+                      </p>
+                    )}
+                    <p>
+                      <span className="text-slate-500">Rollback:</span>{" "}
+                      {assessment?.recovery_plan?.rollback_strategy ?? rollback}
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="secondary" size="sm" onClick={() => setApproveOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="md"
+                      loading={approvalLoading}
+                      onClick={() => void handleApprove()}
+                    >
+                      Approve &amp; Execute
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
 
-          {/* 6. TECHNICAL DETAILS */}
-          <TechnicalDetails>
-            <div className="space-y-2 font-sans text-xs">
-              <p><span className="text-slate-500">Opportunity ID:</span> {id}</p>
-              {resourceId && <p><span className="text-slate-500">Resource ARN/ID:</span> {resourceId}</p>}
-              {region.length > 0 && <p><span className="text-slate-500">Region:</span> {region}</p>}
-              {approval && <p><span className="text-slate-500">Claim hash:</span> {approval.claim_hash}</p>}
-              {approval?.action && <p><span className="text-slate-500">Backend action:</span> {approval.action}</p>}
-              {recommendation.raw && (
-                <p><span className="text-slate-500">Raw recommendation:</span> {recommendation.raw}</p>
-              )}
-              {trace?.hypothesis_summary && (
-                <p><span className="text-slate-500">Agent trace:</span> {trace.hypothesis_summary}</p>
-              )}
-              {showInvestigate && (
-                <button
-                  type="button"
-                  onClick={startStream}
-                  className="text-blue-400 hover:text-blue-300 mt-2"
-                >
-                  Re-run agent investigation →
-                </button>
-              )}
+          {oppState === "NEEDS_FOLLOWUP" && !approval && (
+            <div className="rounded-lg border border-amber-700/50 bg-amber-900/10 px-4 py-3 text-sm text-amber-200 space-y-3">
+              <p>
+                Under investigation — run extended investigation when you are ready to approve or
+                decline again.
+              </p>
+              <Button variant="secondary" size="sm" loading={streaming} onClick={startStream}>
+                {streaming ? "Investigating…" : "Run Extended Investigation"}
+              </Button>
             </div>
-          </TechnicalDetails>
+          )}
+
+          {approvalMsg && !approval && oppState !== "NEEDS_FOLLOWUP" && (
+            <div
+              className={`rounded-lg px-4 py-3 text-sm ${
+                oppState === "DENIED"
+                  ? "border border-red-800/50 bg-red-900/10 text-red-300"
+                  : "border border-blue-700/50 bg-blue-900/10 text-blue-300"
+              }`}
+            >
+              {approvalMsg}
+            </div>
+          )}
+
+          <ConfidenceDetails
+            assessment={assessment}
+            discoveryConf={discoveryConf}
+            actionConf={actionConf}
+          />
+          <PolicyGovernance assessment={assessment} />
+          <RawEvidenceAccordion
+            ref={rawEvidenceRef}
+            opportunityId={id}
+            opportunity={opportunity}
+            finding={finding}
+            trace={trace}
+            signals={assessment?.signals ?? []}
+            showRerun={showInvestigate}
+            onRerunInvestigation={startStream}
+          />
         </>
       )}
     </div>

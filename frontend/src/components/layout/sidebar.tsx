@@ -20,7 +20,7 @@ export function Sidebar() {
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const handleReset = async () => {
-    if (!confirm("Reset all demo data?\n\nThis clears all opportunities, approvals, and scan results. The next scan will fetch fresh data from AWS.")) return;
+    if (!confirm("Reset your demo data?\n\nClears your scan, opportunities, and approvals only — other visitors are unaffected.")) return;
     setResetting(true);
     setResetMsg(null);
     try {

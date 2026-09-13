@@ -137,6 +137,15 @@ export class RecoupInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
+    const demoControlTable = new dynamodb.Table(this, "RecoupDemoControlTable", {
+      tableName: "recoup-demo-control",
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      timeToLiveAttribute: "expires_at_epoch",
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
     // ── SQS ─────────────────────────────────────────────────────────────────
     // Sprint 2: extend CMK encryption to SQS queues
     const dlq = new sqs.Queue(this, "RecoupRecoveryEventsDLQ", {
