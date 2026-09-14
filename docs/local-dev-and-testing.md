@@ -10,11 +10,11 @@ Judges can run **J-FULL** without a local stack:
 
 | | URL |
 |--|-----|
-| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+| UI | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| API | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 ```bash
-./scripts/smoke_production_api.sh https://vxndciwupy.us-east-1.awsapprunner.com
+./scripts/smoke_production_api.sh https://qawwrm7kzy.us-east-1.awsapprunner.com
 ./scripts/post_change_segregation_smoke.sh
 ```
 
@@ -26,8 +26,8 @@ Optional Playwright against prod (session API must be deployed):
 
 ```bash
 cd frontend
-PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \
-PLAYWRIGHT_FRONTEND_URL=https://nvqjc7nnif.us-east-1.awsapprunner.com \
+PLAYWRIGHT_BACKEND_URL=https://qawwrm7kzy.us-east-1.awsapprunner.com \
+PLAYWRIGHT_FRONTEND_URL=https://pdkeexzwxr.us-east-1.awsapprunner.com \
   npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 ```
 

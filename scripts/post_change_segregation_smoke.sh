@@ -2,7 +2,7 @@
 # Post-change verification (Plane D/E ops) — platform must stay healthy.
 set -euo pipefail
 
-API_URL="${RECOUP_API_URL:-https://vxndciwupy.us-east-1.awsapprunner.com}"
+API_URL="${RECOUP_API_URL:-https://qawwrm7kzy.us-east-1.awsapprunner.com}"
 BASE="${API_URL%/}"
 
 echo "API health: $BASE"

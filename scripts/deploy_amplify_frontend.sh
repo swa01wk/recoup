@@ -7,14 +7,14 @@
 #
 # Usage:
 #   export GITHUB_OAUTH_TOKEN='ghp_...'
-#   export NEXT_PUBLIC_API_URL='https://vxndciwupy.us-east-1.awsapprunner.com'
+#   export NEXT_PUBLIC_API_URL='https://qawwrm7kzy.us-east-1.awsapprunner.com'
 #   ./scripts/deploy_amplify_frontend.sh
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REGION="${CDK_DEFAULT_REGION:-us-east-1}"
-API_URL="${NEXT_PUBLIC_API_URL:-https://vxndciwupy.us-east-1.awsapprunner.com}"
+API_URL="${NEXT_PUBLIC_API_URL:-https://qawwrm7kzy.us-east-1.awsapprunner.com}"
 REPO="${AMPLIFY_REPOSITORY:-https://github.com/swa01wk/recoup}"
 APP_NAME="${AMPLIFY_APP_NAME:-recoup-jfull}"
 

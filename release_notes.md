@@ -5,7 +5,18 @@ Maintained changelog for shipped behavior, ops flags, and test baselines.
 
 ---
 
-## Unreleased (on branch — deploy required for production)
+## Sep 13, 2026 (Phase 7 — submission prep)
+
+- **E2E:** Playwright helpers reuse one `X-Demo-Session` per test (`resetBackend` → browser bind → API calls); J-FULL @smoke green on isolated ports.
+- **Backend:** Offline demo scan includes a third finding (RDS) for three-service J-FULL; HITL approve writes outcome before SNS so `sns_sent` persists; in-memory outcome merge preserves SNS flags.
+- **Ops:** [`scripts/prod_journey_hitl_smoke.sh`](../scripts/prod_journey_hitl_smoke.sh) — production approve / investigate / decline smoke.
+- **Docs:** Devpost paste-ready copy, video checklist, builder.aws drafts under `docs/archive/submit/`.
+
+---
+
+## Sep 13, 2026 (production — `feat/agent_enhancements`)
+
+**Live URLs:** UI https://pdkeexzwxr.us-east-1.awsapprunner.com · API https://qawwrm7kzy.us-east-1.awsapprunner.com
 
 ### Opportunity detail UI (text-first layout)
 
@@ -51,31 +62,29 @@ Maintained changelog for shipped behavior, ops flags, and test baselines.
 | `RECOUP_ENABLE_GLOBAL_RESET` | Allow `POST /api/admin/reset?scope=global` |
 | `DEMO_CONTROL_TABLE` | DynamoDB demo control (empty → in-memory fallback locally) |
 
+### Extended investigation SSE fix
+
+- **Bug:** `GET …/stream` returned **401** in production after **Investigate Further** — `EventSource` cannot send `X-Demo-Session`.
+- **Fix:** Middleware accepts **`?demo_session=<uuid>`** on stream requests; UI `api.opportunities.streamUrl()` appends the param.
+- **Test:** `test_sse_stream_accepts_demo_session_query_param_in_production` in `tests/unit/test_demo_session.py`.
+
+**Production verification**
+
+```bash
+curl -sf -X POST https://qawwrm7kzy.us-east-1.awsapprunner.com/api/demo/session | jq .
+./scripts/smoke_production_api.sh https://qawwrm7kzy.us-east-1.awsapprunner.com
+./scripts/prod_journey_hitl_smoke.sh
+```
+
+Browser: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan → three HITL paths (approve / investigate + **Run Extended Investigation** / decline).
+
 **Tests**
 
 - Backend: `tests/unit/test_demo_session.py`, `tests/unit/test_demo_control.py`; extended `test_admin_reset_gate.py`.
 - Playwright: `e2e/journey-demo-session-concurrency.spec.ts` (PSC-1, PSC-3 `@smoke`).
 - Baselines: **416** pytest collected · **125** Playwright tests in **16** spec files.
 
-**Local PSC smoke**
-
-```bash
-cd frontend
-PLAYWRIGHT_BACKEND_PORT=8012 npx playwright test e2e/journey-demo-session-concurrency.spec.ts
-```
-
-Use a **fresh** uvicorn (Playwright `webServer` or manual). Avoid `PLAYWRIGHT_REUSE_SERVERS=1` on ports still running an **older** API build.
-
-**Production verification (after API + UI deploy)**
-
-```bash
-curl -sf -X POST https://vxndciwupy.us-east-1.awsapprunner.com/api/demo/session | jq .
-./scripts/smoke_production_api.sh https://vxndciwupy.us-east-1.awsapprunner.com
-```
-
-Until deploy completes, production returns **404** on `/api/demo/session`.
-
-**Docs updated:** `docs/archive/ops/production-hosting.md`, `docs/local-dev-and-testing.md`, `docs/api-reference.md`, `USER_JOURNEY_CHECKLIST.md`, `docs/demo-playbook.md`, `docs/operator-journey.md` (Step 1).
+**Docs synced:** production URLs, SSE session query param, runbook §2/§3, `api-reference.md`, `operator-journey.md`, `production-hosting.md`, judge/operator guides, `stale-documents.md`.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Last updated:** Sep 13, 2026  
 **Primary operator journey:** [operator-journey.md](operator-journey.md) (**J-FULL** / **S5**)  
-**Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
+**Production UI:** https://pdkeexzwxr.us-east-1.awsapprunner.com · **API:** https://qawwrm7kzy.us-east-1.awsapprunner.com  
 **Test suite:** 125 Playwright tests in 16 specs · `@smoke` + `@full` (`npx playwright test --list`)  
 See [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) for per-step coverage.
 

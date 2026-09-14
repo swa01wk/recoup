@@ -20,8 +20,10 @@ process.env.PLAYWRIGHT_FRONTEND_URL = frontendUrl;
  * Run: npx playwright test
  * Smoke only: npx playwright test --grep @smoke
  *
- * If port 8000 is occupied (e.g. Docker), use your live API port:
- *   PLAYWRIGHT_BACKEND_PORT=8010 npx playwright test
+ * If port 8000 is occupied (e.g. Docker), use a free port pair:
+ *   PLAYWRIGHT_BACKEND_PORT=8015 PLAYWRIGHT_FRONTEND_PORT=3015 npx playwright test
+ * Or reuse an existing local API (must include demo session routes):
+ *   PLAYWRIGHT_REUSE_SERVERS=1 npx playwright test
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -48,13 +50,17 @@ export default defineConfig({
       command: `cd ../backend && RECOUP_SNS_DRY_RUN=1 PYTHONPATH=src python3 -m uvicorn recoup.api.main:app --port ${backendPort}`,
       url: `${backendUrl}/health`,
       timeout: 120_000,
-      reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVERS === "1",
+      reuseExistingServer:
+        process.env.PLAYWRIGHT_REUSE_SERVERS === "1" ||
+        process.env.PLAYWRIGHT_REUSE_SERVERS === "auto",
     },
     {
       command: `NEXT_PUBLIC_API_URL=${backendUrl} npm run dev -- --port ${frontendPort} --hostname 127.0.0.1`,
       url: frontendUrl,
       timeout: 120_000,
-      reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVERS === "1",
+      reuseExistingServer:
+        process.env.PLAYWRIGHT_REUSE_SERVERS === "1" ||
+        process.env.PLAYWRIGHT_REUSE_SERVERS === "auto",
     },
   ],
 });

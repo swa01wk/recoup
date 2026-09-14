@@ -28,6 +28,28 @@ def test_missing_session_header_rejected_in_production(monkeypatch) -> None:
     assert res.json()["code"] == "session_required"
 
 
+def test_sse_stream_accepts_demo_session_query_param_in_production(monkeypatch) -> None:
+    """EventSource cannot send X-Demo-Session; ?demo_session= is allowed on GET stream."""
+    from recoup.demo_session import DEMO_SESSION_QUERY_PARAM
+    from recoup.demo_state import graph_states
+    from recoup.graph.types import GraphState
+    from recoup.models.opportunity import OpportunityState
+
+    monkeypatch.setattr("recoup.api.main.settings.recoup_env", "production")
+    client = TestClient(app)
+    sid = client.post("/api/demo/session").json()["session_id"]
+    graph_states(sid)["opp-stream"] = GraphState(
+        opportunity_id="opp-stream",
+        state_version=1,
+        current_state=OpportunityState.NEEDS_FOLLOWUP,
+    )
+    res = client.get(
+        f"/api/opportunities/opp-stream/stream?{DEMO_SESSION_QUERY_PARAM}={sid}",
+    )
+    assert res.status_code == 200
+    assert "text/event-stream" in res.headers.get("content-type", "")
+
+
 def test_session_isolation_for_opportunities_list() -> None:
     from recoup.graph.types import GraphState
     from recoup.models.opportunity import OpportunityState

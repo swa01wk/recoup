@@ -274,6 +274,20 @@ def _offline_demo_scan_result() -> ScanResult:
             scenario_tag="offline-demo",
             is_demo_resource=True,
         ),
+        Finding(
+            service="RDS",
+            resource_id="db-offline-demo-session-c",
+            resource_type="AWS::RDS::DBInstance",
+            finding_type="IDLE_RDS",
+            issue="Offline demo — idle RDS instance",
+            estimated_monthly_savings_usd=14.0,
+            recommendation="Stop if unused",
+            severity="medium",
+            region="us-east-1",
+            evidence={"cpu_utilization_7d_avg": "0.5%"},
+            scenario_tag="offline-demo",
+            is_demo_resource=True,
+        ),
     ]
     total = round(sum(f.estimated_monthly_savings_usd for f in findings), 2)
     scan_id = str(uuid.uuid4())

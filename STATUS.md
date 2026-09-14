@@ -5,7 +5,7 @@
 > **Sep 11–12:** Primary UI = scan → HITL → ledger; recovery pipeline on promote + detail UI. Metrics: [docs/README.md](docs/README.md).
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 13, 2026 — Guest demo sessions (PSC) · **416** pytest · **125** Playwright · [release_notes.md](release_notes.md)  
+**Last Updated:** Sep 13, 2026 (PM) — Guest demo sessions + SSE `demo_session` on stream · Plane A URLs in table below · [release_notes.md](release_notes.md)  
 **Days Remaining:** 1  
 **Feature Cutoff:** Sep 11, 2026
 
@@ -13,8 +13,8 @@
 
 | | URL |
 |--|-----|
-| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+| UI | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| API | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 Plane B/C/D stacks deployed; Plane E trimmed; budgets `$100/$150/$180`; segregation smoke: `./scripts/post_change_segregation_smoke.sh`.
 
@@ -657,12 +657,13 @@ cd ~/Desktop/recoup/frontend && npm run dev -- --port 3000 --hostname 127.0.0.1
 - [x] **`USER_JOURNEY_CHECKLIST.md`** — full per-step test coverage map created Sep 8
 - [x] All docs updated: DEMO_SCENARIOS, FRONTEND_GUIDE, HACKATHON_DEMO, LIVE_TESTING_GUIDE, LIVE_SCENARIOS_TODO, docs/README, docs/ci-guide, docs/scanner-coverage, docs/video-script, docs/submission-record + all doc headers updated to Sep 8
 
-### Remaining (user actions)
-- [ ] **Live deploy** — Vercel frontend + Railway/Fly backend; update README demo URL
-- [ ] **Video** — ≤ 5:00, recorded screen demo, public on YouTube/Vimeo (follow `docs/video-script.md`)
-- [ ] **builder.aws community posts** — 3 posts for +0.6 bonus (outlines in `docs/builder-posts.md`)
-- [ ] **Devpost submission** — form completed with GitHub URL, video URL, team info (see `docs/submission-record.md`)
-- [ ] **Final rubric check** — verify all 5 criteria covered in README + video
+### Remaining (user actions — Sep 13 PM)
+- [x] **Live deploy** — AWS App Runner UI + API (see README + `docs/judge-demo.md`)
+- [ ] **Video** — record/upload ≤ 5:00 ([`docs/archive/submit/video-recording-checklist.md`](docs/archive/submit/video-recording-checklist.md))
+- [ ] **builder.aws posts** — publish 3 drafts ([`docs/archive/submit/builder-post-drafts.md`](docs/archive/submit/builder-post-drafts.md))
+- [ ] **Devpost** — paste [`docs/archive/submit/devpost-project-description.md`](docs/archive/submit/devpost-project-description.md)
+- [x] **Pre-flight** — `scripts/prod_journey_hitl_smoke.sh` PASS · J-FULL Playwright @smoke green (session-scoped e2e fixes)
+- [ ] **Final rubric check** — after video recorded
 
 ---
 
@@ -914,7 +915,7 @@ All items below were fixed in Sep 3 doc pass. No open documentation debt remains
 | **Sep 3** | Phase 6f: `RecoupDemoWorkloadsStack` deployed, 8/8 scenarios detected, **396/396 tests** | ✅ Done |
 | **Sep 3–6** | Phase 8: Recovery Dashboard redesign — Ledger, roles, pipeline, promote flow | ✅ Done |
 | **Sep 7** | Phase 9: competitive UI gaps + README + deployment artifacts — **397/397 tests** | ✅ Done |
-| **Sep 7–8** | **Phase 7**: Live public URL deploy (Railway/Fly.io + Vercel) | 🟡 Pending |
+| **Sep 7–8** | **Phase 7**: Live public URL deploy (App Runner UI + API) | ✅ Done |
 | **Sep 8** | **Phase 7**: builder.aws Post 1 (Strands graph architecture) | 🔴 Pending |
 | **Sep 9–10** | **Phase 7**: Video recording + editing (≤ 5:00) | 🔴 Pending |
 | **Sep 10** | **Phase 7**: builder.aws Post 2 (Cedar + HITL + evidence) | 🔴 Pending |
@@ -971,10 +972,10 @@ All items completed as part of the `recoup_hackathon_simplification_b15db4c6` pl
 
 | Priority | Action | Guide |
 |----------|--------|-------|
-| P0 | Deploy public demo URL | [`docs/deployment.md`](docs/deployment.md) |
-| P0 | Record ≤ 5:00 demo video | [`docs/video-script.md`](docs/video-script.md) |
-| P1 | Publish 3 builder.aws posts | [`docs/builder-posts.md`](docs/builder-posts.md) |
-| P1 | Submit Devpost by Sep 13 | [`docs/submission-record.md`](docs/submission-record.md) |
+| P0 | Record ≤ 5:00 demo video | [`docs/archive/submit/video-recording-checklist.md`](docs/archive/submit/video-recording-checklist.md) |
+| P1 | Publish 3 builder.aws posts | [`docs/archive/submit/builder-post-drafts.md`](docs/archive/submit/builder-post-drafts.md) |
+| P1 | Submit Devpost | [`docs/archive/submit/devpost-project-description.md`](docs/archive/submit/devpost-project-description.md) |
+| P1 | Submission checklist | [`docs/archive/submit/submission-record.md`](docs/archive/submit/submission-record.md) |
 | P2 | Pre-demo EC2 reset | `./scripts/reset_demo_instance.sh` |
 | P2 | Run smoke suite before demo | `cd frontend && npx playwright test --grep @smoke` |
 

@@ -6,9 +6,9 @@
 
 **Production tabs (no reset):**
 
-- https://nvqjc7nnif.us-east-1.awsapprunner.com/scan  
-- https://nvqjc7nnif.us-east-1.awsapprunner.com/opportunities  
-- https://nvqjc7nnif.us-east-1.awsapprunner.com/recovery  
+- https://pdkeexzwxr.us-east-1.awsapprunner.com/scan  
+- https://pdkeexzwxr.us-east-1.awsapprunner.com/opportunities  
+- https://pdkeexzwxr.us-east-1.awsapprunner.com/recovery  
 
 ---
 
@@ -29,7 +29,7 @@ cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec
 # Quality: curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 ```
 
-**Production:** use the HTTPS tabs above; quality: `curl -s https://vxndciwupy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'`
+**Production:** use the HTTPS tabs above; quality: `curl -s https://qawwrm7kzy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'`
 
 ---
 

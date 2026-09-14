@@ -2,9 +2,9 @@
 
 **Framework:** FastAPI 0.1.0  
 **Last updated:** Sep 13, 2026  
-**Base URL (production):** `https://vxndciwupy.us-east-1.awsapprunner.com`  
+**Base URL (production):** `https://qawwrm7kzy.us-east-1.awsapprunner.com`  
 **Base URL (local):** `http://localhost:8000` (Docker / Playwright default; **8010** if using native `.env.example`)  
-**Interactive docs:** `GET /docs` (Swagger UI) · `GET /redoc` (ReDoc) — e.g. `https://vxndciwupy.us-east-1.awsapprunner.com/docs`  
+**Interactive docs:** `GET /docs` (Swagger UI) · `GET /redoc` (ReDoc) — e.g. `https://qawwrm7kzy.us-east-1.awsapprunner.com/docs`  
 **Run locally:** `cd backend && uvicorn recoup.api.main:app --reload --port 8000`  
 **Playwright tests:** J-FULL–focused suite (see `USER_JOURNEY_CHECKLIST.md`).
 
@@ -23,7 +23,8 @@
 | HITL | POST | `/api/approvals/opportunity/{id}/approve` · `…/investigate` · `…/decline` |
 | Ledger | GET | `/api/approvals/outcomes` · `/api/scan/findings/promoted` |
 | Quality | GET | `/api/quality/scorecard` |
-| Optional agent | POST | `/api/opportunities/{id}/run` · GET `…/trace` · GET `…/stream` |
+| Extended investigation (SSE) | GET | `/api/opportunities/{id}/stream?demo_session=<uuid>` (or header on non-SSE clients) |
+| Optional agent | POST | `/api/opportunities/{id}/run` · GET `…/trace` |
 
 Canonical walkthrough: [operator-journey.md](operator-journey.md).
 
@@ -454,7 +455,9 @@ Remove expired pending approvals (admin/demo).
 
 ### `GET /api/opportunities/{opportunity_id}/stream`
 
-Server-Sent Events (`text/event-stream`). Each message is JSON with a **`type`** field:
+Server-Sent Events (`text/event-stream`). Each message is JSON with a **`type`** field.
+
+**Demo session (production):** Browsers use `EventSource`, which cannot set `X-Demo-Session`. Pass the same `session_id` as query param **`demo_session`** (UI builds this in `api.opportunities.streamUrl`). Other clients may use the header instead.
 
 | `type` | Payload |
 |--------|---------|
@@ -602,9 +605,9 @@ Clears graph state, promoted findings, scan cache/history for **that session onl
 
 ### Session header gate
 
-| Environment | Missing `X-Demo-Session` on `/api/scan/demo` |
-|-------------|-----------------------------------------------|
-| `production` | **401** `{ "code": "session_required" }` |
+| Environment | Missing session on protected routes |
+|-------------|-------------------------------------|
+| `production` | **401** `{ "code": "session_required" }` unless `demo_session` query param is set (stream GET) |
 | `local` | Default test session (backward compatible) |
 
 Long mutations check **session epoch** at end — **409** `{ "code": "session_reset" }` if reset occurred mid-flight.

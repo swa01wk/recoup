@@ -23,6 +23,13 @@ export function detailApproveConfirmButton(page: Page) {
 export const DEMO_SESSION_HEADER = "X-Demo-Session";
 const DEMO_SESSION_STORAGE_KEY = "recoup_demo_session_id";
 
+/** Playwright worker session — set by resetBackend; reused by API helpers in the same test. */
+let _activeDemoSession: string | undefined;
+
+export function activeDemoSessionId(): string | undefined {
+  return _activeDemoSession;
+}
+
 /** Match Playwright API session with browser localStorage before navigation. */
 export async function bindDemoSessionToPage(page: Page, sessionId: string) {
   await page.addInitScript(
@@ -38,11 +45,26 @@ export async function ensureDemoSession(request: APIRequestContext): Promise<str
   const res = await request.post(`${BACKEND}/api/demo/session`);
   expect(res.ok()).toBeTruthy();
   const body = (await res.json()) as { session_id: string };
+  _activeDemoSession = body.session_id;
   return body.session_id;
 }
 
-function sessionHeaders(sessionId: string): Record<string, string> {
+export function sessionHeaders(sessionId: string): Record<string, string> {
   return { [DEMO_SESSION_HEADER]: sessionId };
+}
+
+async function resolveSessionId(
+  request: APIRequestContext,
+  sessionId?: string
+): Promise<string> {
+  if (sessionId) {
+    _activeDemoSession = sessionId;
+    return sessionId;
+  }
+  if (_activeDemoSession) {
+    return _activeDemoSession;
+  }
+  return ensureDemoSession(request);
 }
 
 /** Reset backend state for one demo session (Playwright isolation). */
@@ -50,10 +72,11 @@ export async function resetBackend(
   request: APIRequestContext,
   sessionId?: string
 ): Promise<string> {
-  const sid = sessionId ?? (await ensureDemoSession(request));
+  const sid = await resolveSessionId(request, sessionId);
   await request.post(`${BACKEND}/api/demo/session/reset`, {
     headers: sessionHeaders(sid),
   });
+  _activeDemoSession = sid;
   return sid;
 }
 
@@ -62,7 +85,7 @@ export async function runDemoScan(
   request: APIRequestContext,
   sessionId?: string
 ): Promise<{ total_estimated_monthly_savings_usd: number; findings: unknown[] }> {
-  const sid = sessionId ?? (await ensureDemoSession(request));
+  const sid = await resolveSessionId(request, sessionId);
   const res = await request.post(`${BACKEND}/api/scan/demo`, {
     headers: sessionHeaders(sid),
   });
@@ -76,7 +99,7 @@ export async function promoteFinding(
   finding: Record<string, unknown>,
   sessionId?: string
 ): Promise<{ opportunity_id: string }> {
-  const sid = sessionId ?? (await ensureDemoSession(request));
+  const sid = await resolveSessionId(request, sessionId);
   const res = await request.post(`${BACKEND}/api/scan/findings/promote`, {
     headers: sessionHeaders(sid),
     data: finding,
@@ -90,7 +113,7 @@ export async function promoteActionableFinding(
   request: APIRequestContext,
   sessionId?: string
 ): Promise<{ opportunity_id: string; finding: Record<string, unknown> }> {
-  const sid = sessionId ?? (await ensureDemoSession(request));
+  const sid = await resolveSessionId(request, sessionId);
   const scan = await runDemoScan(request, sid);
   const findings = scan.findings as Array<Record<string, unknown>>;
   expect(findings.length).toBeGreaterThan(0);
@@ -119,7 +142,7 @@ export async function approveOpportunity(
   opportunityId: string,
   sessionId?: string
 ): Promise<Record<string, unknown>> {
-  const sid = sessionId ?? (await ensureDemoSession(request));
+  const sid = await resolveSessionId(request, sessionId);
   const pendingRes = await request.get(
     `${BACKEND}/api/approvals/opportunity/${opportunityId}`,
     { headers: sessionHeaders(sid) }
@@ -156,11 +179,16 @@ export async function approveOpportunity(
 export async function investigateOpportunity(
   request: APIRequestContext,
   opportunityId: string,
-  notes = "Investigate Further — Playwright test"
+  notes = "Investigate Further — Playwright test",
+  sessionId?: string
 ): Promise<Record<string, unknown>> {
+  const sid = await resolveSessionId(request, sessionId);
   const res = await request.post(
     `${BACKEND}/api/approvals/opportunity/${opportunityId}/investigate`,
-    { data: { principal: "playwright-test", notes } }
+    {
+      headers: sessionHeaders(sid),
+      data: { principal: "playwright-test", notes },
+    }
   );
   expect(res.ok()).toBeTruthy();
   return res.json();
@@ -170,11 +198,16 @@ export async function investigateOpportunity(
 export async function declineOpportunity(
   request: APIRequestContext,
   opportunityId: string,
-  notes = "Declined by Playwright test"
+  notes = "Declined by Playwright test",
+  sessionId?: string
 ): Promise<Record<string, unknown>> {
+  const sid = await resolveSessionId(request, sessionId);
   const res = await request.post(
     `${BACKEND}/api/approvals/opportunity/${opportunityId}/decline`,
-    { data: { principal: "playwright-test", notes } }
+    {
+      headers: sessionHeaders(sid),
+      data: { principal: "playwright-test", notes },
+    }
   );
   expect(res.ok()).toBeTruthy();
   return res.json();
@@ -212,13 +245,17 @@ export function pickFindingsByDistinctServices(
 
 /** Latest scan payload from the backend (after demo or live scan). */
 export async function getLastScan(
-  request: APIRequestContext
+  request: APIRequestContext,
+  sessionId?: string
 ): Promise<{
   total_estimated_monthly_savings_usd: number;
   findings: ScanFinding[];
   scan_id?: string;
 }> {
-  const res = await request.get(`${BACKEND}/api/scan/last`);
+  const sid = await resolveSessionId(request, sessionId);
+  const res = await request.get(`${BACKEND}/api/scan/last`, {
+    headers: sessionHeaders(sid),
+  });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -232,8 +269,14 @@ export type OutcomeRecord = {
   sns_sent_at?: string | null;
 };
 
-export async function listOutcomes(request: APIRequestContext): Promise<OutcomeRecord[]> {
-  const res = await request.get(`${BACKEND}/api/approvals/outcomes`);
+export async function listOutcomes(
+  request: APIRequestContext,
+  sessionId?: string
+): Promise<OutcomeRecord[]> {
+  const sid = await resolveSessionId(request, sessionId);
+  const res = await request.get(`${BACKEND}/api/approvals/outcomes`, {
+    headers: sessionHeaders(sid),
+  });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -251,9 +294,13 @@ export function outcomeForOpportunity(
 
 export async function getOpportunity(
   request: APIRequestContext,
-  opportunityId: string
+  opportunityId: string,
+  sessionId?: string
 ): Promise<{ id: string; state: string; potential_value: string | null }> {
-  const res = await request.get(`${BACKEND}/api/opportunities/${opportunityId}`);
+  const sid = await resolveSessionId(request, sessionId);
+  const res = await request.get(`${BACKEND}/api/opportunities/${opportunityId}`, {
+    headers: sessionHeaders(sid),
+  });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -268,13 +315,15 @@ export async function fetchLedgerBuckets(
   recovered: number;
   totalDetected: number;
 }> {
+  const sid = await resolveSessionId(request);
+  const headers = sessionHeaders(sid);
   const [scan, oppsRes, pendingRes] = await Promise.all([
-    getLastScan(request).catch(() => ({
+    getLastScan(request, sid).catch(() => ({
       total_estimated_monthly_savings_usd: 0,
       findings: [],
     })),
-    request.get(`${BACKEND}/api/opportunities`),
-    request.get(`${BACKEND}/api/approvals/pending`),
+    request.get(`${BACKEND}/api/opportunities`, { headers }),
+    request.get(`${BACKEND}/api/approvals/pending`, { headers }),
   ]);
   expect(oppsRes.ok()).toBeTruthy();
   expect(pendingRes.ok()).toBeTruthy();
@@ -414,8 +463,11 @@ export async function seedBrowserScanResult(
  */
 export async function runDemoScanFromUiOrSeed(
   page: Page,
-  request: APIRequestContext
+  request: APIRequestContext,
+  sessionId?: string
 ): Promise<void> {
+  const sid = await resolveSessionId(request, sessionId);
+  await bindDemoSessionToPage(page, sid);
   await page.goto("/");
   await setOperatorRole(page);
   await page.goto("/scan");
@@ -429,7 +481,7 @@ export async function runDemoScanFromUiOrSeed(
     return;
   }
 
-  const scan = await runDemoScan(request);
+  const scan = await runDemoScan(request, sid);
   await seedBrowserScanResult(page, scan as Record<string, unknown>);
   await page.goto("/opportunities");
   await expect(page.getByText(/recovery summary|opportunities/i).first()).toBeVisible({
@@ -440,9 +492,10 @@ export async function runDemoScanFromUiOrSeed(
 /** Reload scan findings from the backend into browser localStorage. */
 export async function syncScanToBrowser(
   page: Page,
-  request: APIRequestContext
+  request: APIRequestContext,
+  sessionId?: string
 ): Promise<void> {
-  const scan = await getLastScan(request);
+  const scan = await getLastScan(request, sessionId);
   await seedBrowserScanResult(page, scan as Record<string, unknown>);
 }
 

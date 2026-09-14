@@ -10,7 +10,7 @@
 
 The Next.js 16 app is the operator console for the **account-scanner lifecycle**: reset demo state → scan → pick findings → promote → HITL on opportunity detail → recovery ledger. It talks to the FastAPI backend via `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
 
-**Production:** https://nvqjc7nnif.us-east-1.awsapprunner.com (image built with API URL baked in — see [archive/ops/production-hosting.md](archive/ops/production-hosting.md)).
+**Production:** https://pdkeexzwxr.us-east-1.awsapprunner.com (image built with API URL baked in — see [archive/ops/production-hosting.md](archive/ops/production-hosting.md)).
 
 ---
 

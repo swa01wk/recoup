@@ -24,8 +24,8 @@
 ```bash
 ./scripts/post_change_segregation_smoke.sh
 # or manually:
-curl -sf "https://vxndciwupy.us-east-1.awsapprunner.com/health"
-curl -sf "https://vxndciwupy.us-east-1.awsapprunner.com/health/ready"
+curl -sf "https://qawwrm7kzy.us-east-1.awsapprunner.com/health"
+curl -sf "https://qawwrm7kzy.us-east-1.awsapprunner.com/health/ready"
 aws dynamodb list-tables --query "TableNames[?starts_with(@, 'recoup-')]"
 aws sns list-topics --query "Topics[?contains(TopicArn, 'recoup-alerts')]"
 ```

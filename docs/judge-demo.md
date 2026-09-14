@@ -1,18 +1,18 @@
 # Recoup — Judge Demo Guide
 
 **Event:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
-**Last updated:** Sep 13, 2026 · Target video ≤5:00  
+**Last updated:** Sep 13, 2026 (PM) · Target video ≤5:00  
 **Canonical operator flow:** [operator-journey.md](operator-journey.md) (J-FULL)
 
 ## Live demo (AWS production)
 
 | | URL |
 |--|-----|
-| **UI** | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| **API** | https://vxndciwupy.us-east-1.awsapprunner.com |
+| **UI** | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| **API** | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 Use the same scenes below on the public UI (`/scan` → Demo Scan → `/opportunities` → …). Ops: [archive/ops/production-hosting.md](archive/ops/production-hosting.md).  
-**Note:** Sidebar **Reset Demo Data** and `POST /api/test/reset` are **disabled in production** (403) — one continuous judge session.
+**Note:** Sidebar **Reset Demo Data** clears **your session only** (`POST /api/demo/session/reset`). `POST /api/test/reset` remains **403** in production (Playwright local only).
 
 ---
 
@@ -75,7 +75,7 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 **Show:** Quality scorecard (local or API):
 
 ```bash
-curl -s https://vxndciwupy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'
+curl -s https://qawwrm7kzy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'
 # local: curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 ```
 
@@ -104,8 +104,8 @@ Diagram: [architecture/architecture.svg](../architecture/architecture.svg)
 cd frontend && npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 
 # Optional — public URLs
-PLAYWRIGHT_BACKEND_URL=https://vxndciwupy.us-east-1.awsapprunner.com \
-PLAYWRIGHT_FRONTEND_URL=https://nvqjc7nnif.us-east-1.awsapprunner.com \
+PLAYWRIGHT_BACKEND_URL=https://qawwrm7kzy.us-east-1.awsapprunner.com \
+PLAYWRIGHT_FRONTEND_URL=https://pdkeexzwxr.us-east-1.awsapprunner.com \
   npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts
 ```
 

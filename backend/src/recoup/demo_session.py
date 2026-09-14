@@ -24,6 +24,8 @@ from .demo_state import clear_all_memory, clear_session_memory
 log = structlog.get_logger(__name__)
 
 DEMO_SESSION_HEADER = "X-Demo-Session"
+# EventSource cannot set custom headers; browser SSE uses this query param instead.
+DEMO_SESSION_QUERY_PARAM = "demo_session"
 SESSION_PREFIX = "session#"
 DEFAULT_TEST_SESSION = "__playwright__"
 

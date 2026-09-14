@@ -24,8 +24,8 @@
 | Primary UI nav | **3** links: `/opportunities`, `/scan`, `/recovery` | `frontend/src/components/layout/sidebar.tsx` |
 | App routes | `/` → `/opportunities`; `/approvals`, `/quality` redirect; `/replay` **removed** (API replay remains) | `frontend/src/app/` |
 | Local backend port | **8000** (Docker, Playwright); **8010** (native uvicorn per `.env.example`) | `docker-compose.yml`, `.env.example` |
-| **Production UI (J-FULL)** | https://nvqjc7nnif.us-east-1.awsapprunner.com | [production-hosting.md](archive/ops/production-hosting.md) · [runbook](archive/ops/app-runner-deployment-runbook.md) |
-| **Production API** | https://vxndciwupy.us-east-1.awsapprunner.com | `./scripts/smoke_production_api.sh` |
+| **Production UI (J-FULL)** | https://pdkeexzwxr.us-east-1.awsapprunner.com | [production-hosting.md](archive/ops/production-hosting.md) · [runbook](archive/ops/app-runner-deployment-runbook.md) |
+| **Production API** | https://qawwrm7kzy.us-east-1.awsapprunner.com | `./scripts/smoke_production_api.sh` |
 | Golden credit value | **~$0.35** | canonical SLA replay |
 | Demo scan savings | **$87.82/mo** (full scan aggregate) | Account Scanner full run |
 | **Primary operator journey** | **J-FULL** (scan → 3 HITL paths → ledger + SNS) | **[operator-journey.md](operator-journey.md)** |
@@ -114,7 +114,8 @@ Native dev with `.env` on port **8010**: set `NEXT_PUBLIC_API_URL=http://localho
 **Production smoke (no local stack):**
 
 ```bash
-./scripts/smoke_production_api.sh https://vxndciwupy.us-east-1.awsapprunner.com
+./scripts/smoke_production_api.sh https://qawwrm7kzy.us-east-1.awsapprunner.com
+./scripts/prod_journey_hitl_smoke.sh
 ./scripts/post_change_segregation_smoke.sh
-# Browser: https://nvqjc7nnif.us-east-1.awsapprunner.com/scan → Demo Scan (J-FULL)
+# Browser: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan (J-FULL)
 ```

@@ -91,6 +91,11 @@ class OutcomeRepository:
             except Exception as exc:  # noqa: BLE001
                 log.warning("outcome.dynamo_write_failed", error=str(exc))
         else:
+            existing = _in_memory.get(pk)
+            if existing:
+                if existing.get("sns_sent"):
+                    record["sns_sent"] = True
+                    record["sns_sent_at"] = existing.get("sns_sent_at")
             _in_memory[pk] = record
             log.debug("outcome.created.inmemory", opportunity_id=opportunity_id)
 

@@ -117,7 +117,7 @@ An **11-node Strands recovery graph** (SLA/incident depth) remains for optional 
 ### 6. Infrastructure (repo)
 
 - **IaC:** `infra/cdk/` — `RecoupInfraStack`, `RecoupIamStack`, `RecoupDemoWorkloadsStack`, `RecoupAppStack` (API), `RecoupUiStack` (Next.js)
-- **Production hosting (Plane A):** App Runner + ECR; UI `https://nvqjc7nnif.us-east-1.awsapprunner.com`, API `https://vxndciwupy.us-east-1.awsapprunner.com` — [archive/ops/production-hosting.md](archive/ops/production-hosting.md)
+- **Production hosting (Plane A):** App Runner + ECR; UI `https://pdkeexzwxr.us-east-1.awsapprunner.com`, API `https://qawwrm7kzy.us-east-1.awsapprunner.com` — [archive/ops/production-hosting.md](archive/ops/production-hosting.md)
 - **Policy:** `infra/policy/recoup-policy.cedar`
 - **Scripts:** `scripts/` — `deploy_app_hosting.sh`, `deploy_ui_hosting.sh`, smoke, segregation, Plane D/E cost trims
 

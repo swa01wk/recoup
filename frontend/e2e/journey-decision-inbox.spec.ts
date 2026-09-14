@@ -20,6 +20,9 @@ import {
   approveOpportunity,
   BACKEND,
   promoteActionableFinding,
+  sessionHeaders,
+  activeDemoSessionId,
+  getOpportunity,
 } from "./helpers";
 
 // ---------------------------------------------------------------------------
@@ -45,8 +48,11 @@ async function setupPendingApproval(
 }> {
   const { opportunity_id } = await promoteActionableFinding(request);
 
+  const sid = activeDemoSessionId();
+  expect(sid).toBeTruthy();
   const pendingRes = await request.get(
-    `${BACKEND}/api/approvals/opportunity/${opportunity_id}`
+    `${BACKEND}/api/approvals/opportunity/${opportunity_id}`,
+    { headers: sessionHeaders(sid!) }
   );
   expect(pendingRes.ok()).toBeTruthy();
   const pending = (await pendingRes.json()) as {
@@ -61,7 +67,11 @@ async function setupPendingApproval(
 async function listAllApprovals(
   request: import("@playwright/test").APIRequestContext
 ): Promise<Array<{ approval_id: string; state: string; opportunity_id: string }>> {
-  const res = await request.get(`${BACKEND}/api/approvals/pending`);
+  const sid = activeDemoSessionId();
+  expect(sid).toBeTruthy();
+  const res = await request.get(`${BACKEND}/api/approvals/pending`, {
+    headers: sessionHeaders(sid!),
+  });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -96,19 +106,15 @@ test("@smoke J6-2b approve path — opportunity advances to pipeline stage 9 (Re
 }) => {
   const { opportunity_id } = await setupPendingApproval(request);
 
-  // Verify opportunity is at stage 8 (AWAITING_APPROVAL) before approval
-  const beforeRes = await request.get(`${BACKEND}/api/opportunities/${opportunity_id}`);
-  expect(beforeRes.ok()).toBeTruthy();
-  const before = (await beforeRes.json()) as { state: string };
+  const before = await getOpportunity(request, opportunity_id);
   expect(before.state).toBe("AWAITING_APPROVAL");
 
-  // Approve
   await approveOpportunity(request, opportunity_id);
 
-  // Opportunity state must be APPROVED (stage 9 — Remediate)
-  const afterRes = await request.get(`${BACKEND}/api/opportunities/${opportunity_id}`);
-  expect(afterRes.ok()).toBeTruthy();
-  const after = (await afterRes.json()) as { state: string; lifecycle_state?: string };
+  const after = (await getOpportunity(request, opportunity_id)) as {
+    state: string;
+    lifecycle_state?: string;
+  };
   expect(["APPROVED", "RECOVERED", "SUBMITTING", "SUBMITTED"]).toContain(after.state);
   // lifecycle_state canonical bucket must be APPROVED (stage 9 in the 11-step pipeline)
   if (after.lifecycle_state !== undefined) {

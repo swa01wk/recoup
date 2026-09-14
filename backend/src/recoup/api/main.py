@@ -47,6 +47,7 @@ from ..demo_session import (
     DEFAULT_TEST_SESSION,
     DemoSessionError,
     DEMO_SESSION_HEADER,
+    DEMO_SESSION_QUERY_PARAM,
     bind_session,
     ensure_test_session,
     reset_session,
@@ -206,6 +207,8 @@ async def demo_session_middleware(request: Request, call_next):  # type: ignore[
         return await call_next(request)
 
     session_id = request.headers.get(DEMO_SESSION_HEADER, "").strip()
+    if not session_id:
+        session_id = request.query_params.get(DEMO_SESSION_QUERY_PARAM, "").strip()
     if not session_id and path == "/api/test/reset":
         session_id = ensure_test_session(DEFAULT_TEST_SESSION)
         bind_session(session_id)

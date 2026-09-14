@@ -1,7 +1,7 @@
 # Recoup — Primary Operator Journey (J-FULL)
 
 **Status:** This is the **main cost-recovery lifecycle Recoup ships today**, polished for the AWS Agents for Humans hackathon demo.  
-**Last updated:** Sep 13, 2026  
+**Last updated:** Sep 13, 2026 (PM — production URLs + SSE investigate stream)  
 **Checklist entry:** [USER_JOURNEY_CHECKLIST.md — J-FULL](../USER_JOURNEY_CHECKLIST.md#j-full--full-operator-journey-scan--3-hitl-paths--ledger--sns)  
 **Playwright:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`
 
@@ -9,10 +9,10 @@
 
 | | URL |
 |--|-----|
-| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+| UI | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| API | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
-Hosting runbook: [archive/ops/production-hosting.md](archive/ops/production-hosting.md). In production, skip step 1 reset (403); complete the journey in one browser session.
+Hosting runbook: [archive/ops/production-hosting.md](archive/ops/production-hosting.md). In production, use sidebar **Reset Demo Data** (session-scoped) or skip reset; `POST /api/test/reset` is **403**.
 
 ---
 
@@ -393,6 +393,8 @@ def investigate_opportunity(...):
 ```
 
 No SNS in investigate path.
+
+**Run Extended Investigation** (after `NEEDS_FOLLOWUP`) opens **`GET /api/opportunities/{id}/stream`** (SSE). The UI appends **`?demo_session=<uuid>`** because browser `EventSource` cannot send `X-Demo-Session`. On success the stream replays pipeline nodes and reopens **Approve** (`AWAITING_APPROVAL`). Playwright: `runExtendedInvestigationStream` in `frontend/e2e/helpers.ts`; full UI path in `journey-full-discovery-triage-ledger.spec.ts`.
 
 ---
 

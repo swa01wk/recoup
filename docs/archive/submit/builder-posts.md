@@ -4,9 +4,11 @@ Three posts required for +0.6 bonus. Each title must include **"Agents for Human
 
 | # | Target date | Status | URL |
 |---|-------------|--------|-----|
-| 1 | Sep 8 | ☐ Draft | |
-| 2 | Sep 10 | ☐ Draft | |
-| 3 | Sep 12 | ☐ Draft | |
+| 1 | Sep 8 | ✅ Draft ready | _paste URL after publish_ |
+| 2 | Sep 10 | ✅ Draft ready | |
+| 3 | Sep 12 | ✅ Draft ready | |
+
+**Full copy-paste bodies:** [builder-post-drafts.md](builder-post-drafts.md)
 
 ---
 

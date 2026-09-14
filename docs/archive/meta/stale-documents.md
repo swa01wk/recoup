@@ -17,7 +17,7 @@
 | `replay-system.md`, `judge-demo.md`, `USER_JOURNEY_CHECKLIST.md` | ✅ Post-cleanup counts & removed journeys |
 | `code-changes-timing.md` execution + matrix | ✅ Phases 0–5 done |
 | `STATUS.md`, `submission-record.md`, test count lines in README | ✅ Use **125** Playwright (16 specs) · **416** pytest · [release_notes.md](../../../release_notes.md) |
-| Production App Runner URLs (API `vxndciwupy…`, UI `nvqjc7nnif…`) | ✅ Synced across root README, judge/operator guides, scripts, [production-hosting.md](../ops/production-hosting.md) (Sep 13) |
+| Production App Runner URLs (API `qawwrm7kzy…`, UI `pdkeexzwxr…`) | ✅ Synced across root README, judge/operator guides, scripts, [production-hosting.md](../ops/production-hosting.md) (Sep 13 PM) |
 | Recovery pipeline + detail UI docs | ✅ `backend-code-architecture`, `frontend-code-architecture`, `agent-code-architecture`, `operator-journey` (Sep 11–13) |
 | `plans/SUPERSEDED.md` pointer | ✅ |
 | Historical `plans/phase-*` bodies | ☐ Intentionally unchanged (Category B) |
@@ -34,7 +34,7 @@
 |------|------------------|------------------------|---|------------|
 | Primary operator story | Scan → 3 services → 3 HITL paths → ledger + SNS | **Aligned:** `operator-journey.md`, `judge-demo.md`, `demo-playbook.md` (S5 first), `README.md` | OK | Canonical — maintain here |
 | Recovery pipeline on promote | `recovery/` + detail UI (evidence graph, safety, plan) | **Aligned:** `operator-journey.md`, `backend-code-architecture.md`, `frontend-code-architecture.md`, `agent-code-architecture.md` | OK | — |
-| Production URLs | API `vxndciwupy…`, UI `nvqjc7nnif…` | **Aligned:** [production-hosting.md](../ops/production-hosting.md), root README, judge/operator guides, smoke scripts (Sep 13) | OK | Re-sync after App Runner recreate |
+| Production URLs | API `qawwrm7kzy…`, UI `pdkeexzwxr…` | **Aligned:** [production-hosting.md](../ops/production-hosting.md), root README, judge/operator guides, smoke scripts (Sep 13 PM) | OK | Re-sync after App Runner recreate |
 | Sidebar / nav | 3 links only | **Aligned:** `frontend-guide.md`, `docs/README.md` key numbers | OK | — |
 | HITL / Decision Inbox | Detail page only; no `/approvals` inbox | **Aligned:** `judge-demo.md`, `frontend-guide.md` | OK | — |
 | SLA replay as main demo | Related journey J4; optional | **Mixed:** `replay-system.md`, `sla-calculator.md` (correct as **technical**); `plans/phase-2` (“primary judge path”) | Δ | Category B — historical banner; do not use for pitch |

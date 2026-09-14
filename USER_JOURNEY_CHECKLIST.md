@@ -1,7 +1,7 @@
 # Recoup — User Journey Checklist
 
 > **Last updated:** Sep 13, 2026  
-> **Production UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com · **API:** https://vxndciwupy.us-east-1.awsapprunner.com  
+> **Production UI:** https://pdkeexzwxr.us-east-1.awsapprunner.com · **API:** https://qawwrm7kzy.us-east-1.awsapprunner.com  
 > **Primary operator lifecycle (product):** **[J-FULL](docs/operator-journey.md)** — scan → 3 distinct services → approve / investigate / decline → Recovery Ledger + SNS.  
 > **Authoritative E2E:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`  
 > **Test suite:** 16 Playwright specs · 125 tests (`cd frontend && npx playwright test --list`)  

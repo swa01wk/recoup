@@ -10,7 +10,7 @@
 
 FastAPI (`recoup.api.main:app`) exposes HTTP APIs for **read-only AWS account scanning**, **finding promotion into HITL-gated opportunities**, **approval workflows**, and **outcome/ledger persistence**. On **promote**, the backend runs `recoup_graph.run(..., stop_at="risk_policy_gate")`: for scan findings (`signal.source == "optimization"`), the **`incident_correlation`** node executes the **`recovery/` pipeline** (evidence graph, sufficiency, safety checks, recommendation/plan) and later graph nodes **no-op** once `recovery_assessment` is populated. The UI does **not** SSE-stream promote; trace comes from `GET .../trace`.
 
-**Production:** App Runner `https://vxndciwupy.us-east-1.awsapprunner.com` — Docker image from repo root `Dockerfile`, `RECOUP_ENV=production`, CORS via `FRONTEND_URL` ([production-hosting.md](archive/ops/production-hosting.md)).
+**Production:** App Runner `https://qawwrm7kzy.us-east-1.awsapprunner.com` — Docker image from repo root `Dockerfile`, `RECOUP_ENV=production`, CORS via `FRONTEND_URL` ([production-hosting.md](archive/ops/production-hosting.md)).
 
 Run locally:
 

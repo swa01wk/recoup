@@ -8,8 +8,10 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   BACKEND,
   resetBackend,
+  bindDemoSessionToPage,
   pickFindingsByDistinctServices,
   getLastScan,
+  sessionHeaders,
   listOutcomes,
   outcomeForOpportunity,
   getOpportunity,
@@ -93,14 +95,17 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
 }) => {
   test.setTimeout(420_000);
 
-  await resetBackend(request);
-  await runDemoScanFromUiOrSeed(page, request);
+  const sid = await resetBackend(request);
+  await bindDemoSessionToPage(page, sid);
+  await runDemoScanFromUiOrSeed(page, request, sid);
 
-  const scan = await getLastScan(request);
+  const scan = await getLastScan(request, sid);
   expect(scan.findings.length).toBeGreaterThanOrEqual(3);
   expect(scan.total_estimated_monthly_savings_usd).toBeGreaterThan(0);
 
-  const auditRes = await request.get(`${BACKEND}/api/scan/audit`);
+  const auditRes = await request.get(`${BACKEND}/api/scan/audit`, {
+    headers: sessionHeaders(sid),
+  });
   expect(auditRes.ok()).toBeTruthy();
   const audit = (await auditRes.json()) as Array<{ finding_count: number }>;
   expect(audit[0]?.finding_count).toBeGreaterThanOrEqual(3);
@@ -170,7 +175,9 @@ test("@smoke @e2e full journey — scan, 3 services, approve / investigate / dec
   );
 
   // —— Promoted list + ledger invariants ——
-  const promotedRes = await request.get(`${BACKEND}/api/scan/findings/promoted`);
+  const promotedRes = await request.get(`${BACKEND}/api/scan/findings/promoted`, {
+    headers: sessionHeaders(sid),
+  });
   const promoted = (await promotedRes.json()) as Array<{ opportunity_id: string }>;
   const promotedIds = promoted.map((p) => p.opportunity_id);
   expect(promotedIds).toEqual(expect.arrayContaining([approveOppId, investigateOppId, declineOppId]));

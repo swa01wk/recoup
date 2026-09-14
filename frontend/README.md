@@ -9,8 +9,8 @@ Next.js app for the Recoup operator UI.
 
 ## Production
 
-**UI:** https://nvqjc7nnif.us-east-1.awsapprunner.com  
-**API (`NEXT_PUBLIC_API_URL` at build):** https://vxndciwupy.us-east-1.awsapprunner.com
+**UI:** https://pdkeexzwxr.us-east-1.awsapprunner.com  
+**API (`NEXT_PUBLIC_API_URL` at build):** https://qawwrm7kzy.us-east-1.awsapprunner.com
 
 Redeploy UI: `NEXT_PUBLIC_API_URL=... ./scripts/deploy_ui_hosting.sh` from repo root.  
 Amplify (optional): `frontend/amplify.yml` + `scripts/deploy_amplify_frontend.sh`.

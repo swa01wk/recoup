@@ -1,6 +1,6 @@
 # Operations through Oct 31 ($150 plan)
 
-**Production URLs:** UI https://nvqjc7nnif.us-east-1.awsapprunner.com · API https://vxndciwupy.us-east-1.awsapprunner.com  
+**Production URLs:** UI https://pdkeexzwxr.us-east-1.awsapprunner.com · API https://qawwrm7kzy.us-east-1.awsapprunner.com  
 **Hosting:** [production-hosting.md](./production-hosting.md) · **Segregation:** [demo-vs-platform-segregation.md](./demo-vs-platform-segregation.md)
 
 ## Weekly (5 min)

@@ -9,8 +9,8 @@
 
 | Role | URL |
 |------|-----|
-| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+| UI | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| API | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 Scripts: `scripts/deploy_app_hosting.sh`, `scripts/deploy_ui_hosting.sh`, `scripts/smoke_production_api.sh`, `scripts/post_change_segregation_smoke.sh`.  
 Optional Amplify (GitHub): `scripts/connect_amplify_github.sh`, `scripts/deploy_amplify_frontend.sh`.

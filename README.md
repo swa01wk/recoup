@@ -15,8 +15,8 @@ Built for the [AWS Agents for Humans Hackathon](https://agentsforhumans.devpost.
 
 | | URL |
 |--|-----|
-| **UI** | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| **API** | https://vxndciwupy.us-east-1.awsapprunner.com |
+| **UI** | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| **API** | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 Flow: `/scan` → **Demo Scan** → `/opportunities` → **Start Recovery** → Approve → `/recovery`.  
 Ops: [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) · [docs/judge-demo.md](docs/judge-demo.md).  

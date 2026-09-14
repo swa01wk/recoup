@@ -31,12 +31,14 @@ Two independent settings must stay aligned:
 |---------|-----------|--------|
 | `NEXT_PUBLIC_API_URL` | **UI Docker build** (`--build-arg`) | Baked into Next.js client + sidebar label. Browser calls this host. |
 | `FRONTEND_URL` → `RECOUP_FRONTEND_URL` | **API App Runner env** (CDK `RecoupAppStack`) | FastAPI CORS: only this origin gets `Access-Control-Allow-Origin`. |
+| `demo_session` query param | **UI** `EventSource` on `GET …/stream` | Browser SSE cannot send `X-Demo-Session`; API accepts `?demo_session=<uuid>` on stream only. |
 
 **Symptoms when misaligned:**
 
 - Sidebar shows old API host (e.g. deleted `hp32eyu3yr…`).
 - Network tab: requests to dead host → **Failed to fetch**, **Provisional headers are shown**.
 - CORS preflight returns **400** or missing `access-control-allow-origin` for the UI you are actually using.
+- **Investigate Further** works but **Run Extended Investigation** fails with **401** on `…/stream` (missing session on SSE).
 
 **Rule after any deploy that changes a public URL:**
 
@@ -47,12 +49,12 @@ Two independent settings must stay aligned:
 
 ---
 
-## 3. Current production URLs (Sep 2026 — update after redeploy)
+## 3. Current production URLs (Sep 13, 2026 PM — update after redeploy)
 
 | Service | URL |
 |---------|-----|
-| UI | https://nvqjc7nnif.us-east-1.awsapprunner.com |
-| API | https://vxndciwupy.us-east-1.awsapprunner.com |
+| UI | https://pdkeexzwxr.us-east-1.awsapprunner.com |
+| API | https://qawwrm7kzy.us-east-1.awsapprunner.com |
 
 Always confirm live values:
 
@@ -88,7 +90,7 @@ export RECOUP_EXTERNAL_ID='recoup-demo-external-id'   # must match IAM trust
 From repo root:
 
 ```bash
-export RECOUP_FRONTEND_URL='https://nvqjc7nnif.us-east-1.awsapprunner.com'   # current UI origin
+export RECOUP_FRONTEND_URL='https://pdkeexzwxr.us-east-1.awsapprunner.com'   # current UI origin
 ./scripts/deploy_app_hosting.sh
 ```
 
@@ -111,7 +113,7 @@ npx cdk deploy RecoupAppStack --exclusively -c createAppRunnerService=true --req
 
 ```bash
 # Optional explicit API; otherwise script reads RecoupAppStack output
-export NEXT_PUBLIC_API_URL='https://vxndciwupy.us-east-1.awsapprunner.com'
+export NEXT_PUBLIC_API_URL='https://qawwrm7kzy.us-east-1.awsapprunner.com'
 ./scripts/deploy_ui_hosting.sh
 ```
 
@@ -140,7 +142,7 @@ Then **always** sync API CORS (section 5.1 CORS-only) if the UI URL is new.
 ### 6.1 API health
 
 ```bash
-API=https://vxndciwupy.us-east-1.awsapprunner.com
+API=https://qawwrm7kzy.us-east-1.awsapprunner.com
 curl -sf "$API/health" | grep '"status":"ok"'
 ./scripts/smoke_production_api.sh "$API"
 ```
@@ -149,7 +151,7 @@ curl -sf "$API/health" | grep '"status":"ok"'
 
 ```bash
 curl -sI -X OPTIONS "$API/api/scan/demo" \
-  -H "Origin: https://nvqjc7nnif.us-east-1.awsapprunner.com" \
+  -H "Origin: https://pdkeexzwxr.us-east-1.awsapprunner.com" \
   -H "Access-Control-Request-Method: POST" \
   | grep access-control-allow-origin
 ```
@@ -157,13 +159,13 @@ curl -sI -X OPTIONS "$API/api/scan/demo" \
 Expected:
 
 ```http
-access-control-allow-origin: https://nvqjc7nnif.us-east-1.awsapprunner.com
+access-control-allow-origin: https://pdkeexzwxr.us-east-1.awsapprunner.com
 ```
 
 ### 6.3 UI
 
 ```bash
-UI=https://nvqjc7nnif.us-east-1.awsapprunner.com
+UI=https://pdkeexzwxr.us-east-1.awsapprunner.com
 curl -sf "$UI/api/health"    # Next route for App Runner HTTP health
 curl -sf -o /dev/null -w "%{http_code}\n" "$UI/scan"
 ```
@@ -266,7 +268,7 @@ Do **not** run phase 2 “create” if the service already exists and is managed
 
 ```bash
 cd frontend
-NEXT_PUBLIC_API_URL='https://vxndciwupy.us-east-1.awsapprunner.com' npm run dev -- --port 3000
+NEXT_PUBLIC_API_URL='https://qawwrm7kzy.us-east-1.awsapprunner.com' npm run dev -- --port 3000
 ```
 
 Open http://localhost:3000/scan — ensure API CORS allows `http://localhost:3000` (production API allows localhost in code for staging; confirm `main.py` CORS if needed).
@@ -288,6 +290,7 @@ Summary of what happened and what fixed it:
 5. **Deploy script hardening**
    - `deploy_ui_hosting.sh`: resolve API URL from `RecoupAppStack`; existing service → `start-deployment`; create retries.
    - Removed default stale API URL (`hp32eyu3yr…`).
+6. **Sep 13 PM — guest sessions + investigate SSE** — `recoup-demo-control` DynamoDB + `?demo_session=` on `GET …/stream` (EventSource cannot send headers). **Current** Plane A URLs: §3 (`pdkeexzwxr` UI, `qawwrm7kzy` API).
 
 ---
 

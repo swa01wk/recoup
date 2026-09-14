@@ -254,7 +254,12 @@ export const api = {
         body: JSON.stringify({ signal }),
       }),
     trace: (id: string) => request<TraceResult>(`/api/opportunities/${id}/trace`),
-    streamUrl: (id: string) => `${BASE}/api/opportunities/${id}/stream`,
+    /** SSE URL including demo session query param (EventSource cannot send headers). */
+    streamUrl: async (id: string) => {
+      const sessionId = await ensureDemoSession();
+      const q = encodeURIComponent(sessionId);
+      return `${BASE}/api/opportunities/${id}/stream?demo_session=${q}`;
+    },
   },
   approvals: {
     listPending: () => request<ApprovalRecord[]>("/api/approvals/pending"),

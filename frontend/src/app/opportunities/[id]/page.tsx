@@ -174,47 +174,54 @@ export default function OpportunityPage({
     ]);
     setLivePipelineStage(2);
 
-    const es = new EventSource(api.opportunities.streamUrl(id));
-    esRef.current = es;
+    void (async () => {
+      const streamUrl = await api.opportunities.streamUrl(id);
+      const es = new EventSource(streamUrl);
+      esRef.current = es;
 
-    es.onmessage = (ev: MessageEvent) => {
-      const event = JSON.parse(ev.data as string) as SseEvent;
-      if (event.type === "node_started") {
-        requestRecoveryDataRefresh();
-      }
-      if ((event.type === "node_started" || event.type === "node_completed") && event.node) {
-        setLivePipelineStage(nodeToPipelineStage(event.node));
-      }
-      if (event.type === "node_completed" && event.investigation_delta) {
-        setInvestigationDelta(event.investigation_delta);
-        void syncRecoveryLedger();
-      }
-      if (event.type === "approval_required") {
-        setLivePipelineStage(8);
-        void syncRecoveryLedger();
-      }
-      if (event.type === "opportunity_done") {
-        setStreaming(false);
-        setLivePipelineStage(null);
-        setInvestigateLines([]);
-        es.close();
-        if (event.state === "AWAITING_APPROVAL") {
-          setApprovalMsg(null);
+      es.onmessage = (ev: MessageEvent) => {
+        const event = JSON.parse(ev.data as string) as SseEvent;
+        if (event.type === "node_started") {
+          requestRecoveryDataRefresh();
         }
-        void syncRecoveryLedger();
-      }
-      if (event.type === "error") {
+        if ((event.type === "node_started" || event.type === "node_completed") && event.node) {
+          setLivePipelineStage(nodeToPipelineStage(event.node));
+        }
+        if (event.type === "node_completed" && event.investigation_delta) {
+          setInvestigationDelta(event.investigation_delta);
+          void syncRecoveryLedger();
+        }
+        if (event.type === "approval_required") {
+          setLivePipelineStage(8);
+          void syncRecoveryLedger();
+        }
+        if (event.type === "opportunity_done") {
+          setStreaming(false);
+          setLivePipelineStage(null);
+          setInvestigateLines([]);
+          es.close();
+          if (event.state === "AWAITING_APPROVAL") {
+            setApprovalMsg(null);
+          }
+          void syncRecoveryLedger();
+        }
+        if (event.type === "error") {
+          setStreaming(false);
+          setLivePipelineStage(null);
+          es.close();
+        }
+      };
+
+      es.onerror = () => {
         setStreaming(false);
         setLivePipelineStage(null);
         es.close();
-      }
-    };
-
-    es.onerror = () => {
+      };
+    })().catch(() => {
       setStreaming(false);
       setLivePipelineStage(null);
-      es.close();
-    };
+      setApprovalMsg("Could not start investigation stream — refresh and try again.");
+    });
   }, [id, syncRecoveryLedger]);
 
   useEffect(() => () => { esRef.current?.close(); }, []);

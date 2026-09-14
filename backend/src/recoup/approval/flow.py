@@ -294,19 +294,7 @@ class HITLFlow:
             "approved_at": updated.timestamp.isoformat(),
         })
 
-        # Fire SNS recovery report and record the result in the outcome record
-        sns_sent = self._send_sns_recovery_report(updated)
-        self._last_sns_notification_sent = sns_sent
-        try:
-            from ..graph.outcome_repository import outcome_repo  # noqa: PLC0415
-            outcome_repo.record_sns_notification(self._opportunity_id, sns_sent)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("hitl_flow.sns_record_failed", error=str(exc))
-
-        # Sprint 3: write/update outcome record so Recovery Ledger shows real credit.
-        # We create immediately as RECOVERED (approval = confirmation of recovery for
-        # demo/replay mode).  For live EC2 stops the execute step will also call
-        # mark_recovered() which is idempotent.
+        # Sprint 3: outcome record before SNS so create() does not clobber sns_sent.
         try:
             from ..graph.outcome_repository import outcome_repo  # noqa: PLC0415
 
@@ -317,13 +305,20 @@ class HITLFlow:
                     credit_amount=updated.amount,
                     action_taken=updated.action,
                 )
-            # Always mark recovered so the Ledger "Recovered" bucket advances
             outcome_repo.mark_recovered(
                 opportunity_id=self._opportunity_id,
                 credit_amount=updated.amount,
             )
         except Exception as exc:  # noqa: BLE001
             log.warning("hitl_flow.outcome_write_failed", error=str(exc))
+
+        sns_sent = self._send_sns_recovery_report(updated)
+        self._last_sns_notification_sent = sns_sent
+        try:
+            from ..graph.outcome_repository import outcome_repo  # noqa: PLC0415
+            outcome_repo.record_sns_notification(self._opportunity_id, sns_sent)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("hitl_flow.sns_record_failed", error=str(exc))
 
         return updated
 
