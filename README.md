@@ -109,8 +109,8 @@ Frontend (Next.js 16)
 |--------|--------|--------|
 | Golden-path success (20 runs) | 20/20 (100%) | ✓ 100% |
 | Overall scenario success | ≥ 92% | ✓ 47/47 scenarios defined |
-| Financial math correctness | 100% | ✓ **416** backend tests collected (0 warnings) |
-| Playwright E2E tests | 125 tests | ✓ 16 specs · **J-FULL** + PSC + J2–J9 + 13 SEC |
+| Financial math correctness | 100% | ✓ **419** backend tests collected (0 warnings) |
+| Playwright E2E tests | 127 tests | ✓ 16 specs · **J-FULL** + PSC + J2–J9 + 13 SEC |
 | Unsafe external actions | 0 | ✓ quality gate |
 | Replay P95 | < 60s | ✓ ~23 ms |
 | Tampered claim rejection | 100% | ✓ 409 on hash/amount/version tamper |
@@ -151,7 +151,7 @@ Strands agent steps (investigate, explain, plan, etc.) call an LLM selected by *
 
 Check active provider (no secrets): `curl -s http://localhost:8000/api/config | jq '.llm_provider, .bedrock_model, .openai_model_id'`
 
-AgentCore runtime, gateway, and infra IAM are documented in [plans/aws-requirements.md](plans/aws-requirements.md). Provider wiring lives in `backend/src/recoup/agents/strands_agents.py`.
+AgentCore runtime, gateway, and infra IAM are documented in [docs/archive/internal/plans/aws-requirements.md](docs/archive/internal/plans/aws-requirements.md). Provider wiring lives in `backend/src/recoup/agents/strands_agents.py`.
 
 See [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) for the live App Runner demo.  
 See [docs/local-dev-and-testing.md](docs/local-dev-and-testing.md) for ports and Playwright.
@@ -173,8 +173,8 @@ cd frontend && npx playwright test
 
 | Suite | Count | Command |
 |-------|------:|---------|
-| Backend unit tests | 416 collected | `cd backend && pytest tests/` |
-| Playwright E2E | 125 (16 specs) | `cd frontend && npx playwright test` |
+| Backend unit tests | 419 collected | `cd backend && pytest tests/` |
+| Playwright E2E | 127 (16 specs) | `cd frontend && npx playwright test` |
 | Primary operator journey | J-FULL | [docs/operator-journey.md](docs/operator-journey.md) |
 | Extended test map | J1–J12 + SEC + J-FULL | [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md) |
 | Quality gates | 6 | `GET /api/quality/scorecard` |

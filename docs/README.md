@@ -13,8 +13,8 @@
 
 | Metric | Value | Verify with |
 |--------|-------|-------------|
-| Backend unit tests | **416** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
-| Playwright E2E | **125** tests in **16** spec files | `cd frontend && npx playwright test --list` |
+| Backend unit tests | **419** collected (live-mode skips as configured) | `cd backend && pytest --collect-only -q` |
+| Playwright E2E | **127** tests in **16** spec files | `cd frontend && npx playwright test --list` |
 | Smoke tests | run `npx playwright test --grep @smoke` | count changes over time |
 | Graph nodes | **11** (6 deterministic · 5 agent) | `backend/src/recoup/graph/recoup_graph.py` |
 | Tools in `TOOL_REGISTRY` | **13** | `backend/src/recoup/tools/registry.py` |

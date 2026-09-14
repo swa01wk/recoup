@@ -1,10 +1,10 @@
 # Recoup — User Journey Checklist
 
-> **Last updated:** Sep 13, 2026  
+> **Last updated:** Sep 14, 2026  
 > **Production UI:** https://pdkeexzwxr.us-east-1.awsapprunner.com · **API:** https://qawwrm7kzy.us-east-1.awsapprunner.com  
 > **Primary operator lifecycle (product):** **[J-FULL](docs/operator-journey.md)** — scan → 3 distinct services → approve / investigate / decline → Recovery Ledger + SNS.  
 > **Authoritative E2E:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`  
-> **Test suite:** 16 Playwright specs · 125 tests (`cd frontend && npx playwright test --list`)  
+> **Test suite:** 16 Playwright specs · 127 tests (`cd frontend && npx playwright test --list`)  
 > **UI:** Sidebar = Opportunities · Account Scanner · Recovery Ledger only. HITL on `/opportunities/[id]`. `/approvals` and `/quality` redirect to `/opportunities`.  
 > **Removed Sep 2026:** `/replay` page, `/api/replay/*`, ec2/governance demo HTTP, J4/J5/J10–J12 Playwright specs. SLA replay adapter + golden **pytest** remain.  
 > **Tags:** `@smoke` · `@full` · `@e2e` (J-FULL mega journey)
@@ -74,9 +74,9 @@ Detect → Investigate → Correlate → Explain → Prove → Plan → Policy �
 | # | Step | Test ID | Tag | Status |
 |---|------|---------|-----|--------|
 | PSC-1 | Two sessions each run demo scan (isolated caches) | PSC-1 | `@smoke` | ✅ |
-| PSC-2 | Session A vs B opportunity lists do not share ids | (planned) | `@smoke` | — |
+| PSC-2 | Session A vs B opportunity lists do not share ids | PSC-2 | `@smoke` | ✅ |
 | PSC-3 | Reset session A — session B opportunities unchanged | PSC-3 | `@smoke` | ✅ |
-| PSC-4 | Two browser contexts — full UI loop independent | (planned) | `@full` | — |
+| PSC-4 | Two browser contexts — independent promote flows | PSC-4 | `@full` | ✅ |
 
 ```bash
 cd frontend && npx playwright test e2e/journey-demo-session-concurrency.spec.ts
@@ -294,7 +294,7 @@ Historical step tables archived in git history pre–Sep 11, 2026.
 | `journey-ui-browser.spec.ts` | 12 | UI |
 | `live-ec2-demo-removed.spec.ts` | 5 | UI / regression |
 | `workflow-stages.spec.ts` | 14 | WF / pipeline |
-| **Total** | **125** (16 files) | J-FULL + PSC + J2–J9 + SEC + UI + WF |
+| **Total** | **127** (16 files) | J-FULL + PSC + J2–J9 + SEC + UI + WF |
 
 **Removed Sep 2026 (consolidated or deleted):** `decision-inbox`, `recovery-ledger`, `opportunity-detail`, `journey-full-recovery`, plus J4/J5/J10–J12 and Strands lifecycle mega-specs.
 
@@ -343,9 +343,10 @@ npx playwright show-report
 
 | Gap | Priority | Notes |
 |-----|----------|-------|
-| EC2 live `StopInstances` E2E | Low | Tested in AWS demo account manually (🚀 Live) |
-| Savings chart pixel-accurate values | Low | Recharts SVG — needs screenshot comparison |
-| AgentCore / Bedrock live invocation | Low | `@bedrock-live` tag gates it; runs in staging with real creds |
+| EC2 live `StopInstances` E2E | Low | Manual in AWS demo account (🚀 Live); not automated in CI |
+| Savings chart pixel-accurate values | Low | Recharts SVG — screenshot comparison optional |
+| AgentCore / Bedrock live invocation | Low | `@bedrock-live` tag; run with AWS creds when validating Strands on Bedrock |
+| Hackathon submission (video, Devpost, builder.aws) | P0 | Operator tasks — see `docs/archive/submit/` (not a code gap) |
 
 ### ✅ Recently closed gaps (Sep 8 sprint)
 

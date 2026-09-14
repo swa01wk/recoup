@@ -1,6 +1,6 @@
 # Recoup — Local Dev and Testing
 
-**Last updated:** Sep 13, 2026
+**Last updated:** Sep 14, 2026
 
 ---
 
@@ -63,6 +63,15 @@ curl -s http://localhost:8000/health | jq .
 curl -s http://localhost:8000/health/ready | jq .
 ```
 
+Copy [`.env.example`](../.env.example) → `.env`. Strands reasoning nodes use **`LLM_PROVIDER`**:
+
+| Provider | Env |
+|----------|-----|
+| **`bedrock`** (default) | AWS credentials; `BEDROCK_MODEL_ID`; `BEDROCK_REGION` |
+| **`openai`** | `OPENAI_API_KEY`; optional `OPENAI_MODEL_ID` |
+
+No secrets in `GET /api/config` — only `llm_provider` and model ids. See [README § LLM provider](../README.md#llm-provider-strands-reasoning-nodes).
+
 ---
 
 ## Playwright
@@ -71,7 +80,7 @@ curl -s http://localhost:8000/health/ready | jq .
 |---------|---------|
 | `cd frontend && npx playwright test` | Full suite |
 | `npx playwright test --grep @smoke` | Smoke subset |
-| `npx playwright test e2e/journey-demo-session-concurrency.spec.ts` | **PSC** — two isolated demo sessions (`@smoke`) |
+| `npx playwright test e2e/journey-demo-session-concurrency.spec.ts` | **PSC** — session isolation (`@smoke` + PSC-4 `@full`) |
 | `npx playwright test e2e/journey-full-discovery-triage-ledger.spec.ts` | **Full operator user journey** (below) |
 
 **Demo scan without AWS (local only):** When `RECOUP_ENV=local`, `POST /api/scan/demo` returns deterministic offline findings if STS AssumeRole fails or role env is unset — enough for PSC and most E2E without `recoup-admin` → `RecoupReadOnlyRole` trust.

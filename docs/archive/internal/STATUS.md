@@ -4,8 +4,8 @@
 > **Production:** App Runner — [production-hosting.md](../ops/production-hosting.md). Metrics: [docs/README.md](../../README.md).
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
-**Last Updated:** Sep 13, 2026 (PM) — Guest demo sessions + SSE `demo_session` on stream · Plane A URLs in table below · [release_notes.md](release_notes.md)  
-**Days Remaining:** 1  
+**Last Updated:** Sep 14, 2026 — README LLM provider docs · PSC-2/PSC-4 E2E · CloudWatch `Recoup/Graph` + `Recoup/Tools` metrics · [release_notes.md](../../../release_notes.md)  
+**Days Remaining:** 0 (submission day)  
 **Feature Cutoff:** Sep 11, 2026
 
 ### Production (judge demo)
@@ -23,8 +23,8 @@ Canonical metrics: [docs/README.md](docs/README.md#key-numbers-canonical--update
 
 | Metric | Value |
 |--------|-------|
-| Backend unit tests | **416** collected (live-mode skips as configured) · 0 DeprecationWarnings |
-| Playwright E2E tests | **125** (16 specs) · J-FULL + PSC + J2–J9 + 13 SEC adversarial |
+| Backend unit tests | **419** collected (live-mode skips as configured) · 0 DeprecationWarnings |
+| Playwright E2E tests | **127** (16 specs) · J-FULL + PSC + J2–J9 + 13 SEC adversarial |
 | Frontend nav | **3** sidebar links: `/opportunities`, `/scan`, `/recovery` (`/replay` removed) |
 | Scanners | **9** (EC2, EBS, EIP, RDS, S3, Lambda, ELB, CW Logs, Cost Explorer) |
 | Demo scenarios | **8/8** detected — $87.82/mo (full scan aggregate) |
@@ -32,7 +32,7 @@ Canonical metrics: [docs/README.md](docs/README.md#key-numbers-canonical--update
 | Tools in registry | **13** |
 | Quality gates | **6** (`/api/quality/scorecard`) |
 | IAM roles | **6** (Runtime, Gateway, ReadConnector, ReadOnly, Remediation, + demo) |
-| Phases complete | 0–6f, 8, 9 ✅ · Phase 7 🟡 |
+| Phases complete | 0–6f, 8, 9 ✅ · Phase 7 code/docs ✅ · submission artifacts 🟡 |
 | User journeys | **12** (J1–J12) + **13** security adversarial tests |
 
 > **Note:** Phase sections below are historical snapshots (Sep 8, 2026). They may mention older test counts (397, ~133). Use **Key Numbers** above and [docs/README.md](docs/README.md) for current metrics.
@@ -77,7 +77,7 @@ Canonical metrics: [docs/README.md](docs/README.md#key-numbers-canonical--update
 | 6f | RecoupDemoWorkloadsStack & 8 Scenario Coverage | Sep 6 | ✅ Complete | 100% |
 | 8 | Frontend Redesign — Recovery Dashboard | Sep 6 | ✅ Complete | 100% |
 | 9 | Competitive UI Gaps (from positioning doc) | Sep 11 | ✅ Complete | 100% |
-| 7 | Polish, Submission & Video | Sep 14 | 🟡 In Progress | 40% |
+| 7 | Polish, Submission & Video | Sep 14 | 🟡 Submission artifacts | 85% |
 
 ---
 
@@ -915,12 +915,11 @@ All items below were fixed in Sep 3 doc pass. No open documentation debt remains
 | **Sep 3–6** | Phase 8: Recovery Dashboard redesign — Ledger, roles, pipeline, promote flow | ✅ Done |
 | **Sep 7** | Phase 9: competitive UI gaps + README + deployment artifacts — **397/397 tests** | ✅ Done |
 | **Sep 7–8** | **Phase 7**: Live public URL deploy (App Runner UI + API) | ✅ Done |
-| **Sep 8** | **Phase 7**: builder.aws Post 1 (Strands graph architecture) | 🔴 Pending |
-| **Sep 9–10** | **Phase 7**: Video recording + editing (≤ 5:00) | 🔴 Pending |
-| **Sep 10** | **Phase 7**: builder.aws Post 2 (Cedar + HITL + evidence) | 🔴 Pending |
+| **Sep 14** | **Phase 7**: README LLM · PSC-2/PSC-4 · CloudWatch graph/tool metrics · compliance doc | ✅ Done |
 | **Sep 11** | ⚠️ Feature cutoff — no new features after this date | — |
-| **Sep 12** | **Phase 7**: builder.aws Post 3 (evaluation + ship gates) | 🔴 Pending |
-| **Sep 12–13** | **Phase 7**: Devpost form + final rubric check + submission by Sep 13 | 🔴 Pending |
+| **Sep 14** | **Phase 7**: builder.aws posts (×3) | 🔴 Pending |
+| **Sep 14** | **Phase 7**: Video recording + upload (≤ 5:00) | 🔴 Pending |
+| **Sep 14** | **Phase 7**: Devpost + final rubric check | 🔴 Pending |
 
 ---
 

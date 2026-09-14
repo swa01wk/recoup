@@ -509,10 +509,12 @@ export async function startRecoveryFromOpportunitiesList(
   await page.getByRole("button", { name: /^refresh$/i }).click();
   await expect(page.getByText("Opportunities").first()).toBeVisible({ timeout: 15_000 });
 
-  const startBtn = page
+  const row = page
     .locator(`span[title="${resourceId}"]`)
-    .locator("xpath=ancestor::div[contains(@class,'border-b')][1]")
-    .getByRole("button", { name: /start recovery/i });
+    .locator("xpath=ancestor::div[contains(@class,'border-b')][1]");
+  await expect(row).toBeVisible({ timeout: 15_000 });
+
+  const startBtn = row.getByRole("button", { name: /start recovery/i });
   await expect(startBtn).toBeVisible({ timeout: 60_000 });
   await startBtn.click();
   await page.waitForURL(/\/opportunities\/recovery-/, { timeout: 30_000 });

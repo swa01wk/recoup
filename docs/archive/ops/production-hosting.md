@@ -13,7 +13,7 @@
 
 App Runner assigns a **new subdomain** when a service is recreated — always read stack outputs after deploy and sync **UI build arg** + **API CORS** (see runbook §2).
 
-Amplify is optional when GitHub is connected (see below).
+**Amplify is optional** — App Runner UI deploy above is the judge demo path. Use Amplify only if you want GitHub-driven frontend builds (see below).
 
 ## Deploy API (App Runner)
 

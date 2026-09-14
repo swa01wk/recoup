@@ -143,6 +143,9 @@ class RecoupTracingHooks:
             opportunity_id=self._opportunity_id,
             duration_ms=ctx.duration_ms,
         )
+        from ..observability.cloudwatch_metrics import publish_graph_node  # noqa: PLC0415
+
+        publish_graph_node(ctx.node_name, ctx.duration_ms)
         self._spans.pop(ctx.node_name, None)
 
     # -----------------------------------------------------------------------
@@ -203,6 +206,9 @@ class RecoupTracingHooks:
             policy_decision=audit.policy_decision,
         )
 
+        from ..observability.cloudwatch_metrics import publish_tool_call  # noqa: PLC0415
+
+        publish_tool_call(ctx.tool_name, ctx.node_name, ctx.duration_ms)
         self._save_audit(audit)
 
     def on_error(self, ctx: NodeContext, error: Exception) -> ErrorDisposition:
