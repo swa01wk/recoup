@@ -138,6 +138,21 @@ recoup/
 
 **Prerequisites:** Python 3.12+, Node 20+, AWS CLI (optional for live demos)
 
+Copy [`.env.example`](.env.example) to `.env` at the repo root (backend reads it via settings).
+
+### LLM provider (Strands reasoning nodes)
+
+Strands agent steps (investigate, explain, plan, etc.) call an LLM selected by **`LLM_PROVIDER`**. Financial math, Cedar policy, and approvals stay deterministic — the LLM only does narrative reasoning. If the provider is unavailable, nodes fall back to simulation stubs so local demos and CI still run.
+
+| `LLM_PROVIDER` | When to use | Required config |
+|----------------|-------------|-----------------|
+| **`bedrock`** (default) | Production and AWS hackathon path | AWS credentials (or runtime IAM role); `BEDROCK_MODEL_ID` (default `us.amazon.nova-pro-v1:0`); `BEDROCK_REGION` (default `us-east-1`) |
+| **`openai`** | Local dev when Bedrock model access is pending | `OPENAI_API_KEY`; optional `OPENAI_MODEL_ID` (default `gpt-4o`) |
+
+Check active provider (no secrets): `curl -s http://localhost:8000/api/config | jq '.llm_provider, .bedrock_model, .openai_model_id'`
+
+AgentCore runtime, gateway, and infra IAM are documented in [plans/aws-requirements.md](plans/aws-requirements.md). Provider wiring lives in `backend/src/recoup/agents/strands_agents.py`.
+
 See [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) for the live App Runner demo.  
 See [docs/local-dev-and-testing.md](docs/local-dev-and-testing.md) for ports and Playwright.
 
