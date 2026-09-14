@@ -88,9 +88,7 @@
 - [x] ALL approval cards: risk tier + action + rollback
 - [x] Dashboard tagline + positioning sentence
 - [x] 11-step pipeline on dashboard
-- [x] README FAQ (6 objections answered)
-- [x] README three-way competitive table
-- [x] README judging rubric callout
+- [x] README FAQ (safety + savings proof; no third-party product comparisons)
 - [x] HITL on opportunity detail (`/opportunities/[id]`) with claim binding
 - [ ] Operator role: full HITL access
 

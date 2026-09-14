@@ -1,6 +1,6 @@
 # Stale & Obsolete Documents
 
-**Last updated:** Sep 13, 2026  
+**Last updated:** Sep 14, 2026  
 **Canonical operator story:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **Doc index (current):** [README.md](README.md)  
 **When to edit vs delete docs:** [code-changes-timing.md](code-changes-timing.md) (same timing as code — prefer banners over deletes before submit)
@@ -16,11 +16,11 @@
 | `demo-playbook.md` S5 primary; S1/S3/S7–S9 marked removed | ✅ |
 | `replay-system.md`, `judge-demo.md`, `USER_JOURNEY_CHECKLIST.md` | ✅ Post-cleanup counts & removed journeys |
 | `code-changes-timing.md` execution + matrix | ✅ Phases 0–5 done |
-| `STATUS.md`, `submission-record.md`, test count lines in README | ✅ Use **125** Playwright (16 specs) · **416** pytest · [release_notes.md](../../../release_notes.md) |
+| Internal [STATUS.md](../internal/STATUS.md), [submission-record.md](../submit/submission-record.md), README test lines | ✅ **125** Playwright (16 specs) · **416** pytest · [release_notes.md](../../../release_notes.md) |
 | Production App Runner URLs (API `qawwrm7kzy…`, UI `pdkeexzwxr…`) | ✅ Synced across root README, judge/operator guides, scripts, [production-hosting.md](../ops/production-hosting.md) (Sep 13 PM) |
 | Recovery pipeline + detail UI docs | ✅ `backend-code-architecture`, `frontend-code-architecture`, `agent-code-architecture`, `operator-journey` (Sep 11–13) |
-| `plans/SUPERSEDED.md` pointer | ✅ |
-| Historical `plans/phase-*` bodies | ☐ Intentionally unchanged (Category B) |
+| [internal/plans/SUPERSEDED.md](../internal/plans/SUPERSEDED.md) pointer | ✅ |
+| Historical `internal/plans/phase-*` bodies | ☐ Internal only (Category B) |
 | **Code track (Phase 6)** | ☐ AgentCore/CDK deferred |
 
 ---
@@ -42,18 +42,18 @@
 | Video script | J-FULL scenes 1–6 | **Aligned:** `video-script.md` (Sep 11 rewrite); appendix for SLA | OK | — |
 | Test checklist UI smoke | J-FULL + 3-link nav | **Aligned:** J1-6 = 3 links; UI-7 = `/replay` 404 | OK | — |
 | Legacy UI tests doc | `journey-ui-browser` = J-FULL | **Aligned:** spec rewritten Sep 11 | OK | — |
-| Viewer role | Removed; operator only | **Δ:** `plans/phase-4/8/9`, old `STATUS.md` lines; **OK:** `operator-journey.md` | Partial | Category B; ignore for judges |
+| Viewer role | Removed; operator only | **Δ:** `internal/plans/phase-4/8/9`, old STATUS lines; **OK:** `operator-journey.md` | Partial | Category B; ignore for judges |
 | 8 Demo Scenarios grid | Not on dashboard | **OK:** removed from UI; still documented in `demo-workloads.md`, S6 playbook | OK | S6 = scan tags, not dashboard grid |
 | Governance dashboard | J10–J12 API-only | **Δ:** old phase plans describe tiles; playbook S7–S9 API-first | Partial | Category B plans; playbook OK |
 | API reference layout | J-FULL endpoints primary | **OK:** J-FULL table + “Removed HTTP routes”; replay section archived | OK | — |
-| STATUS.md | Internal history | **Partial:** Sep 8 sprint snapshots; banner points to J-FULL | Partial | Category A — metrics from `docs/README.md` |
+| [internal/STATUS.md](../internal/STATUS.md) | Internal history | **Partial:** sprint snapshots; not judge-facing | Partial | Metrics from [docs/README.md](../../README.md) |
 | submission-record | J-FULL as primary demo | **OK:** primary demo reframed Sep 11 | OK | — |
-| Root `.docx` plans | J-FULL | Unknown / likely replay-first scenes | Δ | Category F — do not cite without cross-check |
-| Missing `replay-api.md` | N/A | **Δ:** `plans/phase-2` links to non-existent file | Δ | Point to `api-reference.md` replay section |
+| Internal `.docx` in [internal/planning/](../internal/planning/) | J-FULL | Planning only — not for judges | OK | Skip for submission |
+| Missing `replay-api.md` | N/A | **Δ:** `internal/plans/phase-2` links to non-existent file | Δ | Point to `api-reference.md` replay section |
 | `HACKATHON_DEMO.md` stub | → `judge-demo.md` | Stub OK; `operator-journey.md` points to judge-demo appendix | OK | — |
 | Archive | Not maintained | `docs/archive/`, `LIVE_SCENARIOS_TODO.md` stub | OK | Category D |
 
-**Summary:** Judge-facing docs aligned to J-FULL post-cleanup. Remaining **doc Δ:** historical `plans/*`, root `.docx`, optional diagram pass on `architecture.svg`.
+**Summary:** Judge-facing docs aligned to J-FULL (Sep 14). Remaining **doc Δ:** historical `docs/archive/internal/plans/*` only — ignore for pitch.
 
 ---
 
@@ -68,10 +68,11 @@ Use these for judges, demo, and day-to-day work:
 | [demo-playbook.md](demo-playbook.md) | S5/J-FULL first; S1–S4 optional |
 | [code-changes-timing.md](code-changes-timing.md) | Freeze / cleanup timing |
 | [stale-code-removal-plan.md](stale-code-removal-plan.md) | Code removal phases |
-| [local-dev-and-testing.md](local-dev-and-testing.md) | Ports, Playwright |
-| [frontend-guide.md](frontend-guide.md) | Routes & components |
-| [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) | Test ↔ journey map (J-FULL at top) |
-| [README.md](../README.md) | Repo overview & quick start |
+| [local-dev-and-testing.md](../../local-dev-and-testing.md) | Ports, Playwright |
+| [frontend-code-architecture.md](../../frontend-code-architecture.md) | Routes & components (current) |
+| [archive/superseded/frontend-guide.md](../superseded/frontend-guide.md) | Legacy frontend guide |
+| [USER_JOURNEY_CHECKLIST.md](../../../USER_JOURNEY_CHECKLIST.md) | Test ↔ journey map (J-FULL at top) |
+| [README.md](../../../README.md) | Repo overview & quick start |
 
 ---
 
@@ -81,30 +82,30 @@ These files exist and are linked from the repo but describe **old IA** (replay-f
 
 | Document | What’s stale | Suggested action |
 |----------|----------------|------------------|
-| [plans/phase-7-polish-submission-video.md](../plans/phase-7-polish-submission-video.md) | “As-built” block still lists **`/replay`** as step 5 before ledger; body has legacy Command Center / Viewer checklist | Add banner pointing to J-FULL; fix steps 1–6 to match [judge-demo.md](judge-demo.md) **or** mark entire file historical-only |
-| [STATUS.md](../STATUS.md) | Phase snapshots (Sep 8) with old test counts; lines like “Replay Engine (`/replay`)” as shipped UI; “Operator/Viewer switcher”, “6 routes” | Keep as **internal history**; do not use for metrics — use [docs/README.md](README.md) key numbers |
+| [internal/plans/phase-7-polish-submission-video.md](../internal/plans/phase-7-polish-submission-video.md) | Legacy body; use [video-script.md](../submit/video-script.md) + [judge-demo.md](../../judge-demo.md) for recording | Internal only |
+| [internal/STATUS.md](../internal/STATUS.md) | Phase snapshots with old test counts and removed UI | Internal history — use [docs/README.md](../../README.md) key numbers |
 | [docs/api-reference.md](api-reference.md) | Replay endpoints documented equally with scan/HITL; no **J-FULL vs optional** grouping | Add section headers: “J-FULL APIs” vs “Optional / legacy demos” |
 | [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) | UI table still lists **UI-7 `/replay`** as smoke; notes `journey-ui-browser` legacy | Mark UI-7 optional; point UI smoke to J-FULL + `live-ec2-demo-removed` |
 | [docs/frontend-guide.md](frontend-guide.md) | Quick-start curl still starts with replay API | Move replay curls to “Optional depth” appendix |
-| [docs/submission-record.md](submission-record.md) | Feature list emphasizes SLA replay + EC2 + S7–S9 as peer to scanners; Phase 9 UI checklist may not match trimmed UI | Reframe “primary demo = J-FULL”; mark optional proofs separately |
-| [docs/builder-posts.md](builder-posts.md) | Posts 1–3 center **11-node graph / SLA** more than scanner loop | OK for AWS depth bonus; add one paragraph tying posts to J-FULL ledger story |
-| architecture.svg (not in repo) | Referenced historically; use [architecture-overview.md](architecture-overview.md) ASCII | No checked-in SVG — diagram lives in architecture-overview |
+| [submit/submission-record.md](../submit/submission-record.md) | J-FULL primary; optional engine-only proofs listed separately | ✅ Sep 14 |
+| [submit/builder-post-drafts.md](../submit/builder-post-drafts.md) | Builder.aws drafts | ✅ |
+| [architecture/architecture.svg](../../../architecture/architecture.svg) | Canonical diagram; linked from root README | ✅ |
 
 ---
 
-## Category B — Historical implementation plans (entire `plans/` folder)
+## Category B — Historical implementation plans (`docs/archive/internal/plans/`)
 
 **Status:** Completed sprint records — **not** operator runbooks.
 
 | Pattern | Examples | Notes |
 |---------|----------|--------|
-| Replay as **primary judge path** | [phase-2-verified-replay-sla-engine.md](../plans/phase-2-verified-replay-sla-engine.md) | Says “Verified Replay is the primary judge demo path” |
-| Old frontend IA | [phase-4-frontend-command-center.md](../plans/phase-4-frontend-command-center.md), [phase-8-frontend-redesign.md](../plans/phase-8-frontend-redesign.md), [phase-9-competitive-ui-gaps.md](../plans/phase-9-competitive-ui-gaps.md) | Decision Inbox, dashboard tiles, 8-scenario grid |
-| Replay-first principles | [plans/README.md](../plans/README.md) | “Replay-first” row in principles table |
-| Demo scene scripts | [phase-6b-demo-realism-aws-integration.md](../plans/phase-6b-demo-realism-aws-integration.md), [phase-6c-strands-bedrock-integration.md](../plans/phase-6c-strands-bedrock-integration.md) | Scene 1 = SLA replay |
-| AWS cost / scenario math | [aws-requirements.md](../plans/aws-requirements.md) | Still useful for infra; demo **narrative** is stale |
+| Replay as **primary judge path** | [phase-2-verified-replay-sla-engine.md](../internal/plans/phase-2-verified-replay-sla-engine.md) | Says “Verified Replay is the primary judge demo path” |
+| Old frontend IA | [phase-4](../internal/plans/phase-4-frontend-command-center.md), [phase-8](../internal/plans/phase-8-frontend-redesign.md), [phase-9](../internal/plans/phase-9-competitive-ui-gaps.md) | Decision Inbox, dashboard tiles |
+| Replay-first principles | [internal/plans/README.md](../internal/plans/README.md) | Historical |
+| Demo scene scripts | [phase-6b](../internal/plans/phase-6b-demo-realism-aws-integration.md), [phase-6c](../internal/plans/phase-6c-strands-bedrock-integration.md) | Scene 1 = SLA replay |
+| AWS cost / scenario math | [aws-requirements.md](../internal/plans/aws-requirements.md) | Infra reference; demo narrative may lag |
 
-[plans/README.md](../plans/README.md) already warns these are historical. **Do not delete** before hackathon — judges rarely open `plans/`; optional: one-line superseded banner on phase-2 and phase-7 only.
+[internal/plans/README.md](../internal/plans/README.md) marks these **internal only** — judges should use [operator-journey.md](../../operator-journey.md).
 
 **Missing doc referenced from plans:** `docs/replay-api.md` ( cited in phase-2 ) — **never created**; use [api-reference.md](api-reference.md) replay section instead.
 
@@ -161,7 +162,7 @@ Word docs at repo root — not synced with J-FULL (Sep 11 docs pass):
 |------|------|
 | `Recoup_AWS_Master_Hackathon_Plan.docx` | Pre-IA-trim positioning |
 | `Recoup_AWS_Target_Account_Demo_Plan.docx` | May include replay-first scenes |
-| `Recoup_vs_ProsperOps_and_AWS_FinOps_Agent_Competitive_Positioning_and_Demo_Strategy (1).docx` | Competitive framing OK; demo steps may be old |
+| _(removed)_ ProsperOps competitive `.docx` | Deleted from repo Sep 2026 — internal case-study only |
 
 **Suggestion:** Treat as **historical**; do not cite in Devpost without cross-checking [judge-demo.md](judge-demo.md).
 
@@ -181,11 +182,11 @@ Word docs at repo root — not synced with J-FULL (Sep 11 docs pass):
 
 Priority order — align with [code-changes-timing.md](code-changes-timing.md):
 
-1. **Fix** [plans/phase-7-polish-submission-video.md](../plans/phase-7-polish-submission-video.md) as-built block (remove `/replay` as required step).  
-2. **Group** [api-reference.md](api-reference.md) endpoints: J-FULL vs optional.  
-3. **Trim** [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) UI-7 / legacy `journey-ui-browser` notes after test cleanup.  
-4. **Archive or banner** entire `plans/` with single [plans/SUPERSEDED.md](../plans/SUPERSEDED.md) pointer to [operator-journey.md](operator-journey.md).  
-5. **Move** root `.docx` to `docs/archive/offline/` or add README note — optional.
+1. **Done:** `plans/` → [internal/plans/](../internal/plans/); competitive docx removed; judge README trimmed (Sep 14).  
+2. **Group** [api-reference.md](../../api-reference.md) endpoints: J-FULL vs optional (if time).  
+3. **Trim** [USER_JOURNEY_CHECKLIST.md](../../../USER_JOURNEY_CHECKLIST.md) legacy UI notes after test cleanup.  
+4. **Submit:** [video-script.md](../submit/video-script.md) · [submission-record.md](../submit/submission-record.md).  
+5. **Post-hackathon:** redact or delete [internal/plans/](../internal/plans/) competitor case-study text (optional).
 
 **Do not delete** [replay-system.md](replay-system.md) or SLA docs until replay **code** is removed ([stale-code-removal-plan.md](stale-code-removal-plan.md) Phase 2).
 

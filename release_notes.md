@@ -5,6 +5,15 @@ Maintained changelog for shipped behavior, ops flags, and test baselines.
 
 ---
 
+## Sep 14, 2026 (hackathon repo cleanup)
+
+- Removed third-party competitive case-study docx; moved build plans + STATUS to `docs/archive/internal/`.
+- Judge-facing README/Devpost copy no longer names ProsperOps or other case-study products.
+- Untracked Playwright report/test-result artifacts; `.gitignore` updated.
+- Doc pass: fixed stale paths (`plans/` → `internal/plans/`), deployment links → App Runner, test counts **416/125**, video-script + meta index updated.
+
+---
+
 ## Sep 13, 2026 (Phase 7 — submission prep)
 
 - **E2E:** Playwright helpers reuse one `X-Demo-Session` per test (`resetBackend` → browser bind → API calls); J-FULL @smoke green on isolated ports.

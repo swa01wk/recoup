@@ -15,6 +15,7 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 | [optional-depth/](optional-depth/) | SLA replay, graph tools, domain models — code still in repo; optional for judges |
 | [ops/](ops/) | IAM, deploy, runbook, cross-account, stopped-services notebook |
 | [submit/](submit/) | Video script, Devpost checklist, builder posts, CI guide, disclosure |
+| [internal/](internal/) | Phase tracker, implementation plans, planning `.docx` (optional) |
 
 ---
 
@@ -54,4 +55,4 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 |------|--------|
 | [LIVE_SCENARIOS_TODO.md](LIVE_SCENARIOS_TODO.md) | Completed scenario tracker snapshot |
 
-Living status: [STATUS.md](../../STATUS.md) · Operator story: [operator-journey.md](../operator-journey.md)
+Internal build history: [internal/STATUS.md](internal/STATUS.md) · Operator story: [operator-journey.md](../operator-journey.md)

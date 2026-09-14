@@ -203,7 +203,7 @@ recoup/
   infra/cdk/         AWS infrastructure
   docs/              Product & architecture markdown
   scripts/           Demo ops, fixtures, CI helpers
-  plans/             Phase implementation notes
+  docs/archive/internal/plans/   Historical phase notes (optional)
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Code Changes — Now vs Later
 
-**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred · **Doc/metrics sync Sep 13** (App Runner URLs, **407** pytest)  
+**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred · **Doc sync Sep 14** (App Runner, **416** pytest · **125** Playwright, internal/ archive)  
 **Product source of truth:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **Cleanup plan:** [stale-code-removal-plan.md](stale-code-removal-plan.md)  
 **Context:** Feature cutoff Sep 11, 2026 · Hackathon deadline Sep 14, 2026
@@ -11,7 +11,7 @@
 
 | Track | Scope | Status |
 |-------|--------|--------|
-| **Phase 0** | J-FULL doc alignment | **Done** — README, judge-demo, playbook, api-reference J-FULL table, STATUS, submission-record, `plans/SUPERSEDED.md` |
+| **Phase 0** | J-FULL doc alignment | **Done** — README, judge-demo, playbook, api-reference, submission-record, [internal/plans/SUPERSEDED.md](../internal/plans/SUPERSEDED.md) |
 | **Phase 1** | Frontend stale UI | **Done** — `/replay` page removed; demo client trimmed; `/approvals` + `/quality` redirect via `next.config.ts`; `journey-ui-browser` rewritten |
 | **Phase 2** | Optional demo HTTP APIs | **Done** — `/api/replay/*`, ec2/cloudtrail/tagging/cost demo routers removed |
 | **Phase 3** | Replay-centric Playwright | **Done** — 9 specs deleted; J7/J8/J9 retargeted to scan/promote |

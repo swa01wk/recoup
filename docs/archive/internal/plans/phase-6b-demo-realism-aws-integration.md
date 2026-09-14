@@ -1,6 +1,6 @@
 # Phase 6b — Demo Realism & AWS Integration
 
-> **Historical implementation plan.** Targets below reflect mid-build intent. **Current product & metrics:** [docs/README.md](../docs/README.md) · [STATUS.md](../STATUS.md) · [docs/judge-demo.md](../docs/judge-demo.md).
+> **Historical — internal only.** Current product: [docs index](../../../README.md) · [judge-demo.md](../../../judge-demo.md) · [STATUS.md](../STATUS.md).
 
 > **As-built:** Governance demo APIs shipped (`/api/cloudtrail-demo`, `/api/tagging-demo`, `/api/cost-demo`). UI tiles on a single “Command Center” dashboard were **not** kept — prove via API curls or journey tests. See [docs/demo-playbook.md](../docs/demo-playbook.md).
 

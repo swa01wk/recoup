@@ -40,15 +40,11 @@ Walkthrough: [docs/judge-demo.md](../../judge-demo.md) · Video script: [video-s
 
 ---
 
-## Why Recoup (vs FinOps dashboards / optimizers)
+## What makes Recoup different
 
-| Question | Answer |
-|----------|--------|
-| Why not Compute Optimizer? | Optimizer identifies opportunities; Recoup investigates context, proves intent, runs policy + HITL, and records verified recovery. |
-| Why not AWS FinOps Agent? | FinOps Agent investigates and routes recommendations; Recoup closes the loop with bounded execution and a Recovery Ledger. |
-| Why not ProsperOps? | ProsperOps optimizes commitments and economics; Recoup is a spend-incident investigator with evidence, HITL, and verification. |
+Recoup is a **closed-loop recovery operator**: real AWS scanners → evidence-backed cases → **Cedar policy** → **claim-bound human approval** → Recovery Ledger and SNS report — not a read-only recommendation feed.
 
-Full FAQ and rubric mapping: [README.md](../../../README.md)
+FAQ: [README.md](../../../README.md)
 
 ---
 

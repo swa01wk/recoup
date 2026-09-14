@@ -1,4 +1,4 @@
-/** Shared helpers for Phase 9 competitive UI gaps. */
+/** Approval-card fallbacks (risk tier, action, rollback) for opportunity detail. */
 
 export const STRANDS_NODES = new Set([
   "incident_correlation",

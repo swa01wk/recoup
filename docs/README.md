@@ -2,8 +2,8 @@
 
 **Project:** AWS Autonomous Cloud Spend Recovery Agent  
 **Hackathon:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
-**Last updated:** Sep 13, 2026  
-**Phases complete:** 0–6f, 8, 9 · Phase 7 (video/submission) in progress
+**Last updated:** Sep 14, 2026  
+**Shipped:** J-FULL on App Runner · **Submission:** video + Devpost ([submit/submission-record.md](archive/submit/submission-record.md))
 
 **Archived docs:** [archive/](archive/) — meta, superseded, optional depth, ops, submit (moved, not deleted)
 
@@ -89,7 +89,7 @@
 | [../release_notes.md](../release_notes.md) | **Shipped changes & ops flags** (maintain on each release) |
 | [../USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) | Test ↔ journey map |
 | [../README.md](../README.md) | Project overview |
-| [../STATUS.md](../STATUS.md) | Internal phase tracker |
+| [archive/internal/](archive/internal/) | Internal phase tracker & build plans (optional for judges) |
 
 ---
 

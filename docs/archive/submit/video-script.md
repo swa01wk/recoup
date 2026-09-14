@@ -89,9 +89,9 @@ Remaining / Pending / Recovered aligned with the three decisions.
 
 **On screen:** terminal — quality scorecard six gates
 
-> *"123 Playwright tests including the full operator journey; 407 backend tests; Cedar default deny."*
+> *"125 Playwright tests (16 specs) including J-FULL; 416 backend tests; Cedar default deny."*
 
-Diagram: [architecture-overview.md](architecture-overview.md) (ASCII); no separate SVG in repo.
+Diagram: [architecture/architecture.svg](../../../architecture/architecture.svg) in the repo root.
 
 ---
 

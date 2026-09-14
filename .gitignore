@@ -67,3 +67,12 @@ infra/agentcore-ids.json
 # Architecture placeholders
 architecture/*.png
 !architecture/.gitkeep
+
+# Playwright (local runs)
+frontend/playwright-report/
+frontend/test-results/
+backend/test-results/
+test-results/
+
+# Internal planning docs at repo root (use docs/archive/internal/planning/)
+/*.docx

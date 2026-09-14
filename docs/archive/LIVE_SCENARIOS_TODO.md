@@ -1,6 +1,6 @@
 # Archived — Live Scenarios Tracker
 
-> **This checklist is complete.** Living status: [STATUS.md](../../STATUS.md).  
+> **This checklist is complete.** Internal build history: [internal/STATUS.md](../internal/STATUS.md).  
 > Demo scenarios: [demo-playbook.md](../demo-playbook.md).
 
 ---
@@ -9,7 +9,7 @@
 
 > **Last updated:** Sep 8, 2026  
 > **Status:** Most scenarios complete. Remaining work in Phase 7 (video + submission polish).  
-> See `STATUS.md` for full phase-by-phase progress.
+> See [internal/STATUS.md](../internal/STATUS.md) for phase-by-phase progress (internal).
 
 ---
 

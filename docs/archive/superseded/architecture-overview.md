@@ -1,9 +1,8 @@
 # Recoup — Architecture Overview
 
-**Version:** Phases 0–9 complete · Phase 7 (video/submission) in progress  
-**Last Updated:** Sep 11, 2026  
-**Competition:** AWS Agents for Humans Hackathon (Aug 10 – Sep 14, 2026)  
-**Test coverage:** 15 Playwright specs · 123 tests · 407 backend tests collected
+> **Superseded.** Use [recoup-overall-architecture.md](../../recoup-overall-architecture.md) and [architecture/architecture.svg](../../../architecture/architecture.svg). Metrics: [docs/README.md](../../README.md) (**416** pytest · **125** Playwright).
+
+**Last Updated:** Sep 11, 2026 (archived)
 
 ---
 

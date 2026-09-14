@@ -1,8 +1,7 @@
 # Recoup — Project Status
 
-> **Historical phase log below.** For the **current operator product (J-FULL)**, use [docs/operator-journey.md](docs/operator-journey.md).  
-> **Sep 13:** **AWS-all production** live — App Runner API + UI (account 625962218034). Runbook: [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md).  
-> **Sep 11–12:** Primary UI = scan → HITL → ledger; recovery pipeline on promote + detail UI. Metrics: [docs/README.md](docs/README.md).
+> **Historical phase log — not for judges.** Current product: [operator-journey.md](../../operator-journey.md) · [judge-demo.md](../../judge-demo.md).  
+> **Production:** App Runner — [production-hosting.md](../ops/production-hosting.md). Metrics: [docs/README.md](../../README.md).
 
 **Competition Deadline:** Sep 14, 2026 (AWS Agents for Humans Hackathon)  
 **Last Updated:** Sep 13, 2026 (PM) — Guest demo sessions + SSE `demo_session` on stream · Plane A URLs in table below · [release_notes.md](release_notes.md)  

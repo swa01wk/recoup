@@ -92,4 +92,4 @@ curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 curl -s -X POST http://localhost:8000/api/test/reset   # non-production only
 ```
 
-Deploy: [deployment.md](deployment.md)
+Deploy: [production-hosting.md](../ops/production-hosting.md) (App Runner; historical [deployment.md](../ops/deployment.md))

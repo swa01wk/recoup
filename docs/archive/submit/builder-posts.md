@@ -44,7 +44,7 @@ Three posts required for +0.6 bonus. Each title must include **"Agents for Human
 
 ## Post 3 — Evaluation (publish by Sep 12)
 
-**Title:** *Agents for Humans — How We Proved Recoup Works: 420 Backend + 279 E2E Tests, Deterministic Math, and Zero Unsafe Actions*
+**Title:** *Agents for Humans — How We Proved Recoup Works: 416 Backend + 125 E2E Tests, Deterministic Math, and Zero Unsafe Actions*
 
 **Outline:**
 - 47 YAML scenario categories

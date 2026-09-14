@@ -7,7 +7,7 @@
 **Last updated:** Sep 11, 2026  
 **Rules reference:** [R2] AgentCore, [R6] AgentCore Policy, [R7] AgentCore Observability, [R8] Health/EventBridge, [R9] Support API, [R11] Cost Anomaly Detection, [R12] Cost Optimization Hub, [R13] CloudWatch  
 
-> **Historical inventory.** Service/resource list remains valid for provisioning. **Test metrics:** [docs/README.md](../docs/README.md) (**420** backend · **279** Playwright · **28** specs).
+> **Historical inventory.** Service/resource list remains valid for provisioning. **Test metrics:** [docs/README.md](../../../README.md) (**416** backend · **125** Playwright · **16** specs).
 
 ---
 
@@ -758,7 +758,7 @@ These resources exist **solely to demonstrate scan findings**. They are intentio
 |------|------------|--------|-------|
 | [R1] Fresh project | Repository created after Aug 10; first commit timestamped | ✅ | First commit `0bbe21e` |
 | [R1] Public repo | GitHub repo public with license | ✅ | github.com/swa01wk/recoup, MIT |
-| [R1] Judge access | Demo free and accessible through Oct 8, 2026 | 🔴 | Live URL pending (Phase 7 remaining — Vercel + Railway deploy) |
+| [R1] Judge access | Demo free and accessible through Oct 8, 2026 | ✅ | App Runner UI + API — [production-hosting.md](../../ops/production-hosting.md) |
 | [R2] AgentCore | Runtime + Gateway + Policy/Observability deployed | 🟡 | Runtime + Gateway registered (`recoup_recovery_agent-T9RRFljZUO`, `recoup-tool-gateway-tpnzqdgixc`). Strands agents call Bedrock via `BedrockModel` from Strands SDK. **Verify:** AgentCore Runtime is in the execution path (not just direct Bedrock). Harness + Gateway registered — confirm invocation goes through AgentCore for judge review. |
 | [R6] AgentCore Policy | Cedar policies attached in enforcement mode; default deny | 🟡 | Cedar enforced in Python (`safety/cedar.py`). Claim binding tested: tampered hash/amount/version → 409 (**Playwright SEC-1/SEC-2/SEC-3 verified**). **Must verify** `recoup-policy.cedar` is attached to gateway in ENFORCING mode, not advisory. |
 | [R7] AgentCore Observability | All metrics/logs routed to CloudWatch | 🟡 | CW log groups `/recoup/runtime`, `/recoup/gateway`, `/recoup/api`, `/recoup/ec2-demo` wired. `X-Request-ID` on all responses (**Playwright SEC-5/SEC-6 verified**). Custom node/tool metrics (`Recoup/Graph`, `Recoup/Tools`) — not yet publishing custom metric data points. |

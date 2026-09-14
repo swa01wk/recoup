@@ -74,19 +74,6 @@ Canonical doc: [docs/operator-journey.md](docs/operator-journey.md). SLA replay 
 
 ---
 
-## Why Not [X]?
-
-**Why not ProsperOps?**  
-ProsperOps is a mature autonomous FinOps optimizer, especially for commitments and workload scheduling. Recoup is an autonomous cloud-spend investigator and recovery operator focused on cross-signal causal investigation, evidence, risk-tiered HITL remediation, and technical + financial verification.
-
-**Why not AWS FinOps Agent?**  
-AWS FinOps Agent investigates anomalies and surfaces recommendations. Recoup goes further: evidence-backed Recovery Case, Cedar policy, explicit human approval, bounded AWS action, verification, and Recovery Ledger.
-
-**Why not AWS Compute Optimizer?**  
-Compute Optimizer identifies opportunities. Recoup investigates context, establishes intent, packages evidence, chooses a safe recovery workflow, executes under policy, and verifies the outcome.
-
----
-
 ## Frequently Asked Questions
 
 **"How do you prevent hallucinated destructive actions?"**  
@@ -129,7 +116,7 @@ Frontend (Next.js 16)
 | Tampered claim rejection | 100% | ✓ 409 on hash/amount/version tamper |
 
 See `GET /api/quality/scorecard` for live gate status.  
-Primary journey: [docs/operator-journey.md](docs/operator-journey.md). Full test map: [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md). Doc index: [docs/README.md](docs/README.md) · archived meta/cleanup: [docs/archive/meta/](docs/archive/meta/).
+Primary journey: [docs/operator-journey.md](docs/operator-journey.md). Doc index: [docs/README.md](docs/README.md).
 
 ---
 
@@ -137,14 +124,12 @@ Primary journey: [docs/operator-journey.md](docs/operator-journey.md). Full test
 
 ```
 recoup/
-├── backend/               FastAPI API + Strands graph + deterministic engines
-├── frontend/              Next.js UI (opportunities-first) · e2e/ (28 Playwright specs)
-├── docs/                  Documentation index + playbooks (see docs/README.md)
-├── infra/cdk/             AWS CDK stacks
-├── eval_fixtures/         Immutable replay seed artifacts
-├── USER_JOURNEY_CHECKLIST.md   Test ↔ journey map
-├── STATUS.md              Phase tracker
-└── docs/demo-playbook.md  Demo scenarios (J-FULL + optional)
+├── backend/          FastAPI · Strands graph · scanners · HITL
+├── frontend/         Next.js UI · e2e/ (Playwright)
+├── docs/             Judge demo, operator journey, API reference (see docs/README.md)
+├── infra/cdk/        AWS CDK stacks
+├── architecture/     architecture.svg
+└── eval_fixtures/    Golden replay fixtures
 ```
 
 ---
@@ -153,7 +138,7 @@ recoup/
 
 **Prerequisites:** Python 3.12+, Node 20+, AWS CLI (optional for live demos)
 
-See [docs/deployment.md](docs/deployment.md) for public demo deployment (Vercel + Railway/Fly.io).  
+See [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) for the live App Runner demo.  
 See [docs/local-dev-and-testing.md](docs/local-dev-and-testing.md) for ports and Playwright.
 
 ```bash
@@ -173,7 +158,7 @@ cd frontend && npx playwright test
 
 | Suite | Count | Command |
 |-------|------:|---------|
-| Backend unit tests | 420 collected | `cd backend && pytest tests/` |
+| Backend unit tests | 416 collected | `cd backend && pytest tests/` |
 | Playwright E2E | 125 (16 specs) | `cd frontend && npx playwright test` |
 | Primary operator journey | J-FULL | [docs/operator-journey.md](docs/operator-journey.md) |
 | Extended test map | J1–J12 + SEC + J-FULL | [USER_JOURNEY_CHECKLIST.md](USER_JOURNEY_CHECKLIST.md) |
