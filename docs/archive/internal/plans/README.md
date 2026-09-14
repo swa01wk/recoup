@@ -113,7 +113,7 @@ Frontend (Next.js)
 ### Technical ✅ All passing
 - [x] 20/20 consecutive golden replay passes
 - [x] 0 unsafe external actions across full test suite (quality gate)
-- [x] 100% deterministic financial math (416 backend tests collected)
+- [x] 100% deterministic financial math (419 backend tests collected)
 - [x] AgentCore Runtime + Gateway registered (`recoup_recovery_agent-T9RRFljZUO`, `recoup-tool-gateway-tpnzqdgixc`)
 - [x] 279 Playwright tests (28 specs) covering J1–J12 + 13 SEC adversarial scenarios
 - [x] Cedar claim binding: tampered hash/amount/version → 409 (Playwright verified)

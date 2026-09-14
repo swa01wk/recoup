@@ -10,12 +10,13 @@ Maintained changelog for shipped behavior, ops flags, and test baselines.
 - Removed third-party competitive case-study docx; moved build plans + STATUS to `docs/archive/internal/`.
 - Judge-facing README/Devpost copy no longer names ProsperOps or other case-study products.
 - Untracked Playwright report/test-result artifacts; `.gitignore` updated.
-- Doc pass: fixed stale paths (`plans/` → `internal/plans/`), deployment links → App Runner, test counts **416/125**, video-script + meta index updated.
+- Doc pass: fixed stale paths (`plans/` → `internal/plans/`), deployment links → App Runner, test counts **419/127**, submit pack + judge-demo aligned Sep 14.
 - **README:** documented `LLM_PROVIDER` (`bedrock` default vs `openai` + `OPENAI_API_KEY`).
 - **E2E:** PSC-2 (isolated opportunity IDs) and PSC-4 (dual browser contexts) in `journey-demo-session-concurrency.spec.ts`.
 - **Observability:** CloudWatch custom metrics `Recoup/Graph` and `Recoup/Tools` from tracing hooks when live AWS is enabled.
 - **Compliance doc:** refreshed [R1]–[R7], [R11], [R12] rows in `docs/archive/internal/plans/aws-requirements.md`.
 - **Test baselines:** **419** pytest collected · **127** Playwright tests (PSC-2/PSC-4).
+- **Submit pack aligned:** `devpost-project-description.md`, `video-script.md`, `builder-post-drafts.md`, `submission-record.md`, `judge-demo.md` — **419/127**, graph **5 agent + 6 deterministic**, production vs offline demo scan table.
 
 ---
 
@@ -96,7 +97,7 @@ Browser: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan → th
 
 - Backend: `tests/unit/test_demo_session.py`, `tests/unit/test_demo_control.py`; extended `test_admin_reset_gate.py`.
 - Playwright: `e2e/journey-demo-session-concurrency.spec.ts` (PSC-1, PSC-3 `@smoke`).
-- Baselines: **416** pytest collected · **125** Playwright tests in **16** spec files.
+- Baselines: **419** pytest collected · **127** Playwright tests in **16** spec files.
 
 **Docs synced:** production URLs, SSE session query param, runbook §2/§3, `api-reference.md`, `operator-journey.md`, `production-hosting.md`, judge/operator guides, `stale-documents.md`.
 

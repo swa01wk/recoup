@@ -196,14 +196,17 @@ If replay goes away but AgentCore must stay: register fewer tools; document “A
 
 ## Suggested execution order (recommended)
 
-```text
-Phase 0  Docs ✅
-Phase 1  Remove /replay page + trim journey-ui-browser
-Phase 5  Governance demo APIs (if unused in pitch)
-Phase 2  replay + ec2-demo API (only after deciding video/rubric need)
-Phase 3  Collapse Strands lifecycle specs
-Phase 4  EC2 action mapping cleanup
-Phase 6  Infra (last resort)
+```mermaid
+flowchart TD
+    p0["Phase 0 — Docs ✅"]
+    p1["Phase 1 — Remove /replay page + trim journey-ui-browser"]
+    p5["Phase 5 — Governance demo APIs (if unused in pitch)"]
+    p2["Phase 2 — replay + ec2-demo API (after video/rubric decision)"]
+    p3["Phase 3 — Collapse Strands lifecycle specs"]
+    p4["Phase 4 — EC2 action mapping cleanup"]
+    p6["Phase 6 — Infra (last resort)"]
+
+    p0 --> p1 --> p5 --> p2 --> p3 --> p4 --> p6
 ```
 
 ---

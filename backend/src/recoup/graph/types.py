@@ -241,7 +241,7 @@ class AgentNode:
                         )
                     except concurrent.futures.TimeoutError:
                         _log.warning(
-                            "agentnode.strands_timeout node=%s timeout=%.0fs — falling back to stub",
+                            "agentnode.strands_timeout node=%s timeout=%.0fs — stub fallback",
                             self.name,
                             self._STRANDS_TIMEOUT_SECONDS,
                         )

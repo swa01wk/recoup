@@ -19,10 +19,10 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 ## What we built
 
 - **J-FULL operator journey (live demo):** `/scan` → Demo Scan → `/opportunities` → Start Recovery on three services → Approve / Investigate / Decline on `/opportunities/{id}` → `/recovery` ledger buckets.
-- **11-node recovery graph:** 3 Strands reasoning nodes + 8 deterministic nodes (policy, math, adapters).
+- **11-node recovery graph:** 5 agent nodes + 6 deterministic nodes (Cedar policy gate, math, adapters). J-FULL promote runs the recovery pipeline to HITL; optional `POST /api/opportunities/{id}/run` for full graph re-run.
 - **Safety:** Cedar default-deny, evidence sanitizer, claim-bound HITL (`claim_hash`, amount, `state_version`), autonomy classes, zero unsafe external actions (ship gates).
 - **AWS depth:** 9 waste scanners, STS AssumeRole, AgentCore integration, per-guest demo sessions on App Runner.
-- **Proof:** 416 backend tests + 125 Playwright tests; golden SLA replay math in CI (deterministic, not LLM-generated).
+- **Proof:** **419** backend tests + **127** Playwright tests (16 specs, J-FULL + PSC + SEC); golden SLA replay math in CI (deterministic, not LLM-generated).
 
 ---
 

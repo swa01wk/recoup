@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 
 from recoup.api.main import app
 from recoup.demo_control import bump_global_epoch, get_global_epoch, sync_global_epoch
-from recoup.demo_state import graph_states
 from recoup.demo_session import DEFAULT_TEST_SESSION
+from recoup.demo_state import graph_states
 
 
 def test_sync_global_epoch_clears_memory() -> None:

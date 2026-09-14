@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from ..models.recovery import (
     RecoveryPlan,
@@ -40,7 +41,9 @@ def _pick_primary(
         for c in catalog:
             if c.action_id == "change_type":
                 return c
-    return catalog[0] if catalog else RemediationCatalogEntry("investigate", "Investigate", "reversible")
+    if catalog:
+        return catalog[0]
+    return RemediationCatalogEntry("investigate", "Investigate", "reversible")
 
 
 def build_recommendation_and_plan(
@@ -73,7 +76,8 @@ def build_recommendation_and_plan(
     )
     if has_counter:
         reasoning = (
-            "Counter-evidence detected — conservative action preferred over destructive remediation."
+            "Counter-evidence detected — prefer conservative action over "
+            "destructive remediation."
         )
 
     rec = RecoveryRecommendation(
@@ -86,7 +90,10 @@ def build_recommendation_and_plan(
         ],
         expected_monthly_recovery_usd=monthly,
         reversibility=primary.reversibility,
-        prerequisites=["Verify approval and policy gate", "Confirm resource still in scanned state"],
+        prerequisites=[
+            "Verify approval and policy gate",
+            "Confirm resource still in scanned state",
+        ],
     )
 
     pre_checks = [

@@ -1,6 +1,6 @@
 # Recoup — Architecture Overview
 
-> **Superseded.** Use [recoup-overall-architecture.md](../../recoup-overall-architecture.md) and [architecture/architecture.svg](../../../architecture/architecture.svg). Metrics: [docs/README.md](../../README.md) (**416** pytest · **125** Playwright).
+> **Superseded.** Use [recoup-overall-architecture.md](../../recoup-overall-architecture.md) and [architecture/architecture.svg](../../../architecture/architecture.svg). Metrics: [docs/README.md](../../README.md) (**419** pytest · **127** Playwright).
 
 **Last Updated:** Sep 11, 2026 (archived)
 
@@ -16,52 +16,22 @@ Recoup is an autonomous cloud-spend recovery agent. It monitors AWS workloads fo
 
 ## High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js 16)                          │
-│     Sidebar: Opportunities · Account Scanner · Recovery Ledger   │
-│     (+ /opportunities/[id] HITL; optional SSE on agent re-run)   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ HTTP / SSE
-┌────────────────────────▼────────────────────────────────────────┐
-│                  FastAPI Backend (Python 3.12)                   │
-│    /api/scan · /api/opportunities · /api/approvals · /api/quality │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────────┐
-│          Amazon Bedrock AgentCore Runtime                        │
-│          recoup_recovery_agent-T9RRFljZUO                       │
-│                                                                  │
-│   ┌──────────────────────────────────────────────────────────┐  │
-│   │              Strands Agent Graph (11 nodes)              │  │
-│   │                                                          │  │
-│   │  normalize_event → incident_correlation                  │  │
-│   │       → sla_contract_resolver → availability_calculator  │  │
-│   │       → evidence_collector → evidence_sanitizer          │  │
-│   │       → eligibility_reasoner → risk_policy_gate          │  │
-│   │             ↓ REQUIRE_APPROVAL                           │  │
-│   │       await_human_approval (HITL)                        │  │
-│   │             ↓ APPROVED                                   │  │
-│   │       claim_package_generator → submission_adapter        │  │
-│   │       → case_monitor                                     │  │
-│   └──────────────────────────────────────────────────────────┘  │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ MCP (Model Context Protocol)
-┌────────────────────────▼────────────────────────────────────────┐
-│          AgentCore Gateway                                       │
-│    recoup-tool-gateway-tpnzqdgixc                               │
-│    13 narrow typed tools · action classes · Cedar policy        │
-└──────┬──────────────────────────────────────────────────────────┘
-       │ IAM role-scoped invocations
-┌──────▼────────────────────────────────────────────────────────┐
-│                   AWS Data Sources                             │
-│  CloudWatch · Cost Explorer · CloudTrail · Health · Support   │
-└───────────────────────────────────────────────────────────────┘
-       │
-┌──────▼────────────────────────────────────────────────────────┐
-│                   Persistent Storage                           │
-│  DynamoDB (4 tables) · S3 (3 buckets) · SQS · EventBridge    │
-└───────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    fe["Frontend (Next.js 16)<br/>Sidebar: Opportunities · Account Scanner · Recovery Ledger<br/>+ /opportunities/[id] HITL; optional SSE on agent re-run"]
+    api["FastAPI Backend (Python 3.12)<br/>/api/scan · /api/opportunities · /api/approvals · /api/quality"]
+    runtime["Amazon Bedrock AgentCore Runtime<br/>recoup_recovery_agent-T9RRFljZUO"]
+    graph["Strands Agent Graph (11 nodes)<br/>normalize_event → incident_correlation → sla_contract_resolver → availability_calculator → evidence_collector → evidence_sanitizer → eligibility_reasoner → risk_policy_gate → await_human_approval (HITL) → claim_package_generator → submission_adapter → case_monitor"]
+    gateway["AgentCore Gateway<br/>recoup-tool-gateway-tpnzqdgixc<br/>13 narrow typed tools · Cedar policy"]
+    data["AWS Data Sources<br/>CloudWatch · Cost Explorer · CloudTrail · Health · Support"]
+    storage["Persistent Storage<br/>DynamoDB · S3 · SQS · EventBridge"]
+
+    fe -->|"HTTP / SSE"| api
+    api --> runtime
+    runtime --> graph
+    runtime -->|"MCP"| gateway
+    gateway -->|"IAM role-scoped invocations"| data
+    data --> storage
 ```
 
 ---
@@ -314,18 +284,24 @@ The Account Scanner (`/api/scan`) lets users scan **their own** AWS account for 
 
 **Phase 6e:** Raw access keys replaced with **STS AssumeRole**. The caller provides a Role ARN + External ID; Recoup assumes the role and obtains 1-hour temporary credentials.
 
-```
-Frontend /scan page
-  └─ Connection form (Role ARN + External ID + Region)
-  └─ POST /api/scan/full  ──► Backend scanner
-                                 └─ CustomerConnection.build_session()
-                                      └─ sts:AssumeRole (ExternalId required)
-                                           └─ Temporary credentials (1h expiry)
-                                 └─ Parallel service checks:
-                                     EC2 • RDS • S3 • Lambda
-                                     EBS • EIP • Load Balancers
-                                     CloudWatch Logs • Cost Explorer
-                                 └─ Returns ScanResult with assumed_role_arn + findings
+```mermaid
+flowchart TD
+    ui["Frontend /scan page"]
+    form["Connection form (Role ARN + External ID + Region)"]
+    post["POST /api/scan/full"]
+    scanner["Backend scanner"]
+    session["CustomerConnection.build_session()"]
+    sts["sts:AssumeRole (ExternalId required)"]
+    creds["Temporary credentials (1h expiry)"]
+    parallel["Parallel service checks<br/>EC2 · RDS · S3 · Lambda · EBS · EIP · LB · CW Logs · CE"]
+    result["ScanResult with assumed_role_arn + findings"]
+
+    ui --> form
+    ui --> post
+    post --> scanner
+    scanner --> session --> sts --> creds
+    scanner --> parallel
+    scanner --> result
 ```
 
 **IAM Security Roles (Phase 6e):**

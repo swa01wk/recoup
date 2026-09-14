@@ -295,7 +295,7 @@ def _publish_scorecard_metrics(scorecard: dict[str, Any]) -> None:
 
     Metrics:
       - OpportunitiesDetected  (count)
-      - CreditsRecoveredUSD    (dollar value of real credit from billing_snapshot.json — $0.35 for demo account)
+      - CreditsRecoveredUSD    (real credit from billing_snapshot.json — e.g. $0.35 demo)
       - HumanApprovalsRequired (count — always 1 for the canonical scenario)
       - UnsafeActionsBlocked   (count)
       - GoldenPathSuccessRate  (percent 0–100)

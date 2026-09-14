@@ -12,41 +12,28 @@
 
 ## Graph Overview
 
-```
-normalize_event (D)
-    │
-    ▼
-incident_correlation (A) ──── CloudWatch · Health · CloudTrail
-    │
-    ▼
-sla_contract_resolver (D) ──── sla_catalog/
-    │
-    ▼
-availability_calculator (D) ──── pure Decimal math
-    │
-    ▼
-evidence_collector (A) ──── CloudWatch · Logs · Cost · S3
-    │
-    ▼
-evidence_sanitizer (D) ──── deterministic redaction
-    │
-    ▼
-eligibility_reasoner (A) ──── reads evidence by ID only
-    │
-    ▼
-risk_policy_gate (D) ──── Cedar policy
-    │
-    ├── REQUIRE_APPROVAL ──► await_human_approval (HITL pause)
-    │                              │
-    ├── ALLOW ─────────────────────┤
-    │                              ▼
-    └── DENY ──► terminal_denied  claim_package_generator (A)
-                                   │
-                                   ▼
-                              submission_adapter (D)
-                                   │
-                                   ▼
-                              case_monitor (A)
+```mermaid
+flowchart TD
+    n1["normalize_event (D)"]
+    n2["incident_correlation (A)<br/>CloudWatch · Health · CloudTrail"]
+    n3["sla_contract_resolver (D)<br/>sla_catalog/"]
+    n4["availability_calculator (D)<br/>pure Decimal math"]
+    n5["evidence_collector (A)<br/>CloudWatch · Logs · Cost · S3"]
+    n6["evidence_sanitizer (D)<br/>deterministic redaction"]
+    n7["eligibility_reasoner (A)<br/>reads evidence by ID only"]
+    gate["risk_policy_gate (D)<br/>Cedar policy"]
+    hitl["await_human_approval<br/>HITL pause"]
+    denied["terminal_denied"]
+    n9["claim_package_generator (A)"]
+    n10["submission_adapter (D)"]
+    n11["case_monitor (A)"]
+
+    n1 --> n2 --> n3 --> n4 --> n5 --> n6 --> n7 --> gate
+    gate -->|"REQUIRE_APPROVAL"| hitl
+    gate -->|"ALLOW"| n9
+    gate -->|"DENY"| denied
+    hitl --> n9
+    n9 --> n10 --> n11
 ```
 
 Legend: `(D)` = DeterministicNode · `(A)` = AgentNode · `HITL` = Human-in-the-Loop pause

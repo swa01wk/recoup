@@ -18,7 +18,7 @@ Runs on every push alongside `frontend`. Requires backend to start.
 cd frontend && npx playwright test --grep @smoke
 ```
 
-**Test files:** 16 specs · 125 tests (see [release_notes.md](../../../release_notes.md))  
+**Test files:** 16 specs · 127 tests (see [release_notes.md](../../../release_notes.md))  
 **Tags:** `@smoke` (happy path) · `@full` (edge cases + security)  
 **Coverage:** J1–J12 journeys + 13 SEC adversarial scenarios
 
@@ -33,7 +33,7 @@ Runs on every push. No AWS credentials required.
 ```
 ruff check src/ tests/          # style + unused imports
 mypy src/recoup/ --strict       # strict type checking (57 source files, 0 errors)
-pytest tests/ -W error::DeprecationWarning   # ~416 collected, live-mode skips as configured, zero warnings
+pytest tests/ -W error::DeprecationWarning   # ~419 collected, live-mode skips as configured, zero warnings
 pytest tests/unit/test_sla_catalog.py        # SLA catalog integrity
 ```
 

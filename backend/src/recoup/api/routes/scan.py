@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import hashlib
 import json as _json
-import os
+import re as _re
+import secrets
 import time
 import uuid
 from collections import defaultdict
@@ -26,16 +27,33 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-import re as _re
-import secrets
-
 import structlog
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ...config import settings
-from ...approval.flow import HITLFlow
 from ...adapters.finding_to_signal import FindingToSignalAdapter
+from ...approval.flow import HITLFlow
+from ...config import settings
+from ...demo_session import (
+    assert_session_epoch_unchanged,
+    get_session_epoch,
+    require_session_id,
+)
+from ...demo_state import (
+    graph_states as graph_states_for_session,
+)
+from ...demo_state import (
+    promoted_findings as promoted_findings_for_session,
+)
+from ...demo_state import (
+    scan_audit_log as scan_audit_log_for_session,
+)
+from ...demo_state import (
+    scan_history as scan_history_for_session,
+)
+from ...demo_state import (
+    scan_result_cache as scan_result_cache_for_session,
+)
 from ...graph.recoup_graph import recoup_graph
 from ...graph.types import GraphState, PolicyDecision
 from ...models.connection import CustomerConnection
@@ -52,21 +70,10 @@ from ...scanners.lb_scanner import LBScanner
 from ...scanners.rds_scanner import RDSScanner
 from ...scanners.s3_scanner import S3Scanner
 
-from ...demo_session import (
-    assert_session_epoch_unchanged,
-    get_session_epoch,
-    require_session_id,
-)
-from ...demo_state import (
-    graph_states as graph_states_for_session,
-    promoted_findings as promoted_findings_for_session,
-    scan_audit_log as scan_audit_log_for_session,
-    scan_history as scan_history_for_session,
-    scan_result_cache as scan_result_cache_for_session,
-)
-
 log: structlog.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
+
+DEMO_SCAN_CACHE_KEY = "__demo__"
 
 
 def _demo_session_id() -> str:
@@ -87,7 +94,10 @@ _SCAN_SANITIZE_PATTERNS: list[tuple[_re.Pattern[str], str]] = [
     # AWS access key IDs (AKIA... or ASIA...)
     (_re.compile(r"(?:AKIA|ASIA|AIDA|AROA|ANPA|ANVA|APKA)[A-Z0-9]{16}"), "[REDACTED-ACCESS-KEY]"),
     # Full ARNs (arn:aws:...) — partially mask account component
-    (_re.compile(r"arn:aws:[a-z0-9\-]+:[a-z0-9\-]*:(\d{12}):"), r"arn:aws:...[REDACTED-ACCOUNT-ID]:"),
+    (
+        _re.compile(r"arn:aws:[a-z0-9\-]+:[a-z0-9\-]*:(\d{12}):"),
+        r"arn:aws:...[REDACTED-ACCOUNT-ID]:",
+    ),
     # JWT tokens
     (
         _re.compile(r"eyJ[a-zA-Z0-9_\-]{10,}\.[a-zA-Z0-9_\-]{10,}\.[a-zA-Z0-9_\-]{10,}"),
@@ -312,10 +322,9 @@ def _offline_demo_scan_result() -> ScanResult:
 
 def _store_demo_scan_result(result: ScanResult) -> ScanResult:
     """Cache, audit, and return sanitized demo scan result for the current session."""
-    _DEMO_CACHE_KEY = "__demo__"
     scan_cache = scan_result_cache_for_session(_demo_session_id())
     sanitized = _sanitize_scan_result(result)
-    scan_cache[_DEMO_CACHE_KEY] = sanitized
+    scan_cache[DEMO_SCAN_CACHE_KEY] = sanitized
     _write_scan_audit(sanitized, [s.service_name for s in _ALL_SCANNERS])
     return sanitized
 
@@ -496,10 +505,9 @@ def scan_demo() -> ScanResult:
     # Return cached result when available — avoids 22-second AWS round-trips
     # on every test.  The cache is never cleared by test reset; only one
     # real scan happens per uvicorn process lifetime.
-    _DEMO_CACHE_KEY = "__demo__"
     scan_cache = scan_result_cache_for_session(_demo_session_id())
-    if _DEMO_CACHE_KEY in scan_cache:
-        cached = scan_cache[_DEMO_CACHE_KEY]
+    if DEMO_SCAN_CACHE_KEY in scan_cache:
+        cached = scan_cache[DEMO_SCAN_CACHE_KEY]
         # Write an audit entry even for cache hits so tests that reset the
         # audit log still see a record after calling the demo scan endpoint.
         _write_scan_audit(cached, [s.service_name for s in _ALL_SCANNERS])
@@ -539,7 +547,7 @@ def scan_demo() -> ScanResult:
             raise
         log.warning("demo_scan.offline", reason="sts_assume_role_failed")
         return _store_demo_scan_result(_offline_demo_scan_result())
-    scan_cache[_DEMO_CACHE_KEY] = result
+    scan_cache[DEMO_SCAN_CACHE_KEY] = result
     return result
 
 
@@ -551,8 +559,7 @@ def get_last_scan() -> ScanResult:
     Used by the Recovery Ledger and Playwright tests to read scan state
     without relying on localStorage.
     """
-    _DEMO_CACHE_KEY = "__demo__"
-    result = scan_result_cache_for_session(_demo_session_id()).get(_DEMO_CACHE_KEY)
+    result = scan_result_cache_for_session(_demo_session_id()).get(DEMO_SCAN_CACHE_KEY)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -788,23 +795,28 @@ def promote_finding(finding: Finding) -> PromoteResponse:
 
     action = _recovery_action_for_finding(finding)
     flow = HITLFlow(opportunity_id=opp_id)
-    hitl_overrides: dict[str, str] = {}
     if graph_state.recovery_assessment is not None:
         rt, ad, rb = hitl_context_from_assessment(graph_state.recovery_assessment)
-        hitl_overrides = {
-            "risk_tier_override": rt,
-            "action_description_override": ad,
-            "rollback_context_override": rb,
-        }
-    flow.create_request(
-        principal="recoup-agent",
-        action=action,
-        amount=savings,
-        claim_hash=claim_hash,
-        state_version=graph_state.state_version,
-        resource_id=finding.resource_id,
-        **hitl_overrides,
-    )
+        flow.create_request(
+            principal="recoup-agent",
+            action=action,
+            amount=savings,
+            claim_hash=claim_hash,
+            state_version=graph_state.state_version,
+            resource_id=finding.resource_id,
+            risk_tier_override=rt,
+            action_description_override=ad,
+            rollback_context_override=rb,
+        )
+    else:
+        flow.create_request(
+            principal="recoup-agent",
+            action=action,
+            amount=savings,
+            claim_hash=claim_hash,
+            state_version=graph_state.state_version,
+            resource_id=finding.resource_id,
+        )
 
     promoted_at = datetime.now(UTC).isoformat()
     account_bucket[finding.resource_id] = {

@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -30,7 +31,7 @@ except ImportError:  # noqa: BLE001
     RateLimitExceeded = None  # type: ignore[assignment, misc]
     _rate_limit_exceeded_handler = None  # type: ignore[assignment]
 
-    def get_remote_address(request: "Request") -> str:  # type: ignore[misc]
+    def get_remote_address(request: Request) -> str:
         return "unknown"
 
 # ── Sentry (optional) ────────────────────────────────────────────────────────
@@ -39,15 +40,15 @@ try:
     _SENTRY_AVAILABLE = True
 except ImportError:  # noqa: BLE001
     _SENTRY_AVAILABLE = False
-    _sentry_sdk = None  # type: ignore[assignment]
+    _sentry_sdk = None
 
 from ..config import settings
 from ..demo_control import get_global_epoch, sync_global_epoch
 from ..demo_session import (
     DEFAULT_TEST_SESSION,
-    DemoSessionError,
     DEMO_SESSION_HEADER,
     DEMO_SESSION_QUERY_PARAM,
+    DemoSessionError,
     bind_session,
     ensure_test_session,
     reset_session,
@@ -93,7 +94,7 @@ def _configure_sentry() -> None:
             "SENTRY_DSN is set but sentry-sdk is not installed — skipping Sentry init"
         )
         return
-    _sentry_sdk.init(  # type: ignore[union-attr]
+    _sentry_sdk.init(
         dsn=settings.sentry_dsn,
         environment=settings.recoup_env,
         traces_sample_rate=0.1,
@@ -200,7 +201,10 @@ async def demo_session_error_handler(request: Request, exc: DemoSessionError) ->
 
 # ── Demo session + global epoch middleware ────────────────────────────────────
 @app.middleware("http")
-async def demo_session_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+async def demo_session_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     sync_global_epoch()
     path = request.url.path
     if request.method == "OPTIONS" or not _requires_demo_session(path):
@@ -243,7 +247,10 @@ async def demo_session_middleware(request: Request, call_next):  # type: ignore[
 
 # ── API-key auth middleware (Sprint 4) ───────────────────────────────────────
 @app.middleware("http")
-async def api_key_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
+async def api_key_auth(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     """
     Enforce API-key authentication when RECOUP_API_KEY is set in production.
 
@@ -291,7 +298,10 @@ async def api_key_auth(request: Request, call_next):  # type: ignore[no-untyped-
 
 # ── Request-ID middleware ─────────────────────────────────────────────────────
 @app.middleware("http")
-async def inject_request_id(request: Request, call_next):  # type: ignore[no-untyped-def]
+async def inject_request_id(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     request_id = str(uuid.uuid4())
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
@@ -371,13 +381,13 @@ def _do_full_reset(*, clear_scan_cache: bool = False) -> dict[str, str]:
         from ..approval.store import clear_all_approvals  # noqa: PLC0415
 
         clear_all_approvals()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110
         pass
     try:
         from ..graph.outcome_repository import outcome_repo  # noqa: PLC0415
 
         outcome_repo.clear_all()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110
         pass
     cleared = "all_sessions,approvals_dynamo,outcomes_dynamo"
     if clear_scan_cache:
@@ -428,7 +438,7 @@ def test_reset() -> dict[str, str]:
 
 
 @app.get("/api/config", tags=["meta"])
-def config_info() -> dict[str, str | bool]:
+def config_info() -> dict[str, str | bool | int]:
     """Return non-secret config for the frontend feature-flag panel."""
     return {
         "real_submission_enabled": settings.recoup_enable_real_support_submission,

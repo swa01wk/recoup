@@ -1,7 +1,7 @@
 # Recoup — Primary Operator Journey (J-FULL)
 
 **Status:** This is the **main cost-recovery lifecycle Recoup ships today**, polished for the AWS Agents for Humans hackathon demo.  
-**Last updated:** Sep 13, 2026 (PM — production URLs + SSE investigate stream)  
+**Last updated:** Sep 14, 2026 (production vs offline demo scan; PSC E2E)  
 **Checklist entry:** [USER_JOURNEY_CHECKLIST.md — J-FULL](../USER_JOURNEY_CHECKLIST.md#j-full--full-operator-journey-scan--3-hitl-paths--ledger--sns)  
 **Playwright:** `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts`
 
@@ -35,24 +35,23 @@ This path is **implemented end-to-end** in frontend + backend, covered by **Play
 
 ## Lifecycle diagram
 
-```text
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│ 1. Reset    │───▶│ 2. Account Scan  │───▶│ 3. Pick 3 services  │
-│ (test/admin)│    │ 9 AWS scanners   │    │ on /opportunities   │
-└─────────────┘    └──────────────────┘    └──────────┬──────────┘
-                                                      │
-                        ┌─────────────────────────────┼─────────────────────────────┐
-                        ▼                             ▼                             ▼
-               ┌────────────────┐           ┌────────────────┐           ┌────────────────┐
-               │ 4–5a Approve   │           │ 4–5b Investigate│           │ 4–5c Decline   │
-               │ SNS + RECOVERED│           │ NEEDS_FOLLOWUP  │           │ DENIED         │
-               └────────┬───────┘           └────────┬───────┘           └────────┬───────┘
-                        └─────────────────────────────┼─────────────────────────────┘
-                                                      ▼
-                                            ┌──────────────────┐
-                                            │ 6. Recovery      │
-                                            │ Ledger buckets   │
-                                            └──────────────────┘
+```mermaid
+flowchart TD
+    reset["1. Reset<br/>(test/admin)"]
+    scan["2. Account Scan<br/>9 AWS scanners"]
+    pick["3. Pick 3 services<br/>on /opportunities"]
+    approve["4–5a Approve<br/>SNS + RECOVERED"]
+    investigate["4–5b Investigate<br/>NEEDS_FOLLOWUP"]
+    decline["4–5c Decline<br/>DENIED"]
+    ledger["6. Recovery Ledger<br/>buckets"]
+
+    reset --> scan --> pick
+    pick --> approve
+    pick --> investigate
+    pick --> decline
+    approve --> ledger
+    investigate --> ledger
+    decline --> ledger
 ```
 
 **Pipeline semantics (cost recovery):**
@@ -218,7 +217,9 @@ Supporting APIs:
 | POST | `/api/scan/full` | Full scan with Role ARN + External ID |
 | POST | `/api/scan/preview` | Cost Explorer + EC2 only |
 
-Demo workloads target **8 scenario tags** (~$87.82/mo aggregate) — see `docs/demo-workloads.md`.
+Demo workloads target **8 scenario tags** (~$87.82/mo aggregate) when **POST /api/scan/demo** uses STS + `RECOUP_READONLY_ROLE_ARN` (production App Runner). See `docs/demo-workloads.md`.
+
+**Offline fallback** (local Playwright / no STS): three deterministic findings (EC2, EBS, RDS), **~$119/mo** total — still satisfies J-FULL “three distinct services.” Do not quote **$87** or **8+ findings** on camera unless the live read-role scan ran.
 
 ---
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ...models.recovery import (
     EvidenceBundle,
     EvidenceGraph,
@@ -30,7 +32,7 @@ def assess_sufficiency(
     )
     missing_critical = list(bundle.missing_expected)
 
-    base_kwargs = {
+    base_kwargs: dict[str, Any] = {
         "expected_signal_count": expected,
         "collected_signal_count": collected,
         "missing_critical_signals": missing_critical,

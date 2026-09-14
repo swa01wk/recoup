@@ -7,7 +7,7 @@
 **Last updated:** Sep 11, 2026  
 **Rules reference:** [R2] AgentCore, [R6] AgentCore Policy, [R7] AgentCore Observability, [R8] Health/EventBridge, [R9] Support API, [R11] Cost Anomaly Detection, [R12] Cost Optimization Hub, [R13] CloudWatch  
 
-> **Historical inventory.** Service/resource list remains valid for provisioning. **Test metrics:** [docs/README.md](../../../README.md) (**416** backend · **125** Playwright · **16** specs).
+> **Historical inventory.** Service/resource list remains valid for provisioning. **Test metrics:** [docs/README.md](../../../README.md) (**419** backend · **127** Playwright · **16** specs).
 
 ---
 

@@ -28,7 +28,7 @@ class SignalDirection(StrEnum):
 
 
 class SafetyCheckStatus(StrEnum):
-    PASS = "PASS"
+    PASS = "PASS"  # noqa: S105
     WARN = "WARN"
     FAIL = "FAIL"
     UNKNOWN = "UNKNOWN"

@@ -55,29 +55,28 @@ After human approval, graph resumes: `claim_package_generator` → `submission_a
 
 ## Architecture diagram
 
-```text
-  IncidentSignal / replay fixture
-           │
-           ▼
-  ┌──────────────────── normalize_event (deterministic)
-  │
-  ▼
-  incident_correlation ──► sla_contract_resolver ──► availability_calculator
-  (Strands + tools)              (deterministic)           (deterministic)
-           │
-           ▼
-  evidence_collector ──► evidence_sanitizer ──► eligibility_reasoner
-  (Strands)                  (deterministic)         (Strands)
-           │
-           ▼
-                    risk_policy_gate (Cedar)
-                           │
-            ┌──────────────┼──────────────┐
-            ▼              ▼              ▼
-     await_human      claim_pkg…      terminal_denied
-     (HITL API)            │
-                            ▼
-              submission_adapter ──► case_monitor
+```mermaid
+flowchart TD
+    signal["IncidentSignal / replay fixture"]
+    n1["normalize_event (deterministic)"]
+    n2["incident_correlation (Strands + tools)"]
+    n3["sla_contract_resolver (deterministic)"]
+    n4["availability_calculator (deterministic)"]
+    n5["evidence_collector (Strands)"]
+    n6["evidence_sanitizer (deterministic)"]
+    n7["eligibility_reasoner (Strands)"]
+    gate["risk_policy_gate (Cedar)"]
+    hitl["await_human_approval (HITL API)"]
+    claim["claim_package_generator"]
+    denied["terminal_denied"]
+    sub["submission_adapter"]
+    monitor["case_monitor"]
+
+    signal --> n1 --> n2 --> n3 --> n4 --> n5 --> n6 --> n7 --> gate
+    gate --> hitl
+    gate --> claim
+    gate --> denied
+    claim --> sub --> monitor
 ```
 
 **J-FULL optimization path:** `scan.promote_finding` → `recoup_graph.run(..., stop_at="risk_policy_gate")` with `promoted_finding` on state. **`run_recovery_pipeline`** (inside `incident_correlation_stub`) replaces nodes 2–7 semantics for cost recovery: evidence graph, investigator, financial impact, recommendation/plan, policy outcome, safety checks. Resulting `GraphState` is **`AWAITING_APPROVAL`** with claim hash over `availability_result`.

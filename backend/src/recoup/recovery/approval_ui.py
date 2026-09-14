@@ -19,7 +19,8 @@ def hitl_context_from_assessment(assessment: RecoveryAssessment) -> tuple[str, s
     if assessment.recommendation:
         action_description = assessment.recommendation.primary_action_label
         if assessment.recommendation.reasoning:
-            action_description = f"{action_description} — {assessment.recommendation.reasoning[:120]}"
+            snippet = assessment.recommendation.reasoning[:120]
+            action_description = f"{action_description} — {snippet}"
 
     rollback = ""
     if assessment.recovery_plan:

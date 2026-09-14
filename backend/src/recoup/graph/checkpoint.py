@@ -73,7 +73,11 @@ def get_checkpoint(opportunity_id: str) -> str | None:
             import boto3  # noqa: PLC0415
             import botocore.config  # noqa: PLC0415
 
-            cfg = botocore.config.Config(connect_timeout=3, read_timeout=5, retries={"max_attempts": 1})
+            cfg = botocore.config.Config(
+                connect_timeout=3,
+                read_timeout=5,
+                retries={"max_attempts": 1},
+            )
             ddb = boto3.resource("dynamodb", region_name=settings.bedrock_region, config=cfg)
             table = ddb.Table(settings.opportunities_table)
             resp = table.get_item(Key={"id": opportunity_id})

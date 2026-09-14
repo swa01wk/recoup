@@ -14,10 +14,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
-import structlog
 
 from ...approval.flow import AUDIT_LOG_GROUP, AUDIT_LOG_STREAM, HITLFlow
 from ...approval.store import (
@@ -324,7 +323,11 @@ def investigate_opportunity(
     updated = flow.decline(
         approval_id=pending.approval_id,
         principal=body.principal,
-        notes=f"[INVESTIGATE] {body.notes}" if body.notes else "[INVESTIGATE] Sent for further investigation",
+        notes=(
+            f"[INVESTIGATE] {body.notes}"
+            if body.notes
+            else "[INVESTIGATE] Sent for further investigation"
+        ),
     )
 
     # Sprint 3: drive state machine AWAITING_APPROVAL → NEEDS_FOLLOWUP

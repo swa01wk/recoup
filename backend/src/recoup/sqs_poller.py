@@ -2,7 +2,8 @@
 SQS Poller — Phase 6b Priority 7.
 
 Polls ``recoup-recovery-events`` on a background thread when the backend starts
-with live AWS resources configured.  When a Health event message arrives (e.g. from EventBridge), the poller
+with live AWS resources configured.  When a Health event arrives (e.g. EventBridge),
+the poller
 **acks the message only** — auto SLA replay is disabled for the J-FULL product path.
 
 The poller is non-blocking: it runs as a daemon thread and never prevents
@@ -60,7 +61,7 @@ def _process_message(body: str, receipt_handle: str, sqs_client: Any, queue_url:
     receive_count = int(payload.get("ApproximateReceiveCount", 1))
     if receive_count >= 3:
         logger.warning(
-            "SQS poller: unknown message exceeded max retries (%d), deleting to prevent DLQ backlog",
+            "SQS poller: unknown message exceeded max retries (%d), deleting",
             receive_count,
         )
         sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)

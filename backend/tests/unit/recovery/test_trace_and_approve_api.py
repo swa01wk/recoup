@@ -10,10 +10,8 @@ from fastapi.testclient import TestClient
 from recoup.adapters.finding_to_signal import FindingToSignalAdapter
 from recoup.api.main import app
 from recoup.api.routes import opportunities as opp_routes
-from recoup.api.routes import scan as scan_routes
 from recoup.graph.recoup_graph import recoup_graph
 from recoup.graph.types import GraphState
-from recoup.models.opportunity import OpportunityState
 from recoup.scanners.finding import Finding
 
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from ..models.recovery import OperationalSignal
 from ..scanners.finding import Finding
@@ -57,7 +56,8 @@ def signals_from_finding(finding: Finding) -> list[OperationalSignal]:
 
     add("finding", "issue", finding.issue, description=finding.issue)
     add("finding", "finding_type", finding.finding_type or "UNKNOWN")
-    add("cost", "estimated_monthly_savings_usd", f"{finding.estimated_monthly_savings_usd:.2f}", unit="USD")
+    savings = f"{finding.estimated_monthly_savings_usd:.2f}"
+    add("cost", "estimated_monthly_savings_usd", savings, unit="USD")
 
     if finding.severity:
         add("metadata", "severity", finding.severity)

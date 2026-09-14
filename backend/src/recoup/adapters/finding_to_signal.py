@@ -12,8 +12,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from ..scanners.finding import Finding
 from ..models.signal import IncidentSignal
+from ..scanners.finding import Finding
 
 
 class FindingToSignalAdapter:

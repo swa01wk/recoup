@@ -6,9 +6,10 @@ import contextvars
 import threading
 import time
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
-from typing import Any, Iterator
+from typing import Any
 
 import structlog
 from fastapi import HTTPException

@@ -40,21 +40,25 @@ cd backend && uvicorn recoup.api.main:app --reload --port 8000
 
 ## Architecture diagram (J-FULL request path)
 
-```text
-                    ┌──────────────────────────────────────┐
-                    │           FastAPI main.py             │
-                    └───────────┬──────────────────────────┘
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-   routes/scan.py         routes/approvals.py    routes/opportunities.py
-        │                       │                       │
-   9 × scanners            HITLFlow + store          list/get/trace/run/stream
-   STS CustomerConnection       │                       │
-        │                  notifications.py            │
-        ▼                       ▼                       ▼
-   Finding + ScanResult    outcome_repository      _graph_states (in-memory)
-        │                       │
-        └──────── promote ──────┴── GraphState + ApprovalRecord
+```mermaid
+flowchart TB
+    main["FastAPI main.py"]
+    scan["routes/scan.py<br/>9 × scanners · STS CustomerConnection"]
+    approvals["routes/approvals.py<br/>HITLFlow + store · notifications.py"]
+    opps["routes/opportunities.py<br/>list/get/trace/run/stream"]
+    scanOut["Finding + ScanResult"]
+    approvalOut["outcome_repository"]
+    graphOut["_graph_states (in-memory)"]
+    promote["GraphState + ApprovalRecord"]
+
+    main --> scan
+    main --> approvals
+    main --> opps
+    scan --> scanOut
+    approvals --> approvalOut
+    opps --> graphOut
+    scanOut -->|"promote"| promote
+    approvalOut --> promote
 ```
 
 ---

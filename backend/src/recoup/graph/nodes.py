@@ -34,10 +34,10 @@ from ..evidence.sanitizer import EvidenceSanitizer
 from ..models.availability import AvailabilityInterval, AvailabilityResult
 from ..models.claim import ClaimPackage
 from ..models.eligibility import EligibilityAssessment
-from ..safety.cedar import PolicyContext, build_context_from_graph_state, evaluate_policy
-from ..safety.exceptions import SanitizationError
 from ..models.opportunity import OpportunityState
 from ..recovery.pipeline import is_optimization_path, run_recovery_pipeline
+from ..safety.cedar import PolicyContext, build_context_from_graph_state, evaluate_policy
+from ..safety.exceptions import SanitizationError
 from .types import (
     CaseOutcome,
     GraphState,

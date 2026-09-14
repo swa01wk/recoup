@@ -22,51 +22,36 @@ An **11-node Strands recovery graph** (SLA/incident depth) remains for optional 
 
 ## High-level diagram
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Next.js 16 (frontend/)                                                  │
-│  Routes: /opportunities · /scan · /recovery · /opportunities/[id]       │
-│  localStorage scan cache + useRecoveryData → single ledger view          │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │ HTTP (JSON) · optional SSE (EventSource)
-┌───────────────────────────────▼─────────────────────────────────────────┐
-│  FastAPI (backend/src/recoup/api/)                                       │
-│  /api/scan · /api/opportunities · /api/approvals · /api/quality          │
-│  Lifespan: SQS poller (ack-only for Health in J-FULL mode)               │
-└───────┬─────────────────────────────┬───────────────────────────────────┘
-        │                             │
-        ▼                             ▼
-┌───────────────────┐       ┌─────────────────────────────────────────────┐
-│ AWS APIs (read)   │       │ Agent layer (optional)                       │
-│ STS AssumeRole    │       │ recoup_graph · Strands · replay adapter      │
-│ 9 scanners        │       │ tools registry · Cedar · evidence pipeline   │
-└───────────────────┘       └─────────────────────────────────────────────┘
-        │                             │
-        └─────────────┬───────────────┘
-                      ▼
-        ┌─────────────────────────────────────────┐
-        │ Persistence (env-dependent)              │
-        │ In-memory graph/promoted · DynamoDB      │
-        │ approvals + outcomes · S3 evidence · SNS │
-        └─────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    fe["Next.js 16 (frontend/)<br/>Routes: /opportunities · /scan · /recovery · /opportunities/[id]<br/>localStorage scan cache + useRecoveryData"]
+    api["FastAPI (backend/src/recoup/api/)<br/>/api/scan · /api/opportunities · /api/approvals · /api/quality<br/>Lifespan: SQS poller (ack-only for Health in J-FULL mode)"]
+    aws["AWS APIs (read)<br/>STS AssumeRole · 9 scanners"]
+    agent["Agent layer (optional)<br/>recoup_graph · Strands · replay adapter<br/>tools registry · Cedar · evidence pipeline"]
+    persist["Persistence (env-dependent)<br/>In-memory graph/promoted · DynamoDB<br/>approvals + outcomes · S3 evidence · SNS"]
+
+    fe -->|"HTTP JSON · optional SSE (EventSource)"| api
+    api --> aws
+    api --> agent
+    aws --> persist
+    agent --> persist
 ```
 
 ---
 
 ## J-FULL lifecycle (cross-stack)
 
-```text
-  [Reset]     [Demo scan]      [Pick findings]     [Promote]        [HITL]         [Ledger]
-     │              │                 │                │               │                │
-  admin/      POST           /opportunities      POST            POST approve/      /recovery
-  test reset  /scan/demo     table + filters     .../promote       investigate/       + summary
-                                                     │               decline          on /opportunities
-                                                     │                               │
-                                                     └─ graph.run → recovery/       │
-                                                        pipeline + AWAITING_APPROVAL │
-                                                        + HITLFlow PENDING           │
-                                                                                      │
-                                                        approve → RECOVERED + SNS ────┘
+```mermaid
+flowchart LR
+    reset["1 Reset<br/>admin/test reset"]
+    scan["2 Demo scan<br/>POST /scan/demo"]
+    pick["3 Pick findings<br/>/opportunities"]
+    promote["4 Promote<br/>POST .../promote<br/>graph.run → recovery pipeline<br/>AWAITING_APPROVAL + HITLFlow PENDING"]
+    hitl["5 HITL<br/>approve / investigate / decline"]
+    ledger["6 Ledger<br/>/recovery + summary"]
+
+    reset --> scan --> pick --> promote --> hitl --> ledger
+    hitl -->|"approve → RECOVERED + SNS"| ledger
 ```
 
 | Step | Frontend | Backend |
@@ -169,7 +154,7 @@ Optional **agent re-run** on detail deepens investigation without changing the J
 |-------|---------|---------------|
 | E2E | Playwright `frontend/e2e/journey-full-discovery-triage-ledger.spec.ts` | Full operator loop |
 | E2E overlap | J2, J6, J7, J9, scan, UI browser specs | Partial paths |
-| Backend unit/integration | pytest ~416 tests | Graph, recovery pipeline, replay, approvals, scanners, demo sessions |
+| Backend unit/integration | pytest ~419 tests | Graph, recovery pipeline, replay, approvals, scanners, demo sessions |
 | Golden replay | `test_golden_replay.py` | SLA credit determinism |
 | Quality | `journey-quality-gates.spec.ts` | Scorecard structure |
 

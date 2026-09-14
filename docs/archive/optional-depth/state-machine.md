@@ -21,51 +21,26 @@ Every `RecoveryOpportunity` moves through a defined set of states as the agent g
 
 ## State Diagram
 
-```
-                    ┌─────────────┐
-                    │  DETECTED   │ ← initial state on opportunity creation
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │INVESTIGATING│ ← incident_correlation + evidence_collector running
-                    └──────┬──────┘
-              ┌────────────┴────────────┐
-              │                         │
-     ┌────────▼───────┐       ┌─────────▼────────┐
-     │ EVIDENCE_READY │       │  NEEDS_EVIDENCE   │ ← retry loop
-     └────────┬───────┘       └─────────┬─────────┘
-              │                         │ (back to INVESTIGATING)
-     ┌────────▼───────┐
-     │ELIGIBILITY_    │ ← eligibility_reasoner + risk_policy_gate complete
-     │  REVIEWED      │
-     └────────┬───────┘
-     ┌────────┴─────────┬──────────────┐
-     │                  │              │
-┌────▼──────┐      ┌────▼──┐      ┌───▼──┐
-│AWAITING_  │      │DENIED │      │FAILED│
-│ APPROVAL  │      └───────┘      └──────┘
-└────┬──────┘  ← HITL (opportunity detail / approvals API)
-     │
-     ├── DECLINED ──► DENIED
-     │
-     ▼
-  APPROVED ← human approves (UI: `/opportunities/{id}` or `POST .../approvals/opportunity/{id}/approve`)
-     │
-     ▼
- SUBMITTING ← submission_adapter executing
-     │
-     ├── FAILED
-     │
-     ▼
- SUBMITTED ← case_id written
-     │
-     ▼
- MONITORING ← case_monitor polling
-     │
-     ├──────────────────────┐
-     │                      │                 │
-  RECOVERED             REJECTED        NEEDS_FOLLOWUP
-(credit granted)     (claim denied)   (needs manual review)
+```mermaid
+stateDiagram-v2
+    [*] --> DETECTED
+    DETECTED --> INVESTIGATING
+    INVESTIGATING --> EVIDENCE_READY
+    INVESTIGATING --> NEEDS_EVIDENCE
+    NEEDS_EVIDENCE --> INVESTIGATING: retry
+    EVIDENCE_READY --> ELIGIBILITY_REVIEWED
+    ELIGIBILITY_REVIEWED --> AWAITING_APPROVAL
+    ELIGIBILITY_REVIEWED --> DENIED
+    ELIGIBILITY_REVIEWED --> FAILED
+    AWAITING_APPROVAL --> DENIED: declined
+    AWAITING_APPROVAL --> APPROVED: human approves (HITL)
+    APPROVED --> SUBMITTING
+    SUBMITTING --> FAILED
+    SUBMITTING --> SUBMITTED
+    SUBMITTED --> MONITORING
+    MONITORING --> RECOVERED: credit granted
+    MONITORING --> REJECTED: claim denied
+    MONITORING --> NEEDS_FOLLOWUP: manual review
 ```
 
 ---

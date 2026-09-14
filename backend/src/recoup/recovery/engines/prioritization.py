@@ -14,7 +14,11 @@ def compute_priority(assessment: RecoveryAssessment) -> tuple[int, str]:
     fin = assessment.financial_impact
     monthly = float(fin.projected_monthly_recovery_usd if fin else Decimal("0"))
     disc = assessment.discovery_confidence.score if assessment.discovery_confidence else 50
-    suff = assessment.evidence_sufficiency.level if assessment.evidence_sufficiency else EvidenceSufficiencyLevel.PARTIAL
+    suff = (
+        assessment.evidence_sufficiency.level
+        if assessment.evidence_sufficiency
+        else EvidenceSufficiencyLevel.PARTIAL
+    )
     risk = assessment.risk_assessment.score if assessment.risk_assessment else 50
 
     suff_mult = {

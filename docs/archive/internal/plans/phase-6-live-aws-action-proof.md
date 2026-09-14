@@ -240,27 +240,20 @@ forbid(
 
 **This is a separate opportunity type, distinct from the SLA path:**
 
-```
-RecoupDemo=true EC2 instance
-         ↓
-CloudWatch CPU utilization check (last 7 days avg < 1%)
-         ↓
-CloudTrail ownership check (who created it; any recent changes)
-         ↓
-Estimated monthly waste calculation
-  (instance type × hours × on-demand rate)
-         ↓
-Risk / Policy Gate → REQUIRE_APPROVAL (RED autonomy class)
-         ↓
-Decision Inbox (LIVE AWS ACTION card)
-         ↓
-Human approval
-         ↓
-AgentCore Policy → Cedar evaluation → ALLOW
-         ↓
-stop_demo_instance() → verify stopped state
-         ↓
-Audit trail displayed in Trace view
+```mermaid
+flowchart TD
+    s1["RecoupDemo=true EC2 instance"]
+    s2["CloudWatch CPU check (7d avg &lt; 1%)"]
+    s3["CloudTrail ownership check"]
+    s4["Estimated monthly waste calculation"]
+    s5["Risk / Policy Gate → REQUIRE_APPROVAL (RED)"]
+    s6["Decision Inbox (LIVE AWS ACTION card)"]
+    s7["Human approval"]
+    s8["AgentCore Policy → Cedar → ALLOW"]
+    s9["stop_demo_instance() → verify stopped"]
+    s10["Audit trail in Trace view"]
+
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6 --> s7 --> s8 --> s9 --> s10
 ```
 
 **LIVE AWS ACTION card in Decision Inbox:**

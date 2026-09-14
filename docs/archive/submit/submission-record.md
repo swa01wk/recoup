@@ -2,7 +2,7 @@
 
 **Competition:** Aug 10 – Sep 14, 2026  
 **Internal deadline:** Sep 13, 2026  
-**Last updated:** Sep 13, 2026 (PM)  
+**Last updated:** Sep 14, 2026  
 **Status:** Phase 7 — production J-FULL verified (`prod_journey_hitl_smoke.sh` PASS); video upload + Devpost + builder.aws publish remain (human steps)
 
 **Primary demo (J-FULL):** [operator-journey.md](operator-journey.md) — account scan → HITL → Recovery Ledger. Optional SLA/EC2/governance **HTTP** demos removed Sep 2026; engine/tests retain replay adapter internally.
@@ -55,8 +55,8 @@
 - [x] Cost Explorer billing data (S9)
 
 ### Testing (all ✅)
-- [x] 416 backend unit tests collected (live skipped as configured)
-- [x] 125 Playwright tests (16 specs) — J-FULL + J2–J9 + SEC adversarial
+- [x] 419 backend unit tests collected (live skipped as configured)
+- [x] 127 Playwright tests (16 specs) — J-FULL + PSC + J2–J9 + SEC adversarial
 - [x] 0 DeprecationWarnings
 - [x] mypy strict + ruff clean
 - [x] CDK synth passes

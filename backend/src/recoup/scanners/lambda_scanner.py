@@ -66,7 +66,10 @@ class LambdaScanner(BaseScanner):
                             f"over 7 days — appears unused"
                         ),
                         estimated_monthly_savings_usd=round(savings_ratio * 5.0, 2),
-                        recommendation=f"Reduce memory from {memory_mb}MB to {target_memory}MB or delete if unused",
+                        recommendation=(
+                            f"Reduce memory from {memory_mb}MB to {target_memory}MB "
+                            "or delete if unused"
+                        ),
                         severity="medium",
                         region=region,
                         scenario_tag=scenario,

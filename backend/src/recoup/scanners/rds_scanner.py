@@ -82,7 +82,8 @@ class RDSScanner(BaseScanner):
                         finding_type="IDLE_RDS",
                         issue=(
                             f"DB instance {dbid} ({dbclass}/{engine}) avg connections "
-                            f"{avg_connections:.1f}/day over {settings.recoup_rds_lookback_days}d — appears idle"
+                            f"{avg_connections:.1f}/day over "
+                            f"{settings.recoup_rds_lookback_days}d — appears idle"
                         ),
                         estimated_monthly_savings_usd=monthly,
                         recommendation="Stop or delete idle RDS instance to eliminate charges",
@@ -110,7 +111,8 @@ class RDSScanner(BaseScanner):
                         finding_type="IDLE_RDS",
                         issue=(
                             f"DB instance {dbid} ({dbclass}/{engine}) has no connection "
-                            f"history in the past {settings.recoup_rds_lookback_days}d — appears idle / newly launched"
+                            f"history in the past {settings.recoup_rds_lookback_days}d — "
+                            "appears idle / newly launched"
                         ),
                         estimated_monthly_savings_usd=monthly,
                         recommendation="Stop or delete if unused; no connections recorded",

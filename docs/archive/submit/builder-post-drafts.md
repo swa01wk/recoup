@@ -12,14 +12,14 @@ After publishing, paste URLs into [submission-record.md](submission-record.md) a
 
 **Body:**
 
-FinOps tools excel at *finding* waste; teams still struggle to *close* recovery safely. For the **Agents for Humans** hackathon we built **Recoup** — an autonomous cloud-spend recovery agent that runs a **11-node Strands graph** on Amazon Bedrock, but keeps destructive power behind **deterministic Cedar policy** and **human approval**.
+FinOps tools excel at *finding* waste; teams still struggle to *close* recovery safely. For the **Agents for Humans** hackathon we built **Recoup** — an autonomous cloud-spend recovery agent with an **11-node Strands graph** on Amazon Bedrock, but keeps destructive power behind **deterministic Cedar policy** and **human approval**.
 
 ### The graph
 
 Recoup’s pipeline is deliberately split:
 
-- **3 Strands Agent nodes** — incident correlation, claim packaging, and narrative reasoning over heterogeneous AWS signals  
-- **8 deterministic nodes** — normalization, eligibility, Cedar policy gate, HITL, adapters, monitoring  
+- **5 agent nodes** — e.g. incident correlation, evidence collection, eligibility reasoning, claim packaging, case monitoring  
+- **6 deterministic nodes** — normalization, SLA math, sanitization, Cedar policy gate, submission adapter, monitoring hooks  
 
 The LLM proposes; **Cedar decides**; humans approve at the boundary.
 
@@ -45,7 +45,7 @@ Code pointers:
 
 ### Try the live demo
 
-No AWS keys required: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan → promote → approve on opportunity detail → Recovery Ledger.
+No AWS keys required: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan → **Start Recovery** on three services → approve / investigate / decline on opportunity detail → Recovery Ledger. Guest sessions: `X-Demo-Session` + sidebar **Reset Demo Data**.
 
 Repo: https://github.com/swa01wk/recoup
 
@@ -89,7 +89,7 @@ Guest sessions on App Runner isolate concurrent judges (`X-Demo-Session`). Try a
 
 ## Post 3
 
-**Title:** Agents for Humans — How We Proved Recoup Works: 416 Backend + 125 E2E Tests, Deterministic Math, and Zero Unsafe Actions
+**Title:** Agents for Humans — How We Proved Recoup Works: 419 Backend + 127 E2E Tests, Deterministic Math, and Zero Unsafe Actions
 
 **Body:**
 
@@ -97,8 +97,8 @@ Agent demos are easy to hand-wave; we optimized for **ship gates** judges can re
 
 ### Test pyramid
 
-- **416** backend tests (pytest), including golden SLA replay and adversarial policy/safety cases  
-- **125** Playwright tests across **16** specs — including **J-FULL**, the full operator journey (scan → three triage paths → ledger + SNS)  
+- **419** backend tests (pytest), including golden SLA replay and adversarial policy/safety cases  
+- **127** Playwright tests across **16** specs — including **J-FULL** (scan → three triage paths → ledger + SNS) and **PSC** guest-session isolation  
 
 Run locally:
 

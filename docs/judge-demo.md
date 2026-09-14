@@ -1,7 +1,7 @@
 # Recoup — Judge Demo Guide
 
 **Event:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
-**Last updated:** Sep 13, 2026 (PM) · Target video ≤5:00  
+**Last updated:** Sep 14, 2026 · Target video ≤5:00  
 **Canonical operator flow:** [operator-journey.md](operator-journey.md) (J-FULL)
 
 ## Live demo (AWS production)
@@ -83,7 +83,7 @@ curl -s https://qawwrm7kzy.us-east-1.awsapprunner.com/api/quality/scorecard | jq
 
 **Optional talking points (not in sidebar):**
 
-- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **416** backend pytest include golden replay + `tests/unit/recovery/`; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
+- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **419** backend pytest include golden replay + `tests/unit/recovery/`; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
 - **Six quality gates** — scorecard already shown in Scene 6  
 - **Optional agent re-run** — `POST /api/opportunities/{id}/run` on detail (not required for J-FULL)
 
@@ -93,7 +93,7 @@ Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo 
 
 ## Scene 7 — Architecture (4:15–5:00)
 
-Next.js + FastAPI · recovery pipeline on promote + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **125** Playwright tests (16 specs) · **416** backend tests collected · per-guest demo sessions (`X-Demo-Session`).
+Next.js + FastAPI · recovery pipeline on promote + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **127** Playwright tests (16 specs) · **419** backend tests collected · per-guest demo sessions (`X-Demo-Session`, PSC E2E).
 
 Diagram: [architecture/architecture.svg](../architecture/architecture.svg)
 

@@ -95,7 +95,7 @@ Journey map: [USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) · CI: [c
 
 ```bash
 cd backend && pytest tests/ -W error::DeprecationWarning
-# ~416 collected; live-mode skips as configured
+# ~419 collected; live-mode skips as configured
 pytest tests/unit/test_demo_session.py tests/unit/test_demo_control.py
 pytest tests/unit/recovery/   # recovery pipeline unit tests
 ```

@@ -11,36 +11,37 @@
 
 ## Model Relationships
 
-```
-IncidentSignal
-    │ consumed by
-    ▼
-IncidentHypothesis ──── AvailabilityInterval (×N)
-    │                       │
-    ▼                       ▼
-SLAContract ──────► AvailabilityResult
-    │ (credit_tiers)
-    │
-    ▼
-EvidenceManifest ──── EvidenceItem (×N)
-    │                    └── RedactionReport
-    ▼
-EligibilityAssessment
-    │
-    ▼
-ApprovalRecord
-    │
-    ▼
-ClaimPackage ──── EvidenceManifest (embedded)
-    │
-    ▼
-RecoveryOpportunity (state machine entity)
-    │
-    ▼
-RecoveryAssessment (optimization / scan promote — `models/recovery.py`, attached on `GraphState`)
-    │
-    ▼
-ToolAudit (one per tool call)
+```mermaid
+flowchart TD
+    signal["IncidentSignal"]
+    hypothesis["IncidentHypothesis"]
+    intervals["AvailabilityInterval (×N)"]
+    contract["SLAContract"]
+    result["AvailabilityResult"]
+    manifest["EvidenceManifest"]
+    items["EvidenceItem (×N)"]
+    redaction["RedactionReport"]
+    eligibility["EligibilityAssessment"]
+    approval["ApprovalRecord"]
+    claim["ClaimPackage"]
+    opportunity["RecoveryOpportunity"]
+    assessment["RecoveryAssessment (scan promote)"]
+    audit["ToolAudit (per tool call)"]
+
+    signal -->|"consumed by"| hypothesis
+    hypothesis --> intervals
+    hypothesis --> contract
+    intervals --> result
+    contract --> result
+    contract --> manifest
+    manifest --> items
+    items --> redaction
+    manifest --> eligibility
+    eligibility --> approval
+    approval --> claim
+    claim --> opportunity
+    opportunity --> assessment
+    assessment --> audit
 ```
 
 ---

@@ -20,15 +20,14 @@ from pydantic import BaseModel
 
 from ...adapters.replay import CANONICAL_SCENARIO, ReplayAdapter
 from ...approval.flow import HITLFlow
+from ...demo_session import require_session_id
+from ...demo_state import graph_states as graph_states_for_session
 from ...graph.recoup_graph import recoup_graph
 from ...graph.state_machine import InMemoryStateMachine
 from ...graph.types import GraphState, PolicyDecision
 from ...models.opportunity import OpportunityState
 from ...models.recovery import WorkflowSnapshot
 from ...models.signal import IncidentSignal
-
-from ...demo_session import require_session_id
-from ...demo_state import graph_states as graph_states_for_session
 
 router = APIRouter()
 
@@ -158,7 +157,11 @@ def _pipeline_stage_for_state(state: OpportunityState) -> int:
 
 
 def _execution_status_for_state(state: OpportunityState) -> str:
-    if state in (OpportunityState.APPROVED, OpportunityState.SUBMITTING, OpportunityState.SUBMITTED):
+    if state in (
+        OpportunityState.APPROVED,
+        OpportunityState.SUBMITTING,
+        OpportunityState.SUBMITTED,
+    ):
         return "Executing recovery..."
     if state == OpportunityState.MONITORING:
         return "Verification running..."
@@ -215,15 +218,15 @@ def _build_trace_payload(opportunity_id: str, gs: GraphState) -> dict[str, Any]:
 def _finding_for_opportunity(opportunity_id: str) -> Any | None:
     """Return the promoted scan Finding for a recovery opportunity, if any."""
     try:
-        from ..scanners.finding import Finding  # noqa: PLC0415
-        from ...demo_state import promoted_findings as promoted_for_session
         from ...demo_session import require_session_id
+        from ...demo_state import promoted_findings as promoted_for_session
+        from ..scanners.finding import Finding  # noqa: PLC0415
 
         for account_bucket in promoted_for_session(require_session_id()).values():
             for entry in account_bucket.values():
                 if entry.get("opportunity_id") == opportunity_id:
                     return Finding(**entry["finding"])
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110
         pass
     return None
 
@@ -381,6 +384,19 @@ _NODE_ORDER = [
     "case_monitor",
 ]
 
+_POST_APPROVAL_NODES = frozenset({
+    "claim_package_generator",
+    "submission_adapter",
+    "case_monitor",
+})
+_POST_APPROVAL_GRAPH_STATES = frozenset({
+    OpportunityState.APPROVED,
+    OpportunityState.SUBMITTING,
+    OpportunityState.SUBMITTED,
+    OpportunityState.MONITORING,
+    OpportunityState.RECOVERED,
+})
+
 
 @router.get("/{opportunity_id}/stream")
 async def stream_opportunity_progress(opportunity_id: str) -> StreamingResponse:
@@ -417,10 +433,7 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
     Re-run investigation after NEEDS_FOLLOWUP: stream pipeline nodes, then reopen
     AWAITING_APPROVAL with a fresh HITL approval request.
     """
-    _POST_APPROVAL = {"claim_package_generator", "submission_adapter", "case_monitor"}
-
     async def generate() -> Any:
-        from ...config import settings  # noqa: PLC0415
         from ...recovery.pipeline import enrich_assessment_investigation  # noqa: PLC0415
 
         investigating = _set_graph_state(opportunity_id, OpportunityState.INVESTIGATING)
@@ -430,7 +443,7 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
 
         prior_ra = gs.recovery_assessment
         for node in _NODE_ORDER:
-            if node in _POST_APPROVAL:
+            if node in _POST_APPROVAL_NODES:
                 continue
             yield _sse({"type": "node_started", "node": node})
             await asyncio.sleep(0.06)
@@ -492,7 +505,10 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
 
         _maybe_create_approval(awaiting)
 
-        if awaiting.policy_decision == PolicyDecision.REQUIRE_APPROVAL and awaiting.availability_result:
+        if (
+            awaiting.policy_decision == PolicyDecision.REQUIRE_APPROVAL
+            and awaiting.availability_result
+        ):
             yield _sse({
                 "type": "approval_required",
                 "amount": str(awaiting.availability_result.potential_credit),
@@ -515,21 +531,12 @@ def _stream_reinvestigation(opportunity_id: str, gs: GraphState) -> StreamingRes
 def _stream_from_stored(opportunity_id: str, gs: GraphState) -> StreamingResponse:
     """Replay synthetic SSE events from an already-completed run."""
 
-    # Post-approval nodes only ran if the graph progressed past the HITL gate
-    _POST_APPROVAL = {"claim_package_generator", "submission_adapter", "case_monitor"}
     # Post-approval nodes ran if the graph produced a case_id/claim_package OR
     # if the opportunity has been explicitly approved (state advanced past AWAITING_APPROVAL).
-    _POST_APPROVAL_STATES = {
-        OpportunityState.APPROVED,
-        OpportunityState.SUBMITTING,
-        OpportunityState.SUBMITTED,
-        OpportunityState.MONITORING,
-        OpportunityState.RECOVERED,
-    }
     reached_post_approval = (
         gs.case_id is not None
         or gs.claim_package is not None
-        or gs.current_state in _POST_APPROVAL_STATES
+        or gs.current_state in _POST_APPROVAL_GRAPH_STATES
     )
 
     async def generate() -> Any:
@@ -537,7 +544,7 @@ def _stream_from_stored(opportunity_id: str, gs: GraphState) -> StreamingRespons
             _maybe_create_approval(gs)
 
         for node in _NODE_ORDER:
-            if node in _POST_APPROVAL and not reached_post_approval:
+            if node in _POST_APPROVAL_NODES and not reached_post_approval:
                 # Opportunity halted at REQUIRE_APPROVAL — skip these nodes
                 continue
             yield _sse({"type": "node_started", "node": node})

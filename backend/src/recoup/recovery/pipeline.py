@@ -20,15 +20,15 @@ from .engines.confidence import compute_action_confidence, compute_discovery_con
 from .engines.financial import compute_financial_impact
 from .engines.prioritization import compute_priority
 from .engines.risk import assess_risk
+from .engines.safety import run_safety_checks
 from .engines.sufficiency import assess_sufficiency
 from .evidence_bundle import build_evidence_bundle
-from .engines.safety import run_safety_checks
 from .evidence_graph import attach_recommendation_to_graph, build_evidence_graph
-from .signal_direction import apply_signal_directions
 from .investigator import deterministic_investigator, merge_llm_investigator_result
 from .planner import build_recommendation_and_plan
 from .policy import evaluate_recovery_policy
 from .resource_context import build_resource_context
+from .signal_direction import apply_signal_directions
 from .signals import investigation_probe_signals, merge_signals, signals_from_finding
 
 
@@ -268,8 +268,8 @@ def enrich_assessment_investigation(state: GraphState) -> dict[str, Any]:
             prior.discovery_confidence.score if prior.discovery_confidence else None
         ),
         action_confidence_before=(
-            prior.action_confidences.get(rec.primary_action_id).score
-            if prior.action_confidences.get(rec.primary_action_id)
+            ac.score
+            if (ac := prior.action_confidences.get(rec.primary_action_id))
             else None
         ),
         sufficiency_after=sufficiency.level,

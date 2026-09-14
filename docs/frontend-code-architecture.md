@@ -43,22 +43,25 @@ The Next.js 16 app is the operator console for the **account-scanner lifecycle**
 
 ## Architecture diagram (J-FULL data flow)
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Sidebar (reset, nav)                                             │
-└────────────┬────────────────────────────────────────────────────┘
-             │
-   ┌─────────┼─────────┬─────────────────┐
-   ▼         ▼         ▼                 ▼
- /scan   /opportunities  /opportunities/[id]   /recovery
-   │         │                 │                  │
-   │    localStorage      HITL + optional SSE      │
-   │    + useRecoveryData     │                  │
-   └─────────┴─────────────────┴──────────────────┘
-                         │
-                    api.ts (HTTP)
-                         │
-                   FastAPI backend
+```mermaid
+flowchart TB
+    sidebar["Sidebar (reset, nav)"]
+    scan["/scan"]
+    opps["/opportunities<br/>localStorage + useRecoveryData"]
+    detail["/opportunities/[id]<br/>HITL + optional SSE"]
+    recovery["/recovery"]
+    client["api.ts (HTTP)"]
+    backend["FastAPI backend"]
+
+    sidebar --> scan
+    sidebar --> opps
+    sidebar --> detail
+    sidebar --> recovery
+    scan --> client
+    opps --> client
+    detail --> client
+    recovery --> client
+    client --> backend
 ```
 
 ---

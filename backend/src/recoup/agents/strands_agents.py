@@ -609,7 +609,8 @@ def run_recovery_investigator_agent(
         prompt = (
             "You are a cloud cost recovery investigator. Given resource context and "
             "evidence bundle summaries, output JSON with keys: hypothesis_summary (string), "
-            "insights (list of {insight_id, text, signal_ids}), investigation_plan (list of strings). "
+            "insights (list of {insight_id, text, signal_ids}), "
+            "investigation_plan (list of strings). "
             "Do NOT invent metrics, costs, confidence, or risk scores."
         )
         agent = Agent(model=_make_model(), system_prompt=prompt)

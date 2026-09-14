@@ -391,6 +391,7 @@ def _list_all_pending_raw() -> list[ApprovalRecord]:
 
     try:
         from boto3.dynamodb.conditions import Attr  # noqa: PLC0415
+
         from ..config import settings  # noqa: PLC0415
 
         ddb = _ddb_resource()
@@ -419,6 +420,7 @@ def _dynamo_available() -> bool:
     """
     try:
         import boto3  # noqa: F401
+
         from ..config import settings  # noqa: PLC0415
         return bool(settings.approvals_table)
     except ImportError:

@@ -39,7 +39,11 @@ def run_safety_checks(
             )
         )
 
-    owner = ctx.environment.owner or ctx.environment.tags.get("Owner") or ctx.environment.tags.get("owner")
+    owner = (
+        ctx.environment.owner
+        or ctx.environment.tags.get("Owner")
+        or ctx.environment.tags.get("owner")
+    )
     if owner:
         checks.append(
             SafetyCheck(

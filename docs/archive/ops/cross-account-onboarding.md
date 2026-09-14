@@ -11,13 +11,15 @@ This guide walks through connecting any AWS account to Recoup using STS AssumeRo
 Recoup never stores long-lived AWS credentials. Instead, the customer creates a read-only IAM role in their account that trusts Recoup's control-plane role. Recoup calls `sts:AssumeRole` to obtain temporary credentials (1-hour expiry) for each scan.
 
 **Access flow:**
-```
-Recoup account
-  RecoupRuntimeRole
-    ──sts:AssumeRole──▶  RecoupReadOnlyRole (customer account)
-                           temporary credentials (1h)
-                             ▼
-                        CloudWatch / Cost Explorer / CloudTrail / EC2 Describe / ...
+```mermaid
+flowchart LR
+    runtime["RecoupRuntimeRole<br/>(Recoup account)"]
+    readonly["RecoupReadOnlyRole<br/>(customer account)"]
+    creds["Temporary credentials (1h)"]
+    apis["CloudWatch · Cost Explorer · CloudTrail · EC2 Describe · …"]
+
+    runtime -->|"sts:AssumeRole"| readonly
+    readonly --> creds --> apis
 ```
 
 The only change between the hackathon demo (same-account) and production (cross-account) is the account ID in the role ARN. The code path is identical.

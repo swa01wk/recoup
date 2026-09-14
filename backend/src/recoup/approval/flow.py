@@ -334,7 +334,10 @@ class HITLFlow:
 
         try:
             # Try to get rich metadata from graph state
-            from ..demo_session import current_demo_session_id, DEFAULT_TEST_SESSION  # noqa: PLC0415
+            from ..demo_session import (  # noqa: PLC0415
+                DEFAULT_TEST_SESSION,
+                current_demo_session_id,
+            )
             from ..demo_state import graph_states  # noqa: PLC0415
 
             sid = current_demo_session_id.get() or DEFAULT_TEST_SESSION
@@ -355,7 +358,10 @@ class HITLFlow:
                 region = sig.region or "us-east-1"
                 recommendation = (
                     gs.eligibility_assessment.satisfied_requirements[0]
-                    if gs.eligibility_assessment and gs.eligibility_assessment.satisfied_requirements
+                    if (
+                        gs.eligibility_assessment
+                        and gs.eligibility_assessment.satisfied_requirements
+                    )
                     else record.action_description or record.action
                 )
             else:

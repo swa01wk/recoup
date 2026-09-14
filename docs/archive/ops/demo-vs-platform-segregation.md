@@ -34,9 +34,14 @@ Empty demo scan after destroying Plane D is **expected**; infra is still healthy
 
 ## Destroy order
 
-```text
-Safe:  cdk destroy RecoupDemoWorkloadsStack
-Safe:  ./scripts/trim_plane_e_stacks.sh
-Never: cdk destroy RecoupInfraStack (for scanner savings)
-Last:  App Runner + Amplify → then Infra
+```mermaid
+flowchart TD
+    d1["Safe: cdk destroy RecoupDemoWorkloadsStack"]
+    d2["Safe: ./scripts/trim_plane_e_stacks.sh"]
+    n1["Never: cdk destroy RecoupInfraStack (for scanner savings)"]
+    d3["Last: App Runner + Amplify → then Infra"]
+
+    d1 --> d2
+    d2 -.->|"avoid"| n1
+    d2 --> d3
 ```

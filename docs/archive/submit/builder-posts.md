@@ -17,7 +17,7 @@ Three posts required for +0.6 bonus. Each title must include **"Agents for Human
 **Title:** *Building Recoup: Agents for Humans — How We Designed a Safe AWS Recovery Workflow with Strands Graph*
 
 **Outline:**
-- 11-node graph: 3 Strands Agent nodes + 8 deterministic
+- 11-node graph: 5 agent nodes + 6 deterministic
 - Why LLMs propose but Cedar policy decides
 - Cedar policy file walkthrough (`infra/policy/recoup-policy.cedar`)
 - Node snippets from `backend/src/recoup/graph/nodes.py`
@@ -44,7 +44,7 @@ Three posts required for +0.6 bonus. Each title must include **"Agents for Human
 
 ## Post 3 — Evaluation (publish by Sep 12)
 
-**Title:** *Agents for Humans — How We Proved Recoup Works: 416 Backend + 125 E2E Tests, Deterministic Math, and Zero Unsafe Actions*
+**Title:** *Agents for Humans — How We Proved Recoup Works: 419 Backend + 127 E2E Tests, Deterministic Math, and Zero Unsafe Actions*
 
 **Outline:**
 - 47 YAML scenario categories

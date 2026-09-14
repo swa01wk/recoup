@@ -14,7 +14,7 @@ _GB_COST_PER_MONTH_GP3 = 0.08   # gp3 ~$0.08/GB/month  (same perf, lower cost)
 _GB_COST_PER_MONTH_SNAP = 0.05  # EBS snapshot ~$0.05/GB/month
 
 
-def _get_tags(tag_list: list[dict]) -> dict[str, str]:
+def _get_tags(tag_list: list[dict[str, str]]) -> dict[str, str]:
     return {t["Key"]: t["Value"] for t in tag_list}
 
 

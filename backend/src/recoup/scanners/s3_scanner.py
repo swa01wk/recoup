@@ -22,7 +22,7 @@ class S3Scanner(BaseScanner):
             name = bucket["Name"]
             try:
                 self._scan_bucket(s3, name, region, findings)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S110
                 # One bad bucket (redirect error, timeout, etc.) must not
                 # stop the rest of the scan.
                 pass

@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException
 from ...config import settings
 from ...demo_session import (
     create_session,
-    reset_session,
     require_session_id,
+    reset_session,
 )
 
 router = APIRouter()

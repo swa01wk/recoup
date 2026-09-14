@@ -32,7 +32,9 @@ _CATALOG: dict[str, list[RemediationCatalogEntry]] = {
     ],
     "EBS": [
         RemediationCatalogEntry("snapshot_delete", "Snapshot then delete", "partial", True),
-        RemediationCatalogEntry("delete_unattached", "Delete unattached volume", "destructive", True),
+        RemediationCatalogEntry(
+            "delete_unattached", "Delete unattached volume", "destructive", True
+        ),
         RemediationCatalogEntry("change_type", "Change volume type", "reversible", False),
         RemediationCatalogEntry("retain", "Retain volume", "reversible", False),
         RemediationCatalogEntry("investigate", "Investigate further", "reversible", False),

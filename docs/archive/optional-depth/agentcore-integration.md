@@ -24,30 +24,25 @@
 
 ## Architecture
 
-```
-FastAPI Backend
-    │
-    │ invoke_agent()
-    ▼
-AgentCore Runtime (Harness)
-recoup_recovery_agent-T9RRFljZUO
-    │
-    │ Strands agent graph execution
-    │ (per-opportunity session isolation)
-    ▼
-AgentCore Gateway (MCP)
-recoup-tool-gateway-tpnzqdgixc
-    │ AWS IAM auth (SigV4)
-    ├── get_cloudwatch_metrics → Lambda recoup-cw-tool
-    ├── query_cloudwatch_logs  → Lambda recoup-cw-logs-tool
-    ├── get_health_event       → Lambda recoup-health-tool
-    ├── get_cost_and_usage     → Lambda recoup-cost-tool
-    ├── lookup_cloudtrail_events → Lambda recoup-cloudtrail-tool
-    ├── store_evidence         → Lambda recoup-evidence-tool
-    ├── create_approval_request → Lambda recoup-approval-tool
-    ├── simulate_support_case  → Lambda recoup-simulate-tool
-    ├── submit_support_case    → Lambda recoup-support-tool
-    └── stop_demo_instance     → Lambda recoup-ec2-demo-tool
+```mermaid
+flowchart TD
+    api["FastAPI Backend"]
+    runtime["AgentCore Runtime (Harness)<br/>recoup_recovery_agent-T9RRFljZUO"]
+    gateway["AgentCore Gateway (MCP)<br/>recoup-tool-gateway-tpnzqdgixc<br/>AWS IAM auth (SigV4)"]
+
+    api -->|"invoke_agent()"| runtime
+    runtime -->|"Strands graph · per-opportunity session"| gateway
+
+    gateway --> t1["get_cloudwatch_metrics → recoup-cw-tool"]
+    gateway --> t2["query_cloudwatch_logs → recoup-cw-logs-tool"]
+    gateway --> t3["get_health_event → recoup-health-tool"]
+    gateway --> t4["get_cost_and_usage → recoup-cost-tool"]
+    gateway --> t5["lookup_cloudtrail_events → recoup-cloudtrail-tool"]
+    gateway --> t6["store_evidence → recoup-evidence-tool"]
+    gateway --> t7["create_approval_request → recoup-approval-tool"]
+    gateway --> t8["simulate_support_case → recoup-simulate-tool"]
+    gateway --> t9["submit_support_case → recoup-support-tool"]
+    gateway --> t10["stop_demo_instance → recoup-ec2-demo-tool"]
 ```
 
 ---

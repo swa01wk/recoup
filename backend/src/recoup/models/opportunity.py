@@ -66,7 +66,13 @@ class RecoveryOpportunity(BaseModel):
         RECOVERED = verified savings confirmed
         """
         s = self.state.upper()
-        if s in {"DETECTED", "INVESTIGATING", "NEEDS_EVIDENCE", "EVIDENCE_READY", "ELIGIBILITY_REVIEWED"}:
+        if s in {
+            "DETECTED",
+            "INVESTIGATING",
+            "NEEDS_EVIDENCE",
+            "EVIDENCE_READY",
+            "ELIGIBILITY_REVIEWED",
+        }:
             return "DETECTED"
         if s in {"AWAITING_APPROVAL", "NEEDS_FOLLOWUP"}:
             return "PENDING"

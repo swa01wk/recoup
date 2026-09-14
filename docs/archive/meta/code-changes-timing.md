@@ -1,6 +1,6 @@
 # Code Changes — Now vs Later
 
-**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred · **Doc sync Sep 14** (App Runner, **416** pytest · **125** Playwright, internal/ archive)  
+**Status:** J-FULL cleanup **Phases 0–5 executed** (Sep 11, 2026) · Phase 6 deferred · **Doc sync Sep 14** (App Runner, **419** pytest · **127** Playwright, submit pack aligned)  
 **Product source of truth:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **Cleanup plan:** [stale-code-removal-plan.md](stale-code-removal-plan.md)  
 **Context:** Feature cutoff Sep 11, 2026 · Hackathon deadline Sep 14, 2026

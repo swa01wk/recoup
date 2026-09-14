@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 
 log: structlog.BoundLogger = structlog.get_logger(__name__)
 
 
-def _put(namespace: str, metric_name: str, value: float, unit: str, dimensions: list[dict[str, str]]) -> None:
+def _put(
+    namespace: str,
+    metric_name: str,
+    value: float,
+    unit: str,
+    dimensions: list[dict[str, str]],
+) -> None:
     from ..config import settings  # noqa: PLC0415
 
     if not settings.live_aws_enabled:
@@ -16,19 +24,22 @@ def _put(namespace: str, metric_name: str, value: float, unit: str, dimensions: 
         import boto3  # noqa: PLC0415
 
         cw = boto3.client("cloudwatch", region_name=settings.bedrock_region)
-        cw.put_metric_data(
-            Namespace=namespace,
-            MetricData=[
-                {
-                    "MetricName": metric_name,
-                    "Value": value,
-                    "Unit": unit,
-                    "Dimensions": dimensions,
-                }
-            ],
-        )
+        metric_data: list[dict[str, Any]] = [
+            {
+                "MetricName": metric_name,
+                "Value": value,
+                "Unit": unit,
+                "Dimensions": dimensions,
+            }
+        ]
+        cw.put_metric_data(Namespace=namespace, MetricData=metric_data)  # type: ignore[arg-type]
     except Exception as exc:  # noqa: BLE001
-        log.debug("cloudwatch.metric_failed", namespace=namespace, metric=metric_name, error=str(exc))
+        log.debug(
+            "cloudwatch.metric_failed",
+            namespace=namespace,
+            metric=metric_name,
+            error=str(exc),
+        )
 
 
 def publish_graph_node(node_name: str, duration_ms: int) -> None:

@@ -10,8 +10,6 @@ the system still works in local / test mode.
 
 from __future__ import annotations
 
-import time
-import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -87,7 +85,11 @@ class OutcomeRepository:
         if table is not None:
             try:
                 table.put_item(Item=record)
-                log.info("outcome.created", opportunity_id=opportunity_id, credit=str(credit_amount))
+                log.info(
+                    "outcome.created",
+                    opportunity_id=opportunity_id,
+                    credit=str(credit_amount),
+                )
             except Exception as exc:  # noqa: BLE001
                 log.warning("outcome.dynamo_write_failed", error=str(exc))
         else:
@@ -101,7 +103,11 @@ class OutcomeRepository:
 
         return record
 
-    def mark_recovered(self, opportunity_id: str, credit_amount: Decimal | None = None) -> dict[str, Any]:
+    def mark_recovered(
+        self,
+        opportunity_id: str,
+        credit_amount: Decimal | None = None,
+    ) -> dict[str, Any]:
         """Transition outcome to RECOVERED and record the final credit amount."""
         pk = f"outcome#{opportunity_id}"
         now = datetime.now(UTC).isoformat()
@@ -174,7 +180,8 @@ class OutcomeRepository:
         if table is not None:
             try:
                 resp = table.get_item(Key={"pk": pk})
-                return resp.get("Item")
+                item = resp.get("Item")
+                return item if isinstance(item, dict) else None
             except Exception as exc:  # noqa: BLE001
                 log.warning("outcome.dynamo_read_failed", error=str(exc))
         return _in_memory.get(pk)
@@ -218,7 +225,7 @@ class OutcomeRepository:
             if record.get("outcome_state") == "RECOVERED":
                 try:
                     total += Decimal(str(record.get("credit_amount", "0")))
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001, S110
                     pass
         return total
 

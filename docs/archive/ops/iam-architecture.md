@@ -114,24 +114,27 @@ t=60m   STS credentials expire; any in-flight call with old creds returns Expire
 
 ### Same-Account (Hackathon Demo)
 
-```
-┌─────────────────┐         sts:AssumeRole + ExternalId
-│  Recoup backend │  ──────────────────────────────────▶  RecoupReadOnlyRole
-│ (EC2 / Lambda)  │                                        (account 625962218034)
-│                 │  ──────────────────────────────────▶  RecoupRemediationRole
-└─────────────────┘         sts:AssumeRole + ExternalId    (account 625962218034)
+```mermaid
+flowchart LR
+    backend["Recoup backend<br/>(EC2 / Lambda)"]
+    readonly["RecoupReadOnlyRole<br/>(account 625962218034)"]
+    remediation["RecoupRemediationRole<br/>(account 625962218034)"]
+
+    backend -->|"sts:AssumeRole + ExternalId"| readonly
+    backend -->|"sts:AssumeRole + ExternalId"| remediation
 ```
 
 ### Future Cross-Account (Production)
 
+```mermaid
+flowchart LR
+    cp["Recoup control-plane<br/>(Recoup's AWS account)"]
+    role["RecoupReadOnlyRole<br/>(customer account)"]
+
+    cp -->|"sts:AssumeRole + ExternalId"| role
 ```
-┌──────────────────────────┐         sts:AssumeRole + ExternalId
-│ Recoup control-plane     │  ──────────────────────────────────▶  RecoupReadOnlyRole
-│ account (Recoup's AWS)   │                                        (customer account)
-└──────────────────────────┘
 
 Only the role ARN's account ID changes — code path is identical.
-```
 
 ---
 

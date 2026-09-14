@@ -35,7 +35,8 @@ def _load_secrets_from_aws(secrets_arn: str) -> dict[str, str]:
         client = boto3.client("secretsmanager", config=cfg)
         response = client.get_secret_value(SecretId=secrets_arn)
         raw = response.get("SecretString") or ""
-        return json.loads(raw)
+        parsed: dict[str, str] = json.loads(raw)
+        return parsed
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning(
             "secrets_manager.load_failed: %s — using environment variables only", exc
