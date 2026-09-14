@@ -1,7 +1,5 @@
 # Recoup — AWS Autonomous Cloud Spend Recovery Agent
 
-[![CI](https://github.com/swa01wk/recoup/actions/workflows/ci.yml/badge.svg)](https://github.com/swa01wk/recoup/actions/workflows/ci.yml)
-
 > **AWS provides the FinOps intelligence; Recoup closes the recovery loop.**  
 > **Investigate. Prove. Approve. Recover. Verify.**
 
