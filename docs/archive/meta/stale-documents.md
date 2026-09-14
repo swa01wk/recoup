@@ -89,7 +89,7 @@ These files exist and are linked from the repo but describe **old IA** (replay-f
 | [docs/frontend-guide.md](frontend-guide.md) | Quick-start curl still starts with replay API | Move replay curls to “Optional depth” appendix |
 | [submit/submission-record.md](../submit/submission-record.md) | J-FULL primary; optional engine-only proofs listed separately | ✅ Sep 14 |
 | [submit/builder-post-drafts.md](../submit/builder-post-drafts.md) | Builder.aws drafts | ✅ |
-| [architecture/architecture.svg](../../../architecture/architecture.svg) | Canonical diagram; linked from root README | ✅ |
+| [architecture/architecture.md](../../../architecture/architecture.md) | Canonical diagram; linked from root README | ✅ |
 
 ---
 

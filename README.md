@@ -86,17 +86,21 @@ More detail: [docs/judge-demo.md](docs/judge-demo.md) · [docs/demo-playbook.md]
 
 ## Architecture
 
-![Recoup Architecture](architecture/architecture.svg)
+Canonical diagrams (Mermaid): **[architecture/architecture.md](architecture/architecture.md)**
 
-```
-Frontend (Next.js 16)
-  → FastAPI (auth · session · SSE streaming)
-    → Amazon Bedrock AgentCore Runtime
-      → Strands Graph (11 nodes: 5 agent · 6 deterministic)
-        → AgentCore Gateway (13 narrow typed tools)
-          → AgentCore Policy (Cedar · default deny for RED/BLACK)
-            → AWS services (CloudWatch · Cost Explorer · CloudTrail · EventBridge)
-              → DynamoDB (state) · S3 (evidence) · SQS (events)
+```mermaid
+flowchart TB
+    fe["Next.js 16 · J-FULL UI"]
+    api["FastAPI · scan · opportunities · approvals"]
+    aws["AWS STS + 9 scanners"]
+    agent["Strands graph + recovery pipeline (optional depth)"]
+    persist["DynamoDB · S3 · SNS · demo session state"]
+
+    fe --> api
+    api --> aws
+    api --> agent
+    aws --> persist
+    agent --> persist
 ```
 
 ---
@@ -126,7 +130,7 @@ recoup/
 ├── frontend/         Next.js UI · e2e/ (Playwright)
 ├── docs/             Judge demo, operator journey, API reference (see docs/README.md)
 ├── infra/cdk/        AWS CDK stacks
-├── architecture/     architecture.svg
+├── architecture/     architecture.md (Mermaid diagrams)
 └── eval_fixtures/    Golden replay fixtures
 ```
 

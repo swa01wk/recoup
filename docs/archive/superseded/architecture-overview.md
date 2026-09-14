@@ -1,6 +1,6 @@
 # Recoup — Architecture Overview
 
-> **Superseded.** Use [recoup-overall-architecture.md](../../recoup-overall-architecture.md) and [architecture/architecture.svg](../../../architecture/architecture.svg). Metrics: [docs/README.md](../../README.md) (**419** pytest · **127** Playwright).
+> **Superseded.** Use [recoup-overall-architecture.md](../../recoup-overall-architecture.md) and [architecture/architecture.md](../../../architecture/architecture.md). Metrics: [docs/README.md](../../README.md) (**419** pytest · **127** Playwright).
 
 **Last Updated:** Sep 11, 2026 (archived)
 

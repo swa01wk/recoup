@@ -95,7 +95,7 @@ Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo 
 
 Next.js + FastAPI · recovery pipeline on promote + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **127** Playwright tests (16 specs) · **419** backend tests collected · per-guest demo sessions (`X-Demo-Session`, PSC E2E).
 
-Diagram: [architecture/architecture.svg](../architecture/architecture.svg)
+Diagram: [architecture/architecture.md](../architecture/architecture.md)
 
 **Automated proof of J-FULL:**
 
