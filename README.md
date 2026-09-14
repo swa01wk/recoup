@@ -3,7 +3,7 @@
 > **AWS provides the FinOps intelligence; Recoup closes the recovery loop.**  
 > **Investigate. Prove. Approve. Recover. Verify.**
 
-Recoup is a background [Strands Agents](https://strandsagents.com) graph that detects unintended AWS spend, investigates surrounding evidence, applies deterministic Cedar policy, involves humans at real approval boundaries, executes bounded AWS actions, and records verified recovery — closing the complete loop from anomaly to auditable outcome.
+Recoup is a **human-in-the-loop cloud spend recovery operator** on AWS: real scanners detect waste, a **recovery assessment pipeline** (live demo) or **Strands Agents** graph on [Bedrock](https://strandsagents.com) (SLA path in repo/CI) packages evidence-backed cases, **deterministic Cedar-style policy** gates actions, and operators **approve bound claims** before Recoup **records recovery** in the ledger. See [docs/judge-demo.md](docs/judge-demo.md) for what the public demo shows vs. agent depth in the repo.
 
 Built for the [AWS Agents for Humans Hackathon](https://agentsforhumans.devpost.com/) (Aug 10 – Sep 14, 2026).
 
@@ -59,6 +59,8 @@ Production: `POST /api/test/reset` returns **403**.
 | 9 | **Remediate** | Execute only approved/bounded AWS actions via scoped IAM role |
 | 10 | **Verify** | Validate resource state, application health, financial impact |
 | 11 | **Record** | Close case in Recovery Ledger (estimated vs realized recovery) |
+
+**Live J-FULL demo:** steps 2–6 use the **deterministic recovery pipeline** on promote (fast, reliable for judges). **Strands agent nodes** and the full **11-node SLA graph** are documented in [docs/agent-code-architecture.md](docs/agent-code-architecture.md) and proven via golden replay / scorecard (local).
 
 ---
 

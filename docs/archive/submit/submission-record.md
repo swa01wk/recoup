@@ -2,8 +2,8 @@
 
 **Competition:** Aug 10 – Sep 14, 2026  
 **Internal deadline:** Sep 13, 2026  
-**Last updated:** Sep 14, 2026  
-**Status:** Phase 7 — production J-FULL verified (`prod_journey_hitl_smoke.sh` PASS); video upload + Devpost + builder.aws publish remain (human steps)
+**Last updated:** Sep 15, 2026  
+**Status:** Phase 7 — production J-FULL verified; **builder.aws 3/3** + **Devpost submitted** (Sep 15). Remaining: demo video URL on Devpost (if not already added) + final incognito link pass.
 
 **Primary demo (J-FULL):** [operator-journey.md](operator-journey.md) — account scan → HITL → Recovery Ledger. Optional SLA/EC2/governance **HTTP** demos removed Sep 2026; engine/tests retain replay adapter internally.
 
@@ -17,10 +17,10 @@
 | Live demo (frontend) | https://pdkeexzwxr.us-east-1.awsapprunner.com | ☑ loads (308→200) |
 | Backend API | https://qawwrm7kzy.us-east-1.awsapprunner.com | ☑ J-FULL smoke PASS |
 | Demo video (≤ 5:00) | _see [video-recording-checklist.md](video-recording-checklist.md)_ | ☐ |
-| Devpost submission | _paste from [devpost-project-description.md](devpost-project-description.md)_ | ☐ |
-| Builder.aws Post 1 | _[builder-post-drafts.md](builder-post-drafts.md)_ | ☐ publish + URL |
-| Builder.aws Post 2 | | ☐ |
-| Builder.aws Post 3 | | ☐ |
+| Devpost submission | _paste public project URL here_ | ☑ submitted Sep 15 · ☐ incognito |
+| Builder.aws Post 1 — architecture | https://builder.aws.com/content/3JKKaMeu6Cbc2HQQjmAiOosEVOH/building-recoup-agents-for-humans-and-how-we-designed-a-safe-aws-recovery-workflow-with-strands-graph | ☑ |
+| Builder.aws Post 2 — trust (Cedar, redaction, HITL) | https://builder.aws.com/content/3JKron5aTHK1KpAaoIbxNdSd9IH/agents-for-humans-and-making-ai-financial-decisions-trustworthy-cedar-evidence-redaction-and-hitl-in-recoup | ☑ · ☐ incognito |
+| Builder.aws Post 3 — proof (419+127, scorecard) | https://builder.aws.com/content/3JKtrHzpq4RFxt6kXlNYT5uY1uJ/agents-for-humans-and-how-we-proved-recoup-works-419-backend-127-e2e-tests-and-zero-unsafe-actions | ☑ · ☐ incognito |
 
 ---
 
@@ -31,7 +31,7 @@
 | Project name | Recoup |
 | Tagline | Autonomous AWS cloud spend recovery — detect, prove, approve, recover |
 | Track | Professional Agents |
-| AWS Builder ID | Verified ☐ |
+| AWS Builder ID | Verified ☑ (on Devpost submit) |
 | Language | English |
 
 ---
@@ -40,8 +40,8 @@
 
 ### Core features (all ✅)
 - [x] 9 AWS waste scanners (EC2, EBS, EIP, RDS, S3, Lambda, LB, CW Logs, Cost Explorer)
-- [x] 11-node Strands Agents graph on Bedrock Nova Pro
-- [x] AgentCore Runtime + Gateway integration
+- [x] 11-node Strands Agents graph on Bedrock Nova Pro (SLA path; J-FULL uses recovery pipeline on promote — see judge-demo.md)
+- [x] AgentCore-oriented CDK/IAM + tool registry (demo Cedar eval deterministic on App Runner)
 - [x] Cedar policy (default-deny all writes)
 - [x] HITL claim binding (claim_hash + amount + state_version)
 - [x] SLA verified replay with real credit math
@@ -71,10 +71,10 @@
 - [x] /api/config exposes no secrets
 
 ### Remaining (Phase 7)
-- [ ] Demo video recorded (≤ 5:00) — follow `docs/video-script.md`
-- [ ] Devpost submission published
+- [ ] Demo video recorded (≤ 5:00) — follow `docs/video-script.md`; add URL on Devpost if empty
+- [x] Devpost submission published (Sep 15)
 - [x] Architecture diagram finalized (`architecture/architecture.svg`)
-- [ ] Builder community posts live (3 posts — drafts in `builder-post-drafts.md`)
+- [x] Builder community posts live (3 posts — [builder-post-drafts.md](builder-post-drafts.md))
 - [x] README final polish for judge audience
 
 ---
@@ -128,7 +128,7 @@ curl -s http://localhost:8000/api/config | jq 'keys'
 - [ ] Video ≤ 5:00 with captions
 - [ ] Repository still public; MIT license visible
 - [ ] Demo URL budgeted through Oct 8, 2026
-- [ ] Re-read official Devpost rules before submit
+- [x] Re-read official Devpost rules before submit
 - [ ] `git log --oneline -10` shows recent meaningful commits
 
 ---
@@ -142,6 +142,6 @@ curl -s http://localhost:8000/api/config | jq 'keys'
 | Prod J-FULL API smoke | Sep 13 PM | prod_journey_hitl_smoke.sh PASS |
 | Playwright J-FULL @smoke | Sep 13 PM | journey-full-discovery-triage-ledger.spec.ts |
 | Video uploaded | | |
-| Devpost submitted | | |
-| Builder posts live | | |
+| Devpost submitted | Sep 15 AM | Builder ID verified on form; add project URL to URLs table |
+| Builder posts live | Sep 15 | 3/3 URLs in devpost-project-description.md |
 | GitHub repo made public | | |

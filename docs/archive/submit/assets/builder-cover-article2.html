@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Recoup — Builder cover (Article 2)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1200px;
+        height: 675px;
+        overflow: hidden;
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #fafafa;
+        background:
+          radial-gradient(ellipse 80% 60% at 70% 0%, rgba(255, 153, 0, 0.18), transparent),
+          radial-gradient(ellipse 55% 45% at 8% 100%, rgba(56, 178, 172, 0.1), transparent),
+          linear-gradient(165deg, #1a2430 0%, #243444 45%, #151c24 100%);
+        padding: 40px 52px 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #ff9900;
+        margin-bottom: 10px;
+      }
+      h1 {
+        font-size: 40px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        font-size: 18px;
+        font-weight: 400;
+        color: #c5d0d4;
+        max-width: 900px;
+        line-height: 1.35;
+        margin-bottom: 6px;
+      }
+      .diagram-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 0 8px;
+      }
+      .diagram-wrap .mermaid {
+        width: 100%;
+      }
+      .diagram-wrap svg {
+        max-width: 1096px;
+        max-height: 380px;
+      }
+      .footer {
+        height: 44px;
+        margin: 0 -52px;
+        background: linear-gradient(90deg, #ff9900 0%, #ec7211 100%);
+        display: flex;
+        align-items: center;
+        padding: 0 52px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: #131a22;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="eyebrow">Agents for Humans</div>
+    <h1>Trust before recovery</h1>
+    <p class="subtitle">
+      Evidence redaction · Cedar policy (not LLM) · operator approval with claim binding
+    </p>
+    <div class="diagram-wrap">
+      <pre class="mermaid">
+flowchart TB
+    raw["Raw evidence"]
+    redact["Evidence redaction<br/>8 patterns, no PII in model context"]
+    reason["Agent reasoning"]
+    prop["Proposed action"]
+    cedar["Cedar policy gate<br/>permit, REQUIRE_APPROVAL, forbid"]
+    hitl["Operator approval<br/>claim hash, amount, state version"]
+    recover["Recovery action"]
+
+    raw --> redact --> reason --> prop --> cedar
+    cedar -->|needs approval| hitl
+    cedar -->|auto allowed| recover
+    hitl -->|bound approve| recover
+
+    classDef trustTop fill:#232f3e,stroke:#ff9900,stroke-width:2px,color:#fff
+    classDef trustMid fill:#1a2834,stroke:#5d6975,stroke-width:1.5px,color:#ececec
+    classDef trustOut fill:#37475a,stroke:#ff9900,stroke-width:2px,color:#fff
+
+    class redact,cedar,hitl,recover trustTop
+    class raw,reason,prop trustMid
+      </pre>
+    </div>
+    <div class="footer">Recoup · live demo · Start Recovery → Cedar → HITL → ledger</div>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          fontSize: "17px",
+          fontFamily: "Segoe UI, system-ui, sans-serif",
+          primaryTextColor: "#ffffff",
+          lineColor: "#ff9900",
+          edgeLabelBackground: "#1a2430",
+        },
+        flowchart: {
+          curve: "basis",
+          padding: 16,
+          nodeSpacing: 36,
+          rankSpacing: 44,
+          htmlLabels: true,
+        },
+      });
+      await mermaid.run({ querySelector: ".mermaid" });
+    </script>
+  </body>
+</html>

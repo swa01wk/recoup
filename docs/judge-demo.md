@@ -4,6 +4,16 @@
 **Last updated:** Sep 14, 2026 · Target video ≤5:00  
 **Canonical operator flow:** [operator-journey.md](operator-journey.md) (J-FULL)
 
+## Judge narrative (honest scope)
+
+**Live demo (J-FULL):** real AWS scan → **deterministic recovery assessment pipeline** (evidence graph, confidence, safety) through the graph **policy gate** → **claim-bound HITL** → Recovery Ledger + SNS on approve.
+
+**Strands + Bedrock in repo:** full **11-node graph** for SLA credit recovery; golden replay and scorecard in **CI/local** (`use_strands` optional on `POST /api/opportunities/{id}/run`). Production promote defaults to **no Bedrock on promote** (`RECOVERY_LLM_ON_PROMOTE=false`) for reliable judge latency.
+
+**AgentCore:** CDK/IAM/tool registry; Cedar rules in `infra/policy/`; App Runner path uses **deterministic policy evaluation** aligned with those rules.
+
+**“Recover” on approve:** ledger closure + SNS report + tracked **estimated** monthly savings — not claiming unattended remediation on every resource in the public demo.
+
 ## Live demo (AWS production)
 
 | | URL |
@@ -18,7 +28,7 @@ Use the same scenes below on the public UI (`/scan` → Demo Scan → `/opportun
 
 ## Pitch (30 seconds)
 
-AWS customers lose money to unintended spend that scanners surface but teams rarely close. Recoup runs **real read-only AWS scanners**, packages findings into claim-bound recovery opportunities, and recovers value only after **Cedar policy** and explicit **human approval** — with a **Recovery Ledger** and **SNS recovery report** on approve.
+For **FinOps and platform teams**: unintended AWS spend shows up in scans and recommendations, but recovery rarely gets **governed and recorded**. Recoup runs **real read-only AWS scanners**, builds **evidence-backed recovery cases** with deterministic safety and policy gates, and moves dollars to **Recovered** only after **claim-bound human approval** — **Recovery Ledger** and **SNS recovery report** on approve. **Strands on Bedrock** powers the full SLA agent graph in repo and CI; the live demo path prioritizes the **operator recovery pipeline** for reliability.
 
 ---
 
@@ -43,7 +53,7 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 **Show:** `/opportunities`  
 1. Pick **three findings from different services** (e.g. EC2, EBS, RDS)  
 2. **Start Recovery** on each → detail page with **Approval Required**  
-**Say:** Promote runs the recovery pipeline (evidence graph, recommendation, safety checks) and opens HITL with **claim_hash**, amount, and **state_version** — no SSE stream on promote, but detail page shows the full assessment.
+**Say:** **Start Recovery** runs the recovery assessment pipeline (evidence graph, recommendation, safety checks), then **REQUIRE_APPROVAL**. HITL binds **claim_hash**, amount, and **state_version**. Scroll the detail page — **Why Recoup believes**, safety checks, risk tier, action, rollback — that is the assessment judges should see (not a separate replay UI).
 
 ---
 
@@ -57,7 +67,7 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 | **Investigate** | Investigate further | `NEEDS_FOLLOWUP` · pending bucket · no SNS |
 | **Decline** | Decline | `DENIED` · excluded from recovered totals · no SNS |
 
-**Say:** Tampered claim hash or amount → **409** (show curl or mention SEC tests).
+**Say:** Approve means an **authorized human** accepted the bound case — we **record recovery** and **notify via SNS**. Tampered claim hash or amount → **409** (mention SEC Playwright tests).
 
 (`/approvals` redirects — HITL lives on opportunity detail only.)
 
@@ -72,20 +82,20 @@ AWS customers lose money to unintended spend that scanners surface but teams rar
 
 ## Scene 6 — Safety & depth (3:30–4:15)
 
-**Show:** Quality scorecard (local or API):
+**Show:** Quality scorecard on **local backend only** (all six gates pass in dev/CI):
 
 ```bash
-curl -s https://qawwrm7kzy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'
-# local: curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
+curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'
 ```
 
-**Say:** Six gates — zero unsafe external actions, financial math, evidence sanitizer, etc.
+Do not rely on production scorecard for video — App Runner may not pass golden replay gates.
+
+**Say:** Six ship gates — golden **SLA replay through the full Strands graph** (deterministic math, not LLM), financial correctness, evidence recall, tool autonomy classes, trace completeness, zero unsafe external actions. **419** pytest + **127** Playwright (J-FULL).
 
 **Optional talking points (not in sidebar):**
 
-- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; **419** backend pytest include golden replay + `tests/unit/recovery/`; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
-- **Six quality gates** — scorecard already shown in Scene 6  
-- **Optional agent re-run** — `POST /api/opportunities/{id}/run` on detail (not required for J-FULL)
+- **SLA verified replay (engine only)** — deterministic ~$0.35 credit via `adapters/replay.py`; no public `/api/replay` ([archive/optional-depth/replay-system.md](archive/optional-depth/replay-system.md))  
+- **Strands depth** — `docs/agent-code-architecture.md`; optional `POST /api/opportunities/{id}/run` with `use_strands` (canonical SLA scenario; not required for J-FULL)
 
 Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo HTTP.
 
@@ -93,7 +103,7 @@ Removed Sep 2026 (do not demo): `/api/replay/*`, EC2 demo HTTP, governance demo 
 
 ## Scene 7 — Architecture (4:15–5:00)
 
-Next.js + FastAPI · recovery pipeline on promote + optional Strands re-run · 13 tools · Bedrock AgentCore · Cedar · **127** Playwright tests (16 specs) · **419** backend tests collected · per-guest demo sessions (`X-Demo-Session`, PSC E2E).
+Next.js + FastAPI · **recovery pipeline on promote** (live demo) · **11-node Strands graph** (SLA / CI) · Cedar in-repo · AgentCore-oriented CDK · **127** Playwright · **419** backend tests · per-guest demo sessions (`X-Demo-Session`, PSC E2E).
 
 Diagram: [architecture/architecture.md](../architecture/architecture.md)
 
@@ -116,8 +126,8 @@ PLAYWRIGHT_FRONTEND_URL=https://pdkeexzwxr.us-east-1.awsapprunner.com \
 | Criterion | Proof |
 |-----------|--------|
 | AWS depth | 9 scanners, STS read role, DynamoDB approvals, SNS, KMS evidence |
-| Autonomy | Scanner detection + optional Strands investigation on detail |
+| Strands / Bedrock | 11-node graph + `strands_agents.py`; golden replay in CI; optional `use_strands` on `/run` |
 | Human oversight | Claim-bound HITL on `/opportunities/{id}`, safety + sufficiency gates on approve |
-| Verification | Recovery Ledger, SNS report, quality scorecard |
+| Verification | Recovery Ledger, SNS report, local quality scorecard + Playwright J-FULL |
 
 More Q&A: [README.md](../README.md) FAQ · Full API: [api-reference.md](api-reference.md)

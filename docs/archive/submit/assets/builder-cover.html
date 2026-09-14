@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Recoup — Builder cover</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1200px;
+        height: 675px;
+        overflow: hidden;
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #fafafa;
+        background:
+          radial-gradient(ellipse 80% 60% at 70% 0%, rgba(255, 153, 0, 0.12), transparent),
+          linear-gradient(165deg, #131a22 0%, #1b2834 42%, #0d1117 100%);
+        padding: 44px 52px 36px;
+        display: flex;
+        flex-direction: column;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #ff9900;
+        margin-bottom: 10px;
+      }
+      h1 {
+        font-size: 40px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        font-size: 18px;
+        font-weight: 400;
+        color: #aab7b8;
+        max-width: 720px;
+        line-height: 1.35;
+        margin-bottom: 8px;
+      }
+      .diagram-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 4px;
+      }
+      .diagram-wrap .mermaid {
+        width: 100%;
+      }
+      .diagram-wrap svg {
+        max-width: 1096px;
+        max-height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="eyebrow">Agents for Humans</div>
+    <h1>Recoup system architecture</h1>
+    <p class="subtitle">
+      Next.js operator UI · FastAPI · AWS scanners · Strands + Cedar · DynamoDB &amp; SNS
+    </p>
+    <div class="diagram-wrap">
+      <pre class="mermaid">
+flowchart TB
+    fe["Next.js UI<br/>Account scan · opportunities · HITL · ledger"]
+    api["FastAPI API<br/>/api/scan · opportunities · approvals · quality"]
+    aws["AWS read path<br/>STS AssumeRole · 9 account scanners"]
+    agent["Agent layer<br/>11-node Strands · Cedar policy · recovery pipeline"]
+    persist["Persistence<br/>DynamoDB · S3 evidence · SNS · demo sessions"]
+
+    fe -->|"HTTP JSON · SSE on investigate"| api
+    api --> aws
+    api --> agent
+    aws --> persist
+    agent --> persist
+
+    classDef fe fill:#232f3e,stroke:#ff9900,stroke-width:2px,color:#fff
+    classDef api fill:#232f3e,stroke:#ff9900,stroke-width:2px,color:#fff
+    classDef aws fill:#1a2834,stroke:#5d6975,stroke-width:1.5px,color:#ececec
+    classDef agent fill:#1a2834,stroke:#5d6975,stroke-width:1.5px,color:#ececec
+    classDef persist fill:#37475a,stroke:#ff9900,stroke-width:2px,color:#fff
+
+    class fe fe
+    class api api
+    class aws aws
+    class agent agent
+    class persist persist
+      </pre>
+    </div>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          fontSize: "17px",
+          fontFamily: "Segoe UI, system-ui, sans-serif",
+          primaryTextColor: "#ffffff",
+          lineColor: "#ff9900",
+          edgeLabelBackground: "#131a22",
+        },
+        flowchart: {
+          curve: "basis",
+          padding: 16,
+          nodeSpacing: 44,
+          rankSpacing: 52,
+          htmlLabels: true,
+        },
+      });
+      await mermaid.run({ querySelector: ".mermaid" });
+    </script>
+  </body>
+</html>

@@ -3,7 +3,7 @@
 **Project:** AWS Autonomous Cloud Spend Recovery Agent  
 **Hackathon:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
 **Last updated:** Sep 14, 2026  
-**Shipped:** J-FULL on App Runner · **Submission:** video + Devpost ([submit/submission-record.md](archive/submit/submission-record.md))
+**Shipped:** J-FULL on App Runner · **Submission:** Devpost done · **Remaining:** demo video ([submit/submission-record.md](archive/submit/submission-record.md))
 
 **Archived docs:** [archive/](archive/) — meta, superseded, optional depth, ops, submit (moved, not deleted)
 

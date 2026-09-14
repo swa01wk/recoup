@@ -4,9 +4,9 @@ Three posts required for +0.6 bonus. Each title must include **"Agents for Human
 
 | # | Target date | Status | URL |
 |---|-------------|--------|-----|
-| 1 | Sep 8 | ✅ Draft ready | _paste URL after publish_ |
-| 2 | Sep 10 | ✅ Draft ready | |
-| 3 | Sep 12 | ✅ Draft ready | |
+| 1 | Sep 8 | ✅ Published (keep as-is) | https://builder.aws.com/content/3JKKaMeu6Cbc2HQQjmAiOosEVOH/building-recoup-agents-for-humans-and-how-we-designed-a-safe-aws-recovery-workflow-with-strands-graph |
+| 2 | Sep 15 | ✅ Published — trust / J-FULL | https://builder.aws.com/content/3JKron5aTHK1KpAaoIbxNdSd9IH/agents-for-humans-and-making-ai-financial-decisions-trustworthy-cedar-evidence-redaction-and-hitl-in-recoup |
+| 3 | Sep 15 | ✅ Published — proof / scorecard | https://builder.aws.com/content/3JKtrHzpq4RFxt6kXlNYT5uY1uJ/agents-for-humans-and-how-we-proved-recoup-works-419-backend-127-e2e-tests-and-zero-unsafe-actions |
 
 **Full copy-paste bodies:** [builder-post-drafts.md](builder-post-drafts.md)
 

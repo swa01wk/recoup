@@ -11,8 +11,7 @@
   - https://pdkeexzwxr.us-east-1.awsapprunner.com/scan
   - https://pdkeexzwxr.us-east-1.awsapprunner.com/opportunities
   - https://pdkeexzwxr.us-east-1.awsapprunner.com/recovery
-- [ ] Terminal ready: `curl -s https://qawwrm7kzy.us-east-1.awsapprunner.com/api/quality/scorecard | jq '.all_gates_pass'`  
-  _(If prod returns `false`, use local scorecard in Scene 6 and mention “CI + local gates”.)_
+- [ ] Terminal ready (Segment F — **localhost only**): `curl -s http://localhost:8000/api/quality/scorecard | jq '.all_gates_pass'`
 
 ## Recording settings
 
@@ -23,13 +22,14 @@
 
 ## Must-show moments (rubric)
 
-1. **Problem** — waste detected, loop not closed until approval  
-2. **Demo Scan** — 8+ findings, masked account  
-3. **Three services** — Start Recovery on EC2 / EBS / RDS (or any three)  
-4. **HITL wow moment** — risk tier + action + rollback on approval card  
-5. **Triage** — Approve (SNS) · Investigate · Decline  
-6. **Recovery Ledger** — Remaining / Pending / Recovered  
-7. **Close** — architecture.svg + positioning sentence  
+1. **Pitch (Segment A)** — problem · FinOps/platform audience · why governed recovery matters  
+2. **Problem in UI** — waste on table, loop not closed until approval  
+3. **Demo Scan** — 8+ findings, masked account  
+4. **Three services** — Start Recovery on EC2 / EBS / RDS (or any three)  
+5. **HITL wow moment** — risk tier + action + rollback on approval card  
+6. **Triage** — Approve (SNS) · Investigate · Decline  
+7. **Recovery Ledger** — Remaining / Pending / Recovered  
+8. **Close** — local scorecard + architecture.svg + demo/repo links  
 
 ## After record
 
