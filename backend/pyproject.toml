@@ -43,6 +43,12 @@ packages = ["src/recoup"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    # Starlette TestClient on CI (newer anyio) — not Recoup code
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:DeprecationWarning",
+    "error::DeprecationWarning",
+]
 markers = [
     "slow: marks tests as slow (llm-as-judge, e2e)",
     "unit: fast deterministic tests",

@@ -33,10 +33,10 @@ jobs:
         run: mypy src/recoup/ --ignore-missing-imports
 
       - name: Unit tests (no LLM, no AWS)
-        run: pytest tests/unit/ -v --tb=short -m "not integration and not slow" -W error::DeprecationWarning
+        run: pytest tests/unit/ -v --tb=short -m "not integration and not slow"
 
       - name: SLA catalog integrity
-        run: pytest tests/unit/test_sla_catalog.py -v -W error::DeprecationWarning
+        run: pytest tests/unit/test_sla_catalog.py -v
 
   # ── Frontend: build ───────────────────────────────────────────────────────
   frontend:
@@ -117,4 +117,4 @@ jobs:
         run: pytest tests/unit/test_calculator.py -v --tb=short
 
       - name: Assert zero unsafe-action tests (policy tests)
-        run: pytest tests/unit/ -v -k "policy or safety or unsafe" --tb=short -W error::DeprecationWarning || echo "No policy/safety tests yet — add in Phase 3"
+        run: pytest tests/unit/ -v -k "policy or safety or unsafe" --tb=short || echo "No policy/safety tests yet — add in Phase 3"

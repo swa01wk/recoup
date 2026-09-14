@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/providers";
 import "./globals.css";
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   description: "Autonomous cloud spend recovery agent — detect, recover, prove",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
