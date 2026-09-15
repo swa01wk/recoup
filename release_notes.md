@@ -14,9 +14,8 @@ Maintained changelog for shipped behavior, ops flags, and test baselines.
 - **README:** documented `LLM_PROVIDER` (`bedrock` default vs `openai` + `OPENAI_API_KEY`).
 - **E2E:** PSC-2 (isolated opportunity IDs) and PSC-4 (dual browser contexts) in `journey-demo-session-concurrency.spec.ts`.
 - **Observability:** CloudWatch custom metrics `Recoup/Graph` and `Recoup/Tools` from tracing hooks when live AWS is enabled.
-- **Compliance doc:** refreshed [R1]–[R7], [R11], [R12] rows in `docs/archive/internal/plans/aws-requirements.md`.
 - **Test baselines:** **419** pytest collected · **127** Playwright tests (PSC-2/PSC-4).
-- **Submit pack aligned:** `devpost-project-description.md`, `video-script.md`, `builder-post-drafts.md`, `submission-record.md`, `judge-demo.md` — **419/127**, graph **5 agent + 6 deterministic**, production vs offline demo scan table.
+- **Submit pack aligned:** `devpost-project-description.md`, `video-script.md`, `builder-post-drafts.md`, `judge-demo.md` — **419/127**, graph **5 agent + 6 deterministic**, production vs offline demo scan table.
 
 ---
 
@@ -111,4 +110,4 @@ Browser: https://pdkeexzwxr.us-east-1.awsapprunner.com/scan → Demo Scan → th
 | Sep 2026 | Phase 6f — 8 demo workload scenarios, one-click demo scan, scanner evidence fields |
 | Sep 2026 | Phase 6e — STS AssumeRole, RecoupReadOnlyRole / RemediationRole |
 
-Older detail: [docs/archive/submit/submission-record.md](docs/archive/submit/submission-record.md), git history.
+Older detail: git history and local maintainer notes (not in public repo).

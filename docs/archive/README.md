@@ -10,12 +10,12 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 
 | Folder | Contents |
 |--------|----------|
-| [meta/](meta/) | Cleanup inventories: stale-documents, stale-code-removal-plan, code-changes-timing |
+| [meta/](meta/) | stale-documents (timing/cleanup plans are local-only) |
 | [superseded/](superseded/) | Replaced by `recoup-overall-architecture.md` + `*-code-architecture.md` (and `frontend-code-architecture.md` instead of frontend-guide) |
 | [optional-depth/](optional-depth/) | SLA replay, graph tools, domain models — code still in repo; optional for judges |
 | [ops/](ops/) | IAM, deploy, runbook, cross-account, stopped-services notebook |
 | [submit/](submit/) | Video script, Devpost checklist, builder posts, CI guide, disclosure |
-| [internal/](internal/) | Phase tracker, implementation plans, planning `.docx` (optional) |
+| [internal/](internal/) | Local-only: phase tracker, plans, planning `.docx` (see README) |
 
 ---
 
@@ -26,8 +26,6 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 | File | Notes |
 |------|--------|
 | [stale-documents.md](meta/stale-documents.md) | Stale doc matrix (historical) |
-| [stale-code-removal-plan.md](meta/stale-code-removal-plan.md) | Code removal phases |
-| [code-changes-timing.md](meta/code-changes-timing.md) | Freeze / when to edit |
 
 ### superseded/
 
@@ -47,7 +45,7 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 
 ### submit/
 
-`video-script.md` · `submission-record.md` · `builder-posts.md` · `ci-guide.md` · `DISCLOSURE.md`
+`video-script.md` · `builder-posts.md` · `ci-guide.md` · `DISCLOSURE.md`
 
 ### Root of archive/
 
@@ -55,4 +53,4 @@ Archived **Sep 11, 2026** — files moved here (not deleted) to keep the active 
 |------|--------|
 | [LIVE_SCENARIOS_TODO.md](LIVE_SCENARIOS_TODO.md) | Completed scenario tracker snapshot |
 
-Internal build history: [internal/STATUS.md](internal/STATUS.md) · Operator story: [operator-journey.md](../operator-journey.md)
+Operator story: [operator-journey.md](../operator-journey.md)

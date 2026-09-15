@@ -5,6 +5,8 @@
 **Format:** Screen recording + voiceover (no on-camera required)  
 **Last updated:** Sep 15, 2026 (aligned to production screenshot walkthrough)
 
+**Natural voiceover (record from this):** [video-script-natural.md](video-script-natural.md) — conversational segments + one-block teleprompter. This file keeps shot list, timings, and director notes.
+
 **Devpost pitch must cover:** (1) problem · (2) audience · (3) why it matters — **Segment A**; working project — **Segments B–E** (your UI capture).
 
 **Canonical flow:** [operator-journey.md](../../operator-journey.md) · [judge-demo.md](../../judge-demo.md)

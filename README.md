@@ -155,7 +155,7 @@ Strands agent steps (investigate, explain, plan, etc.) call an LLM selected by *
 
 Check active provider (no secrets): `curl -s http://localhost:8000/api/config | jq '.llm_provider, .bedrock_model, .openai_model_id'`
 
-AgentCore runtime, gateway, and infra IAM are documented in [docs/archive/internal/plans/aws-requirements.md](docs/archive/internal/plans/aws-requirements.md). Provider wiring lives in `backend/src/recoup/agents/strands_agents.py`.
+AgentCore runtime, gateway, and infra IAM: [docs/archive/optional-depth/agentcore-integration.md](docs/archive/optional-depth/agentcore-integration.md). Provider wiring lives in `backend/src/recoup/agents/strands_agents.py`.
 
 See [docs/archive/ops/production-hosting.md](docs/archive/ops/production-hosting.md) for the live App Runner demo.  
 See [docs/local-dev-and-testing.md](docs/local-dev-and-testing.md) for ports and Playwright.

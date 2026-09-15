@@ -188,7 +188,7 @@ recoup/
   infra/cdk/         AWS infrastructure
   docs/              Product & architecture markdown
   scripts/           Demo ops, fixtures, CI helpers
-  docs/archive/internal/plans/   Historical phase notes (optional)
+  docs/archive/internal/         Local-only phase notes (not in public repo)
 ```
 
 ---

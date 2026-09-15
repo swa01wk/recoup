@@ -3,7 +3,7 @@
 **Last updated:** Sep 13, 2026  
 **Region:** `us-east-1`  
 **Account:** `625962218034`  
-**Related:** [oct-demo-ops.md](./oct-demo-ops.md) · [demo-vs-platform-segregation.md](./demo-vs-platform-segregation.md) · `./scripts/stop_demo_scanner_compute.sh`
+**Related:** [budget-safety.md](./budget-safety.md) · [demo-vs-platform-segregation.md](./demo-vs-platform-segregation.md) · `./scripts/stop_demo_scanner_compute.sh`
 
 This file tracks AWS compute resources we have **stopped** to reduce demo spend between sessions. Use the start commands below before live testing, filming, or scanner demos that need these workloads running. **Does not** stop App Runner (UI/API) or Infra tables.
 

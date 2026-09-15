@@ -4,7 +4,7 @@ Create each article at [AWS Builder Center → Create an article](https://builde
 
 Titles **must** include **Agents for Humans** (hackathon requirement).
 
-**Status (Sep 15, 2026):** All **three** articles published — URLs in [submission-record.md](submission-record.md) and [devpost-project-description.md](devpost-project-description.md).
+**Status (Sep 15, 2026):** All **three** articles published — URLs in [builder-posts.md](builder-posts.md) and [devpost-project-description.md](devpost-project-description.md).
 
 **Cover image (all posts):** 1200×675 px recommended; jpg/jpeg/png/webp; max 2 MB. **Article 1:** [published — keep as-is](https://builder.aws.com/content/3JKKaMeu6Cbc2HQQjmAiOosEVOH/building-recoup-agents-for-humans-and-how-we-designed-a-safe-aws-recovery-workflow-with-strands-graph) (cover: [assets/builder-cover-recoup-stack.png](assets/builder-cover-recoup-stack.png)). **Articles 2–3:** copy below; covers [assets/builder-cover-recoup-trust.png](assets/builder-cover-recoup-trust.png) (Art. 2) or scorecard terminal (Art. 3). Regenerate: `node docs/archive/submit/assets/export-builder-cover.mjs`.
 

@@ -74,5 +74,13 @@ frontend/test-results/
 backend/test-results/
 test-results/
 
-# Internal planning docs at repo root (use docs/archive/internal/planning/)
+# Internal planning docs at repo root (local copies under docs/archive/internal/planning/)
 /*.docx
+
+# Local-only docs (kept on maintainer machine — not in public repo)
+docs/archive/internal/**
+!docs/archive/internal/README.md
+docs/archive/submit/submission-record.md
+docs/archive/meta/code-changes-timing.md
+docs/archive/meta/stale-code-removal-plan.md
+docs/archive/ops/oct-demo-ops.md

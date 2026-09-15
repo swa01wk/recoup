@@ -1,11 +1,5 @@
-# Internal development artifacts
+# Internal development artifacts (local only)
 
-Material here supported building Recoup during the hackathon. **Judges and submission reviewers can skip this folder.**
+Hackathon build plans, phase trackers, and planning `.docx` files are **not published** in the public repository. Maintainers keep them on disk under this folder; they are listed in `.gitignore`.
 
-| Path | Contents |
-|------|----------|
-| [STATUS.md](STATUS.md) | Phase-by-phase build tracker (historical) |
-| [plans/](plans/) | Implementation phase plans |
-| [planning/](planning/) | Private planning documents (`.docx`) |
-
-**Start here instead:** [README.md](../../README.md) · [judge-demo.md](../judge-demo.md) · [operator-journey.md](../operator-journey.md)
+**Public documentation:** [docs/README.md](../../README.md) · [judge-demo.md](../../judge-demo.md) · [operator-journey.md](../../operator-journey.md)

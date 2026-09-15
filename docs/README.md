@@ -3,7 +3,7 @@
 **Project:** AWS Autonomous Cloud Spend Recovery Agent  
 **Hackathon:** AWS Agents for Humans (Aug 10 – Sep 14, 2026)  
 **Last updated:** Sep 14, 2026  
-**Shipped:** J-FULL on App Runner · **Submission:** Devpost done · **Remaining:** demo video ([submit/submission-record.md](archive/submit/submission-record.md))
+**Shipped:** J-FULL on App Runner · **Submission:** Devpost done · **Remaining:** demo video ([submit/video-recording-checklist.md](archive/submit/video-recording-checklist.md))
 
 **Archived docs:** [archive/](archive/) — meta, superseded, optional depth, ops, submit (moved, not deleted)
 
@@ -45,7 +45,6 @@
 | **[archive/ops/production-hosting.md](archive/ops/production-hosting.md)** | AWS-all deploy (App Runner API + UI, Amplify optional, SNS, smoke) |
 | **[archive/ops/app-runner-deployment-runbook.md](archive/ops/app-runner-deployment-runbook.md)** | App Runner deploy troubleshooting, CORS/URL coupling, verification |
 | **[archive/ops/demo-vs-platform-segregation.md](archive/ops/demo-vs-platform-segregation.md)** | Platform vs demo scanner stacks, safe teardown |
-| **[archive/ops/oct-demo-ops.md](archive/ops/oct-demo-ops.md)** | Credits / $150 plan ops through Oct 31 |
 
 ---
 
@@ -74,11 +73,11 @@
 
 | Folder | Examples |
 |--------|----------|
-| [archive/meta/](archive/meta/) | stale-documents, code-changes-timing, stale-code-removal-plan |
+| [archive/meta/](archive/meta/) | stale-documents (maintainer inventories; timing plans are local-only) |
 | [archive/superseded/](archive/superseded/) | architecture-overview, agent-graph, frontend-guide |
 | [archive/optional-depth/](archive/optional-depth/) | replay-system, sla-calculator, tool-registry, … |
-| [archive/ops/](archive/ops/) | **production-hosting**, segregation, oct-demo-ops, IAM, cross-account, stopped-services |
-| [archive/submit/](archive/submit/) | video-script, submission-record, DISCLOSURE, ci-guide |
+| [archive/ops/](archive/ops/) | **production-hosting**, segregation, IAM, cross-account, stopped-services |
+| [archive/submit/](archive/submit/) | video-script, DISCLOSURE, ci-guide, builder posts |
 
 ---
 
@@ -89,7 +88,7 @@
 | [../release_notes.md](../release_notes.md) | **Shipped changes & ops flags** (maintain on each release) |
 | [../USER_JOURNEY_CHECKLIST.md](../USER_JOURNEY_CHECKLIST.md) | Test ↔ journey map |
 | [../README.md](../README.md) | Project overview |
-| [archive/internal/](archive/internal/) | Internal phase tracker & build plans (optional for judges) |
+| [archive/internal/](archive/internal/) | Local-only build plans (not in public repo; see README there) |
 
 ---
 

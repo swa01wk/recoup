@@ -1,6 +1,6 @@
 # Video recording checklist (Phase 7)
 
-**Script:** [video-script.md](video-script.md) · **Target:** ≤ 5:00 (aim 4:40 + buffer)
+**Script:** [video-script-natural.md](video-script-natural.md) (voice) · [video-script.md](video-script.md) (shots/timing) · **Target:** ≤ 5:00 (aim 4:40 + buffer)
 
 ## Before record
 
@@ -36,7 +36,7 @@
 - [ ] Edit to ≤ 5:00  
 - [ ] Upload **public** YouTube or Vimeo  
 - [ ] Enable **captions**  
-- [ ] Paste URL into [submission-record.md](submission-record.md) and Devpost  
+- [ ] Paste URL on Devpost (and your local submission checklist if you keep one)  
 - [ ] Description links: demo URL, GitHub, builder posts  
 
 ## Suggested YouTube title

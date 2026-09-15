@@ -3,7 +3,7 @@
 **Last updated:** Sep 14, 2026  
 **Canonical operator story:** [operator-journey.md](operator-journey.md) (J-FULL)  
 **Doc index (current):** [README.md](README.md)  
-**When to edit vs delete docs:** [code-changes-timing.md](code-changes-timing.md) (same timing as code — prefer banners over deletes before submit)
+**Maintainer-only inventories** (`code-changes-timing.md`, `stale-code-removal-plan.md`, `docs/archive/internal/`) are local-only and not in the public repo.
 
 ---
 
